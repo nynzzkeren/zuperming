@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zuperming Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: #0f0c29; 
+            color: #e2e8f0; 
+            margin: 0; 
+            padding: 0; 
+        }
+        .sidebar {
+            width: 250px;
+            height: 100vh;
+            background: rgba(30, 30, 46, 0.95);
+            position: fixed;
+            border-right: 1px solid rgba(255,255,255,0.05);
+            padding-top: 30px;
+        }
+        .sidebar h2 {
+            text-align: center;
+            background: -webkit-linear-gradient(#5865F2, #00f2fe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 40px;
+        }
+        .sidebar a {
+            display: block;
+            padding: 15px 25px;
+            color: #a0aec0;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .sidebar a:hover, .sidebar a.active {
+            background: rgba(88, 101, 242, 0.1);
+            color: #5865F2;
+            border-left: 4px solid #5865F2;
+        }
+        .sidebar a.logout {
+            color: #ff5555;
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            border: none;
+        }
+        .content {
+            margin-left: 250px;
+            padding: 40px;
+        }
+        .stats-container { 
+            display: flex; 
+            gap: 25px; 
+            margin-bottom: 40px; 
+        }
+        .stat-card { 
+            background: linear-gradient(145deg, rgba(30, 30, 46, 0.8), rgba(20, 20, 30, 0.9)); 
+            padding: 30px; 
+            border-radius: 12px; 
+            flex: 1; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.05);
+            position: relative;
+            overflow: hidden;
+        }
+        .stat-card::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 4px;
+            background: linear-gradient(90deg, #5865F2, #00f2fe);
+        }
+        .stat-card h3 {
+            margin: 0 0 10px 0;
+            color: #a0aec0;
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+        .stat-number { 
+            font-size: 2.5em; 
+            font-weight: 800; 
+            color: white; 
+        }
+        .card {
+            background: rgba(30, 30, 46, 0.8);
+            padding: 30px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.05);
+            margin-bottom: 40px;
+        }
+        select, button { 
+            padding: 12px 20px; 
+            border-radius: 8px; 
+            border: none; 
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            background: rgba(0,0,0,0.3);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        button { 
+            background: linear-gradient(90deg, #5865F2, #4752C4); 
+            cursor: pointer; 
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(88, 101, 242, 0.4);
+        }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 15px; 
+            background: rgba(20, 20, 30, 0.5);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        th, td { 
+            padding: 15px; 
+            text-align: left; 
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        th { 
+            background-color: rgba(30, 30, 46, 0.9); 
+            color: #a0aec0;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85em;
+        }
+        .status-badge {
+            background: rgba(88, 101, 242, 0.2);
+            color: #5865F2;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Zuperming</h2>
+        <a href="/admin" class="active">Dashboard</a>
+        <a href="/admin/script">Script · Premium</a>
+        <a href="/admin/script/sp">Script · Service Provider</a>
+        <a href="/admin/logout" class="logout">Logout</a>
+    </div>
+
+    <div class="content">
+        <h1 style="margin-top: 0; margin-bottom: 30px;">Overview</h1>
+
+        <div class="stats-container">
+            <div class="stat-card">
+                <h3>Total Executions</h3>
+                <div class="stat-number"><%= stats.total_executions %></div>
+            </div>
+            <div class="stat-card">
+                <h3>HWID Resets</h3>
+                <div class="stat-number"><%= stats.total_resets %></div>
+            </div>
+            <div class="stat-card">
+                <h3>Online in Discord</h3>
+                <div class="stat-number"><%= onlineMembers %></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 style="margin-top:0;">Generate License Key</h3>
+            <p style="color:#a0aec0; margin-top:0;">Public API base: <code style="background:rgba(0,0,0,0.5);padding:2px 6px;border-radius:4px;"><%= baseUrl %></code></p>
+            <form action="/admin/generate-key" method="POST" style="display: flex; gap: 15px; flex-wrap: wrap;">
+                <select name="product" required>
+                    <% Object.values(products).forEach(function(p) { %>
+                        <option value="<%= p.id %>"><%= p.name %></option>
+                    <% }); %>
+                </select>
+                <select name="duration" required>
+                    <option value="1d">1 Day</option>
+                    <option value="3d">3 Days</option>
+                    <option value="7d">1 Week</option>
+                    <option value="30d">1 Month</option>
+                    <option value="lifetime">Lifetime</option>
+                </select>
+                <button type="submit">Generate Key</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h3 style="margin-top:0;">Recent Keys</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Key</th>
+                        <th>Product</th>
+                        <th>Duration</th>
+                        <th>Status</th>
+                        <th>Discord ID</th>
+                        <th>Created At</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% keys.forEach(function(key) { %>
+                        <tr>
+                            <td><code style="background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 4px;"><%= key.key_string %></code></td>
+                            <td><%= key.product || 'premium' %></td>
+                            <td><%= key.duration %></td>
+                            <td><span class="status-badge"><%= key.status %></span></td>
+                            <td><%= key.discord_id || 'Not claimed' %></td>
+                            <td style="color: #a0aec0;"><%= key.created_at %></td>
+                        </tr>
+                    <% }); %>
+                    <% if (keys.length === 0) { %>
+                        <tr><td colspan="6" style="text-align: center; padding: 30px; color: #a0aec0;">No keys generated yet.</td></tr>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
