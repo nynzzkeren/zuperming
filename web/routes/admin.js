@@ -5,6 +5,8 @@ const db = require('../../database');
 const crypto = require('crypto');
 const bot = require('../../bot/bot');
 const { PRODUCTS, getProduct, getBaseUrl } = require('../../config/products');
+const { normalizeDuration, formatDurationLabel } = require('../../utils/keys');
+const { buildChangelogPayload } = require('../../utils/changelog');
 
 const upload = multer({
     storage: multer.memoryStorage(),
@@ -90,9 +92,14 @@ router.get('/', requireAuth, async (req, res) => {
             res.render('dashboard', {
                 stats,
                 onlineMembers,
-                keys: keys || [],
+                keys: (keys || []).map(k => ({
+                    ...k,
+                    duration_label: formatDurationLabel(k.duration)
+                })),
                 products: PRODUCTS,
-                baseUrl: getBaseUrl()
+                baseUrl: getBaseUrl(),
+                message: null,
+                error: null
             });
         });
     });
@@ -101,13 +108,99 @@ router.get('/', requireAuth, async (req, res) => {
 router.post('/generate-key', requireAuth, (req, res) => {
     const { duration, product: productId } = req.body;
     const product = getProduct(productId) || getProduct('premium');
+    const normalized = normalizeDuration(duration);
     const key = `${product.keyPrefix}-` + crypto.randomBytes(8).toString('hex').toUpperCase();
 
     db.run(
         `INSERT INTO keys (key_string, duration, product) VALUES (?, ?, ?)`,
-        [key, duration, product.id],
+        [key, normalized, product.id],
         () => res.redirect('/admin')
     );
+});
+
+router.get('/update', requireAuth, (req, res) => {
+    res.render('update', {
+        message: null,
+        error: null,
+        baseUrl: getBaseUrl(),
+        defaultChannel: process.env.UPDATE_CHANNEL_ID || ''
+    });
+});
+
+router.post('/update', requireAuth, async (req, res) => {
+    try {
+        const {
+            game,
+            version,
+            status,
+            added,
+            improved,
+            removed,
+            channel_id,
+            ping_everyone
+        } = req.body;
+
+        let types = req.body.types || [];
+        if (!Array.isArray(types)) types = [types].filter(Boolean);
+
+        if (!game || !version || types.length === 0) {
+            return res.render('update', {
+                message: null,
+                error: 'Game, version, and at least one type (Premium / Service Provider) are required.',
+                baseUrl: getBaseUrl(),
+                defaultChannel: process.env.UPDATE_CHANNEL_ID || ''
+            });
+        }
+
+        const typeLabel = types.join(' & ');
+        const payload = buildChangelogPayload({
+            game,
+            types: typeLabel,
+            version,
+            status: status || 'Undetected',
+            added,
+            improved,
+            removed,
+            pingEveryone: ping_everyone === 'on' || ping_everyone === 'true'
+        });
+
+        const targetId = (channel_id || process.env.UPDATE_CHANNEL_ID || '').trim();
+        if (!targetId) {
+            return res.render('update', {
+                message: null,
+                error: 'Set UPDATE_CHANNEL_ID in .env or fill Channel ID in the form.',
+                baseUrl: getBaseUrl(),
+                defaultChannel: ''
+            });
+        }
+
+        const channel = await bot.client.channels.fetch(targetId);
+        if (!channel || !channel.isTextBased()) {
+            return res.render('update', {
+                message: null,
+                error: 'Invalid Discord channel ID.',
+                baseUrl: getBaseUrl(),
+                defaultChannel: process.env.UPDATE_CHANNEL_ID || ''
+            });
+        }
+
+        await channel.send(payload);
+
+        return res.render('update', {
+            message: `Update posted to #${channel.name || targetId}`,
+            error: null,
+            baseUrl: getBaseUrl(),
+            defaultChannel: process.env.UPDATE_CHANNEL_ID || ''
+        });
+    } catch (e) {
+        console.error(e);
+        return res.render('update', {
+            message: null,
+            error: 'Failed to post update: ' + e.message,
+            baseUrl: getBaseUrl(),
+            defaultChannel: process.env.UPDATE_CHANNEL_ID || ''
+        });
+    }
 });
 
 router.get('/script', requireAuth, (req, res) => renderScriptPage(res, 'premium'));
@@ -127,16 +220,10 @@ router.post('/script/sp', requireAuth, (req, res, next) => {
     });
 }, (req, res) => saveScript(req, res, 'service_provider'));
 
-router.post('/script/add-game', requireAuth, (req, res) => {
-    addGame(req, res, 'premium');
-});
-
-router.post('/script/sp/add-game', requireAuth, (req, res) => {
-    addGame(req, res, 'service_provider');
-});
+router.post('/script/add-game', requireAuth, (req, res) => addGame(req, res, 'premium'));
+router.post('/script/sp/add-game', requireAuth, (req, res) => addGame(req, res, 'service_provider'));
 
 function addGame(req, res, productId) {
-    const product = getProduct(productId);
     const name = (req.body.game_name || '').trim();
     const robloxGameId = (req.body.roblox_game_id || '').trim();
 

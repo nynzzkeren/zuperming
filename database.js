@@ -17,10 +17,12 @@ const db = new sqlite3.Database(dbPath, (err) => {
             db.run(`CREATE TABLE IF NOT EXISTS keys (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 key_string TEXT UNIQUE NOT NULL,
-                duration TEXT NOT NULL,
+                duration TEXT NOT NULL DEFAULT 'lifetime',
                 status TEXT DEFAULT 'unused',
                 discord_id TEXT,
                 product TEXT DEFAULT 'premium',
+                redeemed_at DATETIME,
+                expires_at DATETIME,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )`);
 
@@ -29,7 +31,9 @@ const db = new sqlite3.Database(dbPath, (err) => {
                 hwid TEXT,
                 last_reset DATETIME,
                 role_claimed BOOLEAN DEFAULT 0,
-                is_blacklisted BOOLEAN DEFAULT 0
+                is_blacklisted BOOLEAN DEFAULT 0,
+                last_executor_warn DATETIME,
+                last_executor_name TEXT
             )`);
 
             db.run(`CREATE TABLE IF NOT EXISTS games (
@@ -58,14 +62,20 @@ const db = new sqlite3.Database(dbPath, (err) => {
 
             db.run(`INSERT OR IGNORE INTO stats (id, total_executions, total_resets) VALUES (1, 0, 0)`);
 
-            db.run(`ALTER TABLE keys ADD COLUMN product TEXT DEFAULT 'premium'`, () => {});
-            db.run(`ALTER TABLE scripts ADD COLUMN product TEXT DEFAULT 'premium'`, () => {});
-            db.run(`ALTER TABLE scripts ADD COLUMN game_id TEXT DEFAULT 'default'`, () => {});
+            const alterIgnore = () => {};
+            db.run(`ALTER TABLE keys ADD COLUMN product TEXT DEFAULT 'premium'`, alterIgnore);
+            db.run(`ALTER TABLE keys ADD COLUMN redeemed_at DATETIME`, alterIgnore);
+            db.run(`ALTER TABLE keys ADD COLUMN expires_at DATETIME`, alterIgnore);
+            db.run(`ALTER TABLE scripts ADD COLUMN product TEXT DEFAULT 'premium'`, alterIgnore);
+            db.run(`ALTER TABLE scripts ADD COLUMN game_id TEXT DEFAULT 'default'`, alterIgnore);
+            db.run(`ALTER TABLE users ADD COLUMN last_executor_warn DATETIME`, alterIgnore);
+            db.run(`ALTER TABLE users ADD COLUMN last_executor_name TEXT`, alterIgnore);
+
             db.run(`UPDATE keys SET product = 'premium' WHERE product IS NULL`);
+            db.run(`UPDATE keys SET duration = 'lifetime' WHERE duration IS NULL OR TRIM(duration) = ''`);
             db.run(`UPDATE scripts SET product = 'premium' WHERE product IS NULL`);
             db.run(`UPDATE scripts SET game_id = 'default' WHERE game_id IS NULL`);
 
-            // Seed default games (from your old hub map)
             const seed = [
                 ['premium', '10200395747', 'GAG2'],
                 ['premium', '6739698191', 'VD'],

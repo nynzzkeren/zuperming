@@ -27,6 +27,13 @@ const apiRoutes = require('./web/routes/api');
 app.use('/admin', adminRoutes);
 app.use('/api', apiRoutes);
 
+// Public loadstring endpoints (clean URLs for executors)
+// https://zuperming.store/loader
+// https://zuperming.store/loader/sp
+app.get('/loader', (req, res) => apiRoutes.serveLoader(res, 'premium'));
+app.get('/loader/sp', (req, res) => apiRoutes.serveLoader(res, 'service_provider'));
+
+// Root = web dashboard
 app.get('/', (req, res) => {
     res.redirect('/admin');
 });

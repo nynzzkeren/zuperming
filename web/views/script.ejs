@@ -66,6 +66,18 @@
             width: 100%;
             border: none;
         }
+        .menu-toggle {
+            display: none;
+            position: fixed;
+            top: 14px; left: 14px;
+            z-index: 30;
+            background: rgba(6,10,24,0.95);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-weight: 700;
+        }
         .content { margin-left: 250px; padding: 40px; }
         .card {
             background: var(--panel);
@@ -79,10 +91,17 @@
         .hint { color: var(--muted); line-height: 1.6; margin-bottom: 20px; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
         @media (max-width: 900px) {
-            .sidebar { position: relative; width: 100%; height: auto; }
-            .content { margin-left: 0; padding: 20px; }
+            .menu-toggle { display: block; }
+            .sidebar {
+                transform: translateX(-105%);
+                transition: transform 0.25s ease;
+                height: 100%;
+                z-index: 20;
+            }
+            .sidebar.open { transform: translateX(0); }
+            .content { margin-left: 0; padding: 70px 16px 24px; }
             .grid-2 { grid-template-columns: 1fr; }
-            .sidebar a.logout { position: static; }
+            .sidebar a.logout { position: static; margin-top: 30px; }
         }
         label { display: block; font-weight: 600; margin-bottom: 8px; color: var(--muted); font-size: 0.9em; }
         select, input[type="text"], textarea, input[type="file"] {
@@ -138,11 +157,13 @@
     </style>
 </head>
 <body>
+    <button class="menu-toggle" type="button" onclick="document.querySelector('.sidebar').classList.toggle('open')">Menu</button>
     <div class="sidebar">
         <h2>ZUPERMING</h2>
         <a href="/admin">Dashboard</a>
         <a href="/admin/script" class="<%= product.id === 'premium' ? 'active' : '' %>">Script · Premium</a>
         <a href="/admin/script/sp" class="<%= product.id === 'service_provider' ? 'active' : '' %>">Script · Service Provider</a>
+        <a href="/admin/update">Ping Update</a>
         <a href="/admin/logout" class="logout">Logout</a>
     </div>
 

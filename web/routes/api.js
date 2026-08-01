@@ -4,6 +4,8 @@ const path = require('path');
 const router = express.Router();
 const db = require('../../database');
 const { getProduct, getBaseUrl } = require('../../config/products');
+const { isKeyExpired } = require('../../utils/keys');
+const { buildExecutorWarnDm } = require('../../utils/changelog');
 
 function serveLoader(res, productId) {
     const product = getProduct(productId);
@@ -16,6 +18,38 @@ function serveLoader(res, productId) {
         if (err) return res.send(`print("${product.brand}: Loader not found on server")`);
         res.type('text/plain');
         res.send(data.replace(/\{\{BASE_URL\}\}/g, getBaseUrl()));
+    });
+}
+
+function maybeWarnExecutor(keyRow, req) {
+    const quality = String(req.query.unc_quality || '').toLowerCase();
+    if (quality !== 'bad' && quality !== 'medium') return;
+    if (!keyRow.discord_id) return;
+
+    const executor = String(req.query.executor || 'Unknown').slice(0, 64);
+    const score = parseInt(req.query.unc_score || '0', 10) || 0;
+    const total = parseInt(req.query.unc_total || '0', 10) || 0;
+
+    db.get(`SELECT * FROM users WHERE discord_id = ?`, [keyRow.discord_id], async (err, userRow) => {
+        if (err || !userRow) return;
+
+        const last = userRow.last_executor_warn ? new Date(userRow.last_executor_warn).getTime() : 0;
+        const cooldownMs = 12 * 60 * 60 * 1000; // 12h
+        if (Date.now() - last < cooldownMs) return;
+
+        db.run(
+            `UPDATE users SET last_executor_warn = CURRENT_TIMESTAMP, last_executor_name = ? WHERE discord_id = ?`,
+            [executor, keyRow.discord_id]
+        );
+
+        try {
+            const bot = require('../../bot/bot');
+            const user = await bot.client.users.fetch(keyRow.discord_id);
+            const payload = buildExecutorWarnDm({ executorName: executor, score, total });
+            await user.send(payload);
+        } catch (e) {
+            console.error('Failed to DM executor warning:', e.message);
+        }
     });
 }
 
@@ -43,6 +77,12 @@ function handleExecute(req, res, productId) {
             if (err || !keyRow) {
                 return res.send(`game.Players.LocalPlayer:Kick("${brand}: Invalid or Unused Key")`);
             }
+
+            if (isKeyExpired(keyRow)) {
+                return res.send(`game.Players.LocalPlayer:Kick("${brand}: Key expired. Buy/renew your key.")`);
+            }
+
+            maybeWarnExecutor(keyRow, req);
 
             db.get(`SELECT * FROM users WHERE discord_id = ?`, [keyRow.discord_id], (err, userRow) => {
                 if (err || !userRow) {
@@ -108,3 +148,5 @@ router.get('/sp/execute', (req, res) => handleExecute(req, res, 'service_provide
 router.get('/sp/loader', (req, res) => serveLoader(res, 'service_provider'));
 
 module.exports = router;
+module.exports.serveLoader = serveLoader;
+module.exports.handleExecute = handleExecute;

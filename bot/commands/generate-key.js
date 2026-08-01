@@ -2,6 +2,7 @@ const { SlashCommandBuilder } = require('discord.js');
 const db = require('../../database');
 const crypto = require('crypto');
 const { getProduct, PRODUCTS } = require('../../config/products');
+const { normalizeDuration, formatDurationLabel } = require('../../utils/keys');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -9,7 +10,7 @@ module.exports = {
         .setDescription('Generates a new license key (Admin Only)')
         .addStringOption(option =>
             option.setName('product')
-                .setDescription('Which panel/product this key belongs to')
+                .setDescription('Premium or Service Provider')
                 .setRequired(true)
                 .addChoices(
                     { name: 'Zuperming Premium', value: 'premium' },
@@ -17,11 +18,11 @@ module.exports = {
                 ))
         .addStringOption(option =>
             option.setName('duration')
-                .setDescription('Duration of the key (e.g., 1d, 7d, lifetime)')
-                .setRequired(true))
+                .setDescription('Empty/lifetime = permanent. Examples: 1d, 7d, 30d')
+                .setRequired(false))
         .addUserOption(option =>
             option.setName('user')
-                .setDescription('The user to DM the generated key to')
+                .setDescription('DM the key to this user')
                 .setRequired(false)),
     async execute(interaction) {
         if (!interaction.member.permissions.has('Administrator')) {
@@ -29,7 +30,7 @@ module.exports = {
         }
 
         const product = getProduct(interaction.options.getString('product')) || PRODUCTS.premium;
-        const duration = interaction.options.getString('duration');
+        const duration = normalizeDuration(interaction.options.getString('duration'));
         const targetUser = interaction.options.getUser('user');
         const key = `${product.keyPrefix}-` + crypto.randomBytes(8).toString('hex').toUpperCase();
 
@@ -42,17 +43,18 @@ module.exports = {
                     return interaction.reply({ content: 'Failed to generate key. Database error.', ephemeral: true });
                 }
 
-                let responseMsg = `Successfully generated **${product.name}** key:\n\`\`\`\n${key}\n\`\`\`\nDuration: ${duration}`;
+                const label = formatDurationLabel(duration);
+                let responseMsg = `Successfully generated **${product.name}** key:\n\`\`\`\n${key}\n\`\`\`\nDuration: **${label}**`;
 
                 if (targetUser) {
                     try {
                         await targetUser.send(
-                            `Hello! Here is your **${product.name}** license key:\n\`\`\`\n${key}\n\`\`\`\nDuration: ${duration}\n\nRedeem it in the **${product.name}** Discord panel.`
+                            `Hello! Here is your **${product.name}** license key:\n\`\`\`\n${key}\n\`\`\`\nDuration: **${label}**\n\nRedeem it in the **${product.name}** Discord panel.`
                         );
-                        responseMsg += `\n\n✅ Key was successfully sent via DM to ${targetUser.tag}.`;
+                        responseMsg += `\n\n✅ Key sent via DM to ${targetUser.tag}.`;
                     } catch (error) {
                         console.error('Could not send DM to user.', error);
-                        responseMsg += `\n\n❌ Could not send DM to ${targetUser.tag}. They might have DMs disabled.`;
+                        responseMsg += `\n\n❌ Could not DM ${targetUser.tag}.`;
                     }
                 }
 

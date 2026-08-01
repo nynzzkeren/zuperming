@@ -11,6 +11,7 @@ const {
 } = require('discord.js');
 const db = require('../../database');
 const { getProduct, getBaseUrl } = require('../../config/products');
+const { computeExpiresAt, isKeyExpired, formatDurationLabel } = require('../../utils/keys');
 
 function resolveProductFromCustomId(customId) {
     if (customId.startsWith('btn_sp_') || customId === 'modal_sp_redeem' || customId === 'btn_sp_copy_script') {
@@ -21,6 +22,19 @@ function resolveProductFromCustomId(customId) {
 
 function buildLoaderScript(product, keyString) {
     return `_G.key_script = "${keyString}"\nloadstring(game:HttpGet("${getBaseUrl()}${product.loaderRoute}"))()`;
+}
+
+function getValidKey(discordId, productId, cb) {
+    db.get(
+        `SELECT * FROM keys WHERE discord_id = ? AND status = 'used' AND product = ?`,
+        [discordId, productId],
+        (err, row) => {
+            if (err) return cb(err);
+            if (!row) return cb(null, null);
+            if (isKeyExpired(row)) return cb(null, null, 'expired');
+            return cb(null, row);
+        }
+    );
 }
 
 module.exports = {
@@ -66,42 +80,143 @@ module.exports = {
             }
 
             if (action === 'script' || action === 'copy_script') {
-                return db.get(
-                    `SELECT * FROM keys WHERE discord_id = ? AND status = 'used' AND product = ?`,
-                    [interaction.user.id, product.id],
-                    (err, row) => {
-                        if (err) return interaction.reply({ content: 'Database error.', ephemeral: true });
-                        if (!row) {
+                return getValidKey(interaction.user.id, product.id, (err, row, reason) => {
+                    if (err) return interaction.reply({ content: 'Database error.', ephemeral: true });
+                    if (!row) {
+                        return interaction.reply({
+                            content: reason === 'expired'
+                                ? `Your **${product.name}** key has expired.`
+                                : `You do not own a valid **${product.name}** key.`,
+                            ephemeral: true
+                        });
+                    }
+
+                    const loaderScript = buildLoaderScript(product, row.key_string);
+
+                    if (action === 'copy_script') {
+                        return interaction.reply({
+                            content: `\`${loaderScript}\``,
+                            ephemeral: true
+                        });
+                    }
+
+                    const copyId = product.id === 'service_provider' ? 'btn_sp_copy_script' : 'btn_copy_script';
+                    const container = new ContainerBuilder()
+                        .addTextDisplayComponents(
+                            (text) => text.setContent(`# Your ${product.name} Loader`),
+                            (text) => text.setContent(
+                                `Duration: **${formatDurationLabel(row.duration)}**` +
+                                (row.expires_at ? `\nExpires: ${row.expires_at}` : '\nExpires: Permanent')
+                            ),
+                            (text) => text.setContent('Copy and paste this script into your executor:')
+                        )
+                        .addTextDisplayComponents(
+                            (text) => text.setContent(`\`\`\`lua\n${loaderScript}\n\`\`\``)
+                        )
+                        .addActionRowComponents((rowComp) =>
+                            rowComp.addComponents(
+                                new ButtonBuilder()
+                                    .setCustomId(copyId)
+                                    .setLabel('Mobile Copy')
+                                    .setStyle(ButtonStyle.Secondary)
+                            )
+                        );
+
+                    return interaction.reply({
+                        components: [container],
+                        flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral
+                    });
+                });
+            }
+
+            if (action === 'role') {
+                const roleId = process.env.BUYER_ROLE_ID;
+                if (!roleId) return interaction.reply({ content: 'Buyer role ID is not configured.', ephemeral: true });
+
+                return getValidKey(interaction.user.id, product.id, async (err, row, reason) => {
+                    if (err) return interaction.reply({ content: 'Database error.', ephemeral: true });
+                    if (!row) {
+                        return interaction.reply({
+                            content: reason === 'expired'
+                                ? `Your **${product.name}** key has expired.`
+                                : `You do not own a valid **${product.name}** key to get this role.`,
+                            ephemeral: true
+                        });
+                    }
+
+                    const member = await interaction.guild.members.fetch(interaction.user.id);
+                    if (member.roles.cache.has(roleId)) {
+                        return interaction.reply({ content: 'You already have the buyer role.', ephemeral: true });
+                    }
+
+                    try {
+                        await member.roles.add(roleId);
+                        return interaction.reply({ content: 'Buyer role granted successfully.', ephemeral: true });
+                    } catch (error) {
+                        console.error(error);
+                        return interaction.reply({ content: 'Failed to grant role. Check bot permissions.', ephemeral: true });
+                    }
+                });
+            }
+
+            if (action === 'hwid') {
+                return getValidKey(interaction.user.id, product.id, (err, keyRow, reason) => {
+                    if (err) return interaction.reply({ content: 'Database error.', ephemeral: true });
+                    if (!keyRow) {
+                        return interaction.reply({
+                            content: reason === 'expired'
+                                ? `Your **${product.name}** key has expired.`
+                                : `You need to redeem a **${product.name}** key first before you can reset HWID.`,
+                            ephemeral: true
+                        });
+                    }
+
+                    db.run(
+                        `UPDATE users SET hwid = NULL, last_reset = CURRENT_TIMESTAMP WHERE discord_id = ?`,
+                        [interaction.user.id],
+                        function (updateErr) {
+                            if (updateErr) return interaction.reply({ content: 'Database error.', ephemeral: true });
+                            db.run(`UPDATE stats SET total_resets = total_resets + 1 WHERE id = 1`);
+
+                            const container = new ContainerBuilder()
+                                .addTextDisplayComponents(
+                                    (text) => text.setContent('# HWID Reset Successful'),
+                                    (text) => text.setContent('Your HWID has been successfully reset. You can now use your key on a new device.')
+                                );
+
                             return interaction.reply({
-                                content: `You do not own a valid **${product.name}** key.`,
-                                ephemeral: true
+                                components: [container],
+                                flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral
                             });
                         }
+                    );
+                });
+            }
 
-                        const loaderScript = buildLoaderScript(product, row.key_string);
+            if (action === 'stats') {
+                return getValidKey(interaction.user.id, product.id, (err, keyRow, reason) => {
+                    if (err) return interaction.reply({ content: 'Database error.', ephemeral: true });
+                    if (!keyRow) {
+                        return interaction.reply({
+                            content: reason === 'expired'
+                                ? `Your **${product.name}** key has expired.`
+                                : `You do not own a valid **${product.name}** key.`,
+                            ephemeral: true
+                        });
+                    }
 
-                        if (action === 'copy_script') {
-                            return interaction.reply({
-                                content: `\`${loaderScript}\``,
-                                ephemeral: true
-                            });
-                        }
-
-                        const copyId = product.id === 'service_provider' ? 'btn_sp_copy_script' : 'btn_copy_script';
+                    db.get(`SELECT * FROM users WHERE discord_id = ?`, [interaction.user.id], (err, userRow) => {
                         const container = new ContainerBuilder()
                             .addTextDisplayComponents(
-                                (text) => text.setContent(`# Your ${product.name} Loader`),
-                                (text) => text.setContent('Copy and paste this script into your executor:')
+                                (text) => text.setContent(`# Your Stats · ${product.name}`)
                             )
                             .addTextDisplayComponents(
-                                (text) => text.setContent(`\`\`\`lua\n${loaderScript}\n\`\`\``)
-                            )
-                            .addActionRowComponents((row) =>
-                                row.addComponents(
-                                    new ButtonBuilder()
-                                        .setCustomId(copyId)
-                                        .setLabel('Mobile Copy')
-                                        .setStyle(ButtonStyle.Secondary)
+                                (text) => text.setContent(
+                                    `**Key:** ||${keyRow.key_string}||\n` +
+                                    `**Duration:** ${formatDurationLabel(keyRow.duration)}\n` +
+                                    `**Expires:** ${keyRow.expires_at || 'Permanent'}\n` +
+                                    `**HWID Bound:** ${userRow && userRow.hwid ? 'Yes' : 'No'}\n` +
+                                    `**Last HWID Reset:** ${userRow && userRow.last_reset ? userRow.last_reset : 'Never'}`
                                 )
                             );
 
@@ -109,109 +224,8 @@ module.exports = {
                             components: [container],
                             flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral
                         });
-                    }
-                );
-            }
-
-            if (action === 'role') {
-                const roleId = process.env.BUYER_ROLE_ID;
-                if (!roleId) return interaction.reply({ content: 'Buyer role ID is not configured.', ephemeral: true });
-
-                return db.get(
-                    `SELECT * FROM keys WHERE discord_id = ? AND status = 'used' AND product = ?`,
-                    [interaction.user.id, product.id],
-                    async (err, row) => {
-                        if (err) return interaction.reply({ content: 'Database error.', ephemeral: true });
-                        if (!row) {
-                            return interaction.reply({
-                                content: `You do not own a valid **${product.name}** key to get this role.`,
-                                ephemeral: true
-                            });
-                        }
-
-                        const member = await interaction.guild.members.fetch(interaction.user.id);
-                        if (member.roles.cache.has(roleId)) {
-                            return interaction.reply({ content: 'You already have the buyer role.', ephemeral: true });
-                        }
-
-                        try {
-                            await member.roles.add(roleId);
-                            return interaction.reply({ content: 'Buyer role granted successfully.', ephemeral: true });
-                        } catch (error) {
-                            console.error(error);
-                            return interaction.reply({ content: 'Failed to grant role. Check bot permissions.', ephemeral: true });
-                        }
-                    }
-                );
-            }
-
-            if (action === 'hwid') {
-                return db.get(
-                    `SELECT * FROM keys WHERE discord_id = ? AND status = 'used' AND product = ?`,
-                    [interaction.user.id, product.id],
-                    (err, keyRow) => {
-                        if (err) return interaction.reply({ content: 'Database error.', ephemeral: true });
-                        if (!keyRow) {
-                            return interaction.reply({
-                                content: `You need to redeem a **${product.name}** key first before you can reset HWID.`,
-                                ephemeral: true
-                            });
-                        }
-
-                        db.run(
-                            `UPDATE users SET hwid = NULL, last_reset = CURRENT_TIMESTAMP WHERE discord_id = ?`,
-                            [interaction.user.id],
-                            function (updateErr) {
-                                if (updateErr) return interaction.reply({ content: 'Database error.', ephemeral: true });
-                                db.run(`UPDATE stats SET total_resets = total_resets + 1 WHERE id = 1`);
-
-                                const container = new ContainerBuilder()
-                                    .addTextDisplayComponents(
-                                        (text) => text.setContent('# HWID Reset Successful'),
-                                        (text) => text.setContent('Your HWID has been successfully reset. You can now use your key on a new device.')
-                                    );
-
-                                return interaction.reply({
-                                    components: [container],
-                                    flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral
-                                });
-                            }
-                        );
-                    }
-                );
-            }
-
-            if (action === 'stats') {
-                return db.get(
-                    `SELECT * FROM keys WHERE discord_id = ? AND status = 'used' AND product = ?`,
-                    [interaction.user.id, product.id],
-                    (err, keyRow) => {
-                        if (err) return interaction.reply({ content: 'Database error.', ephemeral: true });
-                        if (!keyRow) {
-                            return interaction.reply({
-                                content: `You do not own a valid **${product.name}** key.`,
-                                ephemeral: true
-                            });
-                        }
-
-                        db.get(`SELECT * FROM users WHERE discord_id = ?`, [interaction.user.id], (err, userRow) => {
-                            const container = new ContainerBuilder()
-                                .addTextDisplayComponents(
-                                    (text) => text.setContent(`# Your Stats · ${product.name}`)
-                                )
-                                .addTextDisplayComponents(
-                                    (text) => text.setContent(
-                                        `**Key:** ||${keyRow.key_string}||\n**Duration:** ${keyRow.duration}\n**HWID Bound:** ${userRow && userRow.hwid ? 'Yes' : 'No'}\n**Last HWID Reset:** ${userRow && userRow.last_reset ? userRow.last_reset : 'Never'}`
-                                    )
-                                );
-
-                            return interaction.reply({
-                                components: [container],
-                                flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral
-                            });
-                        });
-                    }
-                );
+                    });
+                });
             }
         }
 
@@ -236,10 +250,12 @@ module.exports = {
                         return interaction.reply({ content: 'This key has already been used.', ephemeral: true });
                     }
 
+                    const expiresAt = computeExpiresAt(row.duration);
+
                     db.serialize(() => {
                         db.run(
-                            `UPDATE keys SET status = 'used', discord_id = ? WHERE key_string = ? AND product = ?`,
-                            [interaction.user.id, key, product.id]
+                            `UPDATE keys SET status = 'used', discord_id = ?, redeemed_at = CURRENT_TIMESTAMP, expires_at = ? WHERE key_string = ? AND product = ?`,
+                            [interaction.user.id, expiresAt, key, product.id]
                         );
                         db.run(`INSERT OR IGNORE INTO users (discord_id) VALUES (?)`, [interaction.user.id]);
 
@@ -253,7 +269,12 @@ module.exports = {
                         const container = new ContainerBuilder()
                             .addTextDisplayComponents(
                                 (text) => text.setContent('# Key Redeemed Successfully'),
-                                (text) => text.setContent(`Your **${product.name}** key has been redeemed! Use **Get Script** to copy your loader.`)
+                                (text) => text.setContent(
+                                    `Your **${product.name}** key has been redeemed!\n` +
+                                    `Duration: **${formatDurationLabel(row.duration)}**` +
+                                    (expiresAt ? `\nExpires: ${expiresAt}` : '\nExpires: Permanent') +
+                                    `\n\nUse **Get Script** to copy your loader.`
+                                )
                             );
 
                         return interaction.reply({
