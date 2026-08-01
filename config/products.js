@@ -24,6 +24,19 @@ const PRODUCTS = {
         btnPrefix: 'btn_sp_',
         modalRedeem: 'modal_sp_redeem',
         roleEnv: 'SP_BUYER_ROLE_ID'
+    },
+    freemium: {
+        id: 'freemium',
+        name: 'Zuperming Freemium',
+        keyPrefix: 'ZFREE',
+        brand: 'Zuperming Freemium',
+        loaderFile: 'loader_freemium.lua',
+        loaderRoute: '/loader/free',
+        executeRoute: '/api/free/execute',
+        adminScriptPath: '/admin/script/free',
+        btnPrefix: 'btn_free_',
+        modalRedeem: 'modal_free_redeem',
+        roleEnv: 'FREE_BUYER_ROLE_ID'
     }
 };
 
@@ -38,8 +51,22 @@ function getProduct(id) {
 
 function getProductRoleId(product) {
     if (!product) return process.env.BUYER_ROLE_ID || null;
-    // SP falls back to BUYER_ROLE_ID if SP_BUYER_ROLE_ID not set
     return process.env[product.roleEnv] || process.env.BUYER_ROLE_ID || null;
 }
 
-module.exports = { PRODUCTS, getBaseUrl, getProduct, getProductRoleId };
+function getFreemiumGetKeyUrl() {
+    return (process.env.FREEMIUM_GETKEY_URL || `${getBaseUrl()}/get-key`).replace(/\/$/, '');
+}
+
+function getSupportUrl() {
+    return process.env.SUPPORT_URL || process.env.SUGGESTION_URL || 'https://discord.gg/';
+}
+
+module.exports = {
+    PRODUCTS,
+    getBaseUrl,
+    getProduct,
+    getProductRoleId,
+    getFreemiumGetKeyUrl,
+    getSupportUrl
+};

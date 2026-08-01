@@ -32,6 +32,12 @@ app.use('/api', apiRoutes);
 // https://zuperming.store/loader/sp
 app.get('/loader', (req, res) => apiRoutes.serveLoader(res, 'premium'));
 app.get('/loader/sp', (req, res) => apiRoutes.serveLoader(res, 'service_provider'));
+app.get('/loader/free', (req, res) => apiRoutes.serveLoader(res, 'freemium'));
+
+// Freemium get-key page
+app.get('/get-key', (req, res) => {
+    res.render('get-key', { baseUrl: require('./config/products').getBaseUrl() });
+});
 
 // Root = web dashboard
 app.get('/', (req, res) => {

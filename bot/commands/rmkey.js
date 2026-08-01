@@ -14,7 +14,8 @@ module.exports = {
                 .setRequired(true)
                 .addChoices(
                     { name: 'Premium', value: 'premium' },
-                    { name: 'Service Provider', value: 'service_provider' }
+                    { name: 'Service Provider', value: 'service_provider' },
+                    { name: 'Freemium', value: 'freemium' }
                 ))
         .addBooleanOption(o =>
             o.setName('remove_role')

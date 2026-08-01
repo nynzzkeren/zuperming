@@ -68,6 +68,7 @@ const db = new sqlite3.Database(dbPath, (err) => {
             db.run(`ALTER TABLE keys ADD COLUMN expires_at DATETIME`, alterIgnore);
             db.run(`ALTER TABLE scripts ADD COLUMN product TEXT DEFAULT 'premium'`, alterIgnore);
             db.run(`ALTER TABLE scripts ADD COLUMN game_id TEXT DEFAULT 'default'`, alterIgnore);
+            db.run(`ALTER TABLE keys ADD COLUMN bound_hwid TEXT`, alterIgnore);
             db.run(`ALTER TABLE users ADD COLUMN last_executor_warn DATETIME`, alterIgnore);
             db.run(`ALTER TABLE users ADD COLUMN last_executor_name TEXT`, alterIgnore);
 
@@ -80,7 +81,9 @@ const db = new sqlite3.Database(dbPath, (err) => {
                 ['premium', '10200395747', 'GAG2'],
                 ['premium', '6739698191', 'VD'],
                 ['service_provider', '10200395747', 'GAG2'],
-                ['service_provider', '6739698191', 'VD']
+                ['service_provider', '6739698191', 'VD'],
+                ['freemium', '10200395747', 'GAG2'],
+                ['freemium', '6739698191', 'VD']
             ];
             seed.forEach(([product, roblox_game_id, name]) => {
                 db.run(

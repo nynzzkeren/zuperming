@@ -10,10 +10,14 @@ const {
     MessageFlags
 } = require('discord.js');
 const db = require('../../database');
-const { getProduct, getBaseUrl, getProductRoleId } = require('../../config/products');
+const { getProduct, getBaseUrl, getProductRoleId, getFreemiumGetKeyUrl, getSupportUrl } = require('../../config/products');
 const { computeExpiresAt, isKeyExpired, formatDurationLabel } = require('../../utils/keys');
+const { isUsableHttpUrl } = require('../../utils/changelog');
 
 function resolveProductFromCustomId(customId) {
+    if (customId.startsWith('btn_free_') || customId === 'modal_free_redeem' || customId === 'btn_free_copy_script') {
+        return getProduct('freemium');
+    }
     if (customId.startsWith('btn_sp_') || customId === 'modal_sp_redeem' || customId === 'btn_sp_copy_script') {
         return getProduct('service_provider');
     }
@@ -22,6 +26,16 @@ function resolveProductFromCustomId(customId) {
 
 function buildLoaderScript(product, keyString) {
     return `_G.key_script = "${keyString}"\nloadstring(game:HttpGet("${getBaseUrl()}${product.loaderRoute}"))()`;
+}
+
+function freemiumLoaderTemplate() {
+    const url = getFreemiumGetKeyUrl();
+    return (
+        `-- 1) Ambil key di: ${url}\n` +
+        `-- 2) Paste key di bawah, lalu execute\n` +
+        `_G.key_script = "PASTE_YOUR_KEY_HERE"\n` +
+        `loadstring(game:HttpGet("${getBaseUrl()}/loader/free"))()`
+    );
 }
 
 function getValidKey(discordId, productId, cb) {
@@ -35,6 +49,12 @@ function getValidKey(discordId, productId, cb) {
             return cb(null, row);
         }
     );
+}
+
+function copyButtonId(product) {
+    if (product.id === 'freemium') return 'btn_free_copy_script';
+    if (product.id === 'service_provider') return 'btn_sp_copy_script';
+    return 'btn_copy_script';
 }
 
 module.exports = {
@@ -60,8 +80,24 @@ module.exports = {
             const { customId } = interaction;
             const product = resolveProductFromCustomId(customId);
             const action = customId
+                .replace(/^btn_free_/, '')
                 .replace(/^btn_sp_/, '')
                 .replace(/^btn_/, '');
+
+            // Freemium-only buttons
+            if (product.id === 'freemium' && (action === 'getkey' || action === 'support')) {
+                if (action === 'getkey') {
+                    const url = getFreemiumGetKeyUrl();
+                    return interaction.reply({
+                        content: `**Get Freemium Key:**\n${url}`,
+                        ephemeral: true
+                    });
+                }
+                return interaction.reply({
+                    content: `**Support:**\n${getSupportUrl()}`,
+                    ephemeral: true
+                });
+            }
 
             if (action === 'redeem') {
                 const modal = new ModalBuilder()
@@ -80,6 +116,49 @@ module.exports = {
             }
 
             if (action === 'script' || action === 'copy_script') {
+                // Freemium: always give loader template (key from web). If Discord-bound key exists, fill it.
+                if (product.id === 'freemium') {
+                    return getValidKey(interaction.user.id, product.id, (err, row) => {
+                        const loaderScript = row
+                            ? buildLoaderScript(product, row.key_string)
+                            : freemiumLoaderTemplate();
+
+                        if (action === 'copy_script') {
+                            return interaction.reply({ content: `\`${loaderScript}\``, ephemeral: true });
+                        }
+
+                        const container = new ContainerBuilder()
+                            .addTextDisplayComponents(
+                                (text) => text.setContent('# Freemium Loader'),
+                                (text) => text.setContent(
+                                    row
+                                        ? `Key Discord-bound · Duration: **${formatDurationLabel(row.duration)}**`
+                                        : `Ambil key di **Get Key** (web), paste ke \`_G.key_script\`, lalu execute.`
+                                ),
+                                (text) => text.setContent('Copy and paste into your executor:')
+                            )
+                            .addTextDisplayComponents(
+                                (text) => text.setContent(`\`\`\`lua\n${loaderScript}\n\`\`\``)
+                            )
+                            .addActionRowComponents((rowComp) =>
+                                rowComp.addComponents(
+                                    new ButtonBuilder()
+                                        .setCustomId('btn_free_copy_script')
+                                        .setLabel('Mobile Copy')
+                                        .setStyle(ButtonStyle.Secondary),
+                                    ...(isUsableHttpUrl(getFreemiumGetKeyUrl())
+                                        ? [new ButtonBuilder().setLabel('Get Key').setStyle(ButtonStyle.Link).setURL(getFreemiumGetKeyUrl())]
+                                        : [])
+                                )
+                            );
+
+                        return interaction.reply({
+                            components: [container],
+                            flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral
+                        });
+                    });
+                }
+
                 return getValidKey(interaction.user.id, product.id, (err, row, reason) => {
                     if (err) return interaction.reply({ content: 'Database error.', ephemeral: true });
                     if (!row) {
@@ -100,7 +179,6 @@ module.exports = {
                         });
                     }
 
-                    const copyId = product.id === 'service_provider' ? 'btn_sp_copy_script' : 'btn_copy_script';
                     const container = new ContainerBuilder()
                         .addTextDisplayComponents(
                             (text) => text.setContent(`# Your ${product.name} Loader`),
@@ -116,7 +194,7 @@ module.exports = {
                         .addActionRowComponents((rowComp) =>
                             rowComp.addComponents(
                                 new ButtonBuilder()
-                                    .setCustomId(copyId)
+                                    .setCustomId(copyButtonId(product))
                                     .setLabel('Mobile Copy')
                                     .setStyle(ButtonStyle.Secondary)
                             )
