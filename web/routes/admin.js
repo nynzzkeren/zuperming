@@ -153,7 +153,7 @@ router.post('/update', requireAuth, async (req, res) => {
         }
 
         const typeLabel = types.join(' & ');
-        const payload = buildChangelogPayload({
+        const basePayload = {
             game,
             types: typeLabel,
             version,
@@ -162,7 +162,7 @@ router.post('/update', requireAuth, async (req, res) => {
             improved,
             removed,
             pingEveryone: ping_everyone === 'on' || ping_everyone === 'true'
-        });
+        };
 
         const targetId = (channel_id || process.env.UPDATE_CHANNEL_ID || '').trim();
         if (!targetId) {
@@ -174,17 +174,41 @@ router.post('/update', requireAuth, async (req, res) => {
             });
         }
 
-        const channel = await bot.client.channels.fetch(targetId);
-        if (!channel || !channel.isTextBased()) {
+        if (!bot.client || !bot.client.isReady()) {
             return res.render('update', {
                 message: null,
-                error: 'Invalid Discord channel ID.',
+                error: 'Discord bot belum ready. Tunggu bot online, lalu coba lagi.',
                 baseUrl: getBaseUrl(),
                 defaultChannel: process.env.UPDATE_CHANNEL_ID || ''
             });
         }
 
-        await channel.send(payload);
+        const channel = await bot.client.channels.fetch(targetId);
+        if (!channel || !channel.isTextBased()) {
+            return res.render('update', {
+                message: null,
+                error: 'Invalid Discord channel ID / bot tidak punya akses channel itu.',
+                baseUrl: getBaseUrl(),
+                defaultChannel: process.env.UPDATE_CHANNEL_ID || ''
+            });
+        }
+
+        try {
+            await channel.send(buildChangelogPayload(basePayload));
+        } catch (e1) {
+            console.error('Update send failed, retry without thumbnail:', e1.message);
+            try {
+                await channel.send(buildChangelogPayload({ ...basePayload, includeThumbnail: false }));
+            } catch (e2) {
+                console.error(e2);
+                return res.render('update', {
+                    message: null,
+                    error: 'Failed to post update: ' + e2.message,
+                    baseUrl: getBaseUrl(),
+                    defaultChannel: process.env.UPDATE_CHANNEL_ID || ''
+                });
+            }
+        }
 
         return res.render('update', {
             message: `Update posted to #${channel.name || targetId}`,

@@ -1,13 +1,9 @@
 const {
     ContainerBuilder,
-    SeparatorSpacingSize,
     ButtonBuilder,
     ButtonStyle,
     MessageFlags
 } = require('discord.js');
-
-const LOGO_URL = process.env.BRAND_LOGO_URL ||
-    'https://cdn.discordapp.com/attachments/1449307932750643210/1531296832527929457/1783999829490.png';
 
 function linesFromTextarea(text) {
     return (text || '')
@@ -15,6 +11,15 @@ function linesFromTextarea(text) {
         .map((l) => l.trim())
         .filter(Boolean)
         .map((l) => (l.startsWith('-') || l.startsWith('•') ? l.replace(/^[-•]\s*/, '') : l));
+}
+
+function isUsableHttpUrl(url) {
+    try {
+        const u = new URL(String(url || ''));
+        return u.protocol === 'http:' || u.protocol === 'https:';
+    } catch {
+        return false;
+    }
 }
 
 function buildChangelogPayload({
@@ -27,7 +32,8 @@ function buildChangelogPayload({
     removed,
     pingEveryone,
     reportUrl,
-    suggestionUrl
+    suggestionUrl,
+    includeThumbnail = true
 }) {
     const typeLabel = Array.isArray(types) ? types.filter(Boolean).join(' & ') : String(types || 'Premium');
     const addedLines = linesFromTextarea(added);
@@ -46,8 +52,13 @@ function buildChangelogPayload({
     }
     changelogBody = changelogBody.trim() || '_No changelog details provided._';
 
-    const container = new ContainerBuilder()
-        .addSectionComponents((section) =>
+    const logoUrl = process.env.BRAND_LOGO_URL || '';
+    const canThumb = includeThumbnail && isUsableHttpUrl(logoUrl);
+
+    const container = new ContainerBuilder();
+
+    if (canThumb) {
+        container.addSectionComponents((section) =>
             section
                 .addTextDisplayComponents(
                     (text) => text.setContent(`**Game:** ${game}`),
@@ -56,39 +67,54 @@ function buildChangelogPayload({
                     (text) => text.setContent(`**Status:** ${status || 'Undetected'}`)
                 )
                 .setThumbnailAccessory((thumb) =>
-                    thumb.setURL(LOGO_URL).setDescription('Zuperming')
+                    thumb.setURL(logoUrl).setDescription('Zuperming')
                 )
-        )
-        .addSeparatorComponents((sep) =>
-            sep.setDivider(true).setSpacing(SeparatorSpacingSize.Small)
-        )
+        );
+    } else {
+        container.addTextDisplayComponents(
+            (text) => text.setContent(`**Game:** ${game}`),
+            (text) => text.setContent(`**Type:** ${typeLabel}`),
+            (text) => text.setContent(`**Version:** ${version}`),
+            (text) => text.setContent(`**Status:** ${status || 'Undetected'}`)
+        );
+    }
+
+    container
+        .addSeparatorComponents((sep) => sep.setDivider(true))
         .addTextDisplayComponents(
             (text) => text.setContent('# Change Log'),
             (text) => text.setContent(changelogBody)
         );
 
-    const report = reportUrl || process.env.REPORT_BUG_URL || 'https://discord.com/channels/@me';
-    const suggestion = suggestionUrl || process.env.SUGGESTION_URL || 'https://discord.com/channels/@me';
+    const report = reportUrl || process.env.REPORT_BUG_URL || '';
+    const suggestion = suggestionUrl || process.env.SUGGESTION_URL || '';
+    const buttons = [];
 
-    container.addActionRowComponents((row) =>
-        row.addComponents(
+    if (isUsableHttpUrl(report)) {
+        buttons.push(
             new ButtonBuilder()
                 .setLabel('Report Bug')
                 .setStyle(ButtonStyle.Link)
                 .setURL(report)
-                .setEmoji('🐞'),
+                .setEmoji('🐞')
+        );
+    }
+    if (isUsableHttpUrl(suggestion)) {
+        buttons.push(
             new ButtonBuilder()
                 .setLabel('Suggestion')
                 .setStyle(ButtonStyle.Link)
                 .setURL(suggestion)
                 .setEmoji('✉️')
-        )
-    );
+        );
+    }
 
-    const content = pingEveryone ? '@everyone' : undefined;
+    if (buttons.length) {
+        container.addActionRowComponents((row) => row.addComponents(...buttons));
+    }
 
     return {
-        content,
+        content: pingEveryone ? '@everyone' : undefined,
         components: [container],
         flags: MessageFlags.IsComponentsV2,
         allowedMentions: pingEveryone ? { parse: ['everyone'] } : { parse: [] }
@@ -107,19 +133,20 @@ function buildExecutorWarnDm({ executorName, score, total }) {
                 `Silakan ganti executor, lalu execute ulang.`
             )
         )
-        .addSeparatorComponents((sep) =>
-            sep.setDivider(true).setSpacing(SeparatorSpacingSize.Small)
-        )
+        .addSeparatorComponents((sep) => sep.setDivider(true))
         .addTextDisplayComponents(
             (text) => text.setContent('### Recommended Executors')
         );
 
-    const buttons = executors.slice(0, 3).map((ex) =>
-        new ButtonBuilder()
-            .setLabel(ex.label || ex.name)
-            .setStyle(ButtonStyle.Link)
-            .setURL(ex.url)
-    );
+    const buttons = executors
+        .filter((ex) => isUsableHttpUrl(ex.url))
+        .slice(0, 3)
+        .map((ex) =>
+            new ButtonBuilder()
+                .setLabel(ex.label || ex.name)
+                .setStyle(ButtonStyle.Link)
+                .setURL(ex.url)
+        );
 
     if (buttons.length) {
         container.addActionRowComponents((row) => row.addComponents(...buttons));
@@ -134,5 +161,6 @@ function buildExecutorWarnDm({ executorName, score, total }) {
 module.exports = {
     buildChangelogPayload,
     buildExecutorWarnDm,
-    linesFromTextarea
+    linesFromTextarea,
+    isUsableHttpUrl
 };

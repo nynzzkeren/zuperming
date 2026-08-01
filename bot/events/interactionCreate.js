@@ -10,7 +10,7 @@ const {
     MessageFlags
 } = require('discord.js');
 const db = require('../../database');
-const { getProduct, getBaseUrl } = require('../../config/products');
+const { getProduct, getBaseUrl, getProductRoleId } = require('../../config/products');
 const { computeExpiresAt, isKeyExpired, formatDurationLabel } = require('../../utils/keys');
 
 function resolveProductFromCustomId(customId) {
@@ -130,8 +130,8 @@ module.exports = {
             }
 
             if (action === 'role') {
-                const roleId = process.env.BUYER_ROLE_ID;
-                if (!roleId) return interaction.reply({ content: 'Buyer role ID is not configured.', ephemeral: true });
+                const roleId = getProductRoleId(product);
+                if (!roleId) return interaction.reply({ content: `Role ID not configured (${product.roleEnv}).`, ephemeral: true });
 
                 return getValidKey(interaction.user.id, product.id, async (err, row, reason) => {
                     if (err) return interaction.reply({ content: 'Database error.', ephemeral: true });
@@ -151,7 +151,7 @@ module.exports = {
 
                     try {
                         await member.roles.add(roleId);
-                        return interaction.reply({ content: 'Buyer role granted successfully.', ephemeral: true });
+                        return interaction.reply({ content: `${product.name} role granted successfully.`, ephemeral: true });
                     } catch (error) {
                         console.error(error);
                         return interaction.reply({ content: 'Failed to grant role. Check bot permissions.', ephemeral: true });
@@ -259,7 +259,7 @@ module.exports = {
                         );
                         db.run(`INSERT OR IGNORE INTO users (discord_id) VALUES (?)`, [interaction.user.id]);
 
-                        const roleId = process.env.BUYER_ROLE_ID;
+                        const roleId = getProductRoleId(product);
                         if (roleId) {
                             interaction.guild.members.fetch(interaction.user.id).then(member => {
                                 member.roles.add(roleId).catch(console.error);

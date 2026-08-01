@@ -3,8 +3,8 @@ const { buildChangelogPayload } = require('../../utils/changelog');
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('ping-update')
-        .setDescription('Post a Change Log update ping (Admin Only)')
+        .setName('update')
+        .setDescription('Post Change Log update (Admin)')
         .addStringOption(o => o.setName('game').setDescription('Game name').setRequired(true))
         .addStringOption(o =>
             o.setName('type')
@@ -17,13 +17,13 @@ module.exports = {
                 ))
         .addStringOption(o => o.setName('version').setDescription('Version e.g. 1.4').setRequired(true))
         .addStringOption(o => o.setName('status').setDescription('Status e.g. Undetected').setRequired(false))
-        .addStringOption(o => o.setName('added').setDescription('Added items, separate with | ').setRequired(false))
-        .addStringOption(o => o.setName('improved').setDescription('Improved items, separate with | ').setRequired(false))
-        .addStringOption(o => o.setName('removed').setDescription('Removed items, separate with | ').setRequired(false))
+        .addStringOption(o => o.setName('added').setDescription('Added items, separate with |').setRequired(false))
+        .addStringOption(o => o.setName('improved').setDescription('Improved items, separate with |').setRequired(false))
+        .addStringOption(o => o.setName('removed').setDescription('Removed items, separate with |').setRequired(false))
         .addBooleanOption(o => o.setName('ping_everyone').setDescription('Ping @everyone').setRequired(false))
         .addChannelOption(o =>
             o.setName('channel')
-                .setDescription('Target channel (default: UPDATE_CHANNEL_ID)')
+                .setDescription('Target channel (default UPDATE_CHANNEL_ID)')
                 .addChannelTypes(ChannelType.GuildText)
                 .setRequired(false)),
     async execute(interaction) {
@@ -31,9 +31,11 @@ module.exports = {
             return interaction.reply({ content: 'Admin only.', ephemeral: true });
         }
 
+        await interaction.deferReply({ ephemeral: true });
+
         const pipeToLines = (v) => (v || '').split('|').map(s => s.trim()).filter(Boolean).join('\n');
 
-        const payload = buildChangelogPayload({
+        const base = {
             game: interaction.options.getString('game'),
             types: interaction.options.getString('type'),
             version: interaction.options.getString('version'),
@@ -42,7 +44,7 @@ module.exports = {
             improved: pipeToLines(interaction.options.getString('improved')),
             removed: pipeToLines(interaction.options.getString('removed')),
             pingEveryone: interaction.options.getBoolean('ping_everyone') || false
-        });
+        };
 
         const channel =
             interaction.options.getChannel('channel') ||
@@ -52,10 +54,19 @@ module.exports = {
             interaction.channel;
 
         if (!channel || !channel.isTextBased()) {
-            return interaction.reply({ content: 'Invalid channel.', ephemeral: true });
+            return interaction.editReply({ content: 'Invalid channel.' });
         }
 
-        await channel.send(payload);
-        return interaction.reply({ content: `Update posted in ${channel}.`, ephemeral: true });
+        try {
+            await channel.send(buildChangelogPayload(base));
+        } catch (e1) {
+            try {
+                await channel.send(buildChangelogPayload({ ...base, includeThumbnail: false }));
+            } catch (e2) {
+                return interaction.editReply({ content: `Failed: ${e2.message}` });
+            }
+        }
+
+        return interaction.editReply({ content: `Update posted in ${channel}.` });
     },
 };
