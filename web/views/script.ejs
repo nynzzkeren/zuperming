@@ -3,149 +3,143 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload Script - <%= product.name %></title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <title><%= product.name %> · Scripts</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Orbitron:wght@500;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background: #0f0c29; 
-            color: #e2e8f0; 
-            margin: 0; 
-            padding: 0; 
+        :root {
+            --bg: #05070f;
+            --panel: rgba(8, 12, 28, 0.78);
+            --border: rgba(59, 130, 246, 0.22);
+            --text: #e8eefc;
+            --muted: #8b9bc4;
+            --blue: #3b82f6;
+            --blue-bright: #60a5fa;
+            --magenta: #e11d8f;
+            --danger: #f87171;
+            --ok: #34d399;
+            --bg-image: url('https://cdn.discordapp.com/attachments/1482305764315107423/1532727199881363637/1783999829490.png?ex=6a6de6f1&is=6a6c9571&hm=0f7b740f2385acefcefdd24820f12617d61f6bd4158355a494e856172da7bbd5');
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background:
+                linear-gradient(145deg, rgba(5,7,15,0.92), rgba(10,20,55,0.88), rgba(18,8,30,0.9)),
+                var(--bg-image) center / cover no-repeat fixed;
+            color: var(--text);
+            margin: 0;
+            min-height: 100vh;
         }
         .sidebar {
             width: 250px;
             height: 100vh;
-            background: rgba(30, 30, 46, 0.95);
+            background: rgba(6, 10, 24, 0.92);
+            backdrop-filter: blur(12px);
             position: fixed;
-            border-right: 1px solid rgba(255,255,255,0.05);
+            border-right: 1px solid var(--border);
             padding-top: 30px;
         }
         .sidebar h2 {
             text-align: center;
-            background: -webkit-linear-gradient(#5865F2, #00f2fe);
+            font-family: 'Orbitron', sans-serif;
+            background: linear-gradient(90deg, var(--blue-bright), #a78bfa, var(--magenta));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-bottom: 40px;
+            letter-spacing: 0.04em;
         }
         .sidebar a {
             display: block;
             padding: 15px 25px;
-            color: #a0aec0;
+            color: var(--muted);
             text-decoration: none;
             font-weight: 600;
-            transition: all 0.3s;
         }
         .sidebar a:hover, .sidebar a.active {
-            background: rgba(88, 101, 242, 0.1);
-            color: #5865F2;
-            border-left: 4px solid #5865F2;
+            background: linear-gradient(90deg, rgba(59,130,246,0.18), rgba(225,29,143,0.08));
+            color: var(--blue-bright);
+            border-left: 3px solid var(--blue);
         }
         .sidebar a.logout {
-            color: #ff5555;
+            color: var(--danger);
             position: absolute;
             bottom: 20px;
             width: 100%;
             border: none;
         }
-        .content {
-            margin-left: 250px;
-            padding: 40px;
-        }
+        .content { margin-left: 250px; padding: 40px; }
         .card {
-            background: rgba(30, 30, 46, 0.8);
-            padding: 30px;
-            border-radius: 12px;
-            border: 1px solid rgba(255,255,255,0.05);
-        }
-        .hint {
-            color: #a0aec0;
-            margin-bottom: 25px;
-            line-height: 1.6;
-        }
-        .dropzone {
-            border: 2px dashed rgba(88, 101, 242, 0.45);
-            border-radius: 10px;
+            background: var(--panel);
+            backdrop-filter: blur(10px);
             padding: 28px;
-            text-align: center;
-            background: rgba(0,0,0,0.25);
-            margin-bottom: 18px;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            margin-bottom: 24px;
         }
-        .dropzone input[type="file"] {
-            color: #e2e8f0;
-            max-width: 100%;
+        h1, h3 { margin-top: 0; }
+        .hint { color: var(--muted); line-height: 1.6; margin-bottom: 20px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+        @media (max-width: 900px) {
+            .sidebar { position: relative; width: 100%; height: auto; }
+            .content { margin-left: 0; padding: 20px; }
+            .grid-2 { grid-template-columns: 1fr; }
+            .sidebar a.logout { position: static; }
         }
-        .or {
-            text-align: center;
-            color: #718096;
-            margin: 18px 0;
-            font-weight: 600;
-            font-size: 0.9em;
+        label { display: block; font-weight: 600; margin-bottom: 8px; color: var(--muted); font-size: 0.9em; }
+        select, input[type="text"], textarea, input[type="file"] {
+            width: 100%;
+            background: rgba(5, 10, 24, 0.9);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 14px;
+            font-family: 'JetBrains Mono', monospace;
+            margin-bottom: 14px;
         }
-        textarea { 
-            width: 100%; 
-            height: 280px; 
-            background-color: rgba(0,0,0,0.4); 
-            color: #a0aec0; 
-            border: 1px solid rgba(255,255,255,0.1); 
-            padding: 15px; 
-            font-family: 'Consolas', monospace; 
-            border-radius: 8px;
-            box-sizing: border-box;
-            resize: vertical;
-        }
-        textarea:focus {
+        textarea { height: 220px; resize: vertical; }
+        select:focus, input:focus, textarea:focus {
             outline: none;
-            border-color: #5865F2;
+            border-color: var(--blue);
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
         }
-        button { 
-            padding: 15px 30px; 
-            background: linear-gradient(90deg, #5865F2, #4752C4); 
-            color: white; 
-            border: none; 
-            border-radius: 8px; 
-            cursor: pointer; 
-            margin-top: 15px; 
-            font-weight: 600;
-            font-size: 1.1em;
-            transition: transform 0.2s, box-shadow 0.2s;
+        button {
+            padding: 12px 22px;
+            background: linear-gradient(90deg, #2563eb, #7c3aed);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 700;
+            font-family: inherit;
         }
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(88, 101, 242, 0.4);
-        }
-        .msg { 
-            padding: 15px; 
-            background: rgba(43, 79, 43, 0.2); 
-            color: #8f8; 
-            border: 1px solid rgba(43, 79, 43, 0.5);
-            border-radius: 8px; 
-            margin-bottom: 25px; 
+        button:hover { filter: brightness(1.08); }
+        .msg, .err {
+            padding: 14px;
+            border-radius: 10px;
+            margin-bottom: 18px;
             font-weight: 600;
         }
-        .err {
-            padding: 15px; 
-            background: rgba(120, 40, 40, 0.25); 
-            color: #f88; 
-            border: 1px solid rgba(180, 60, 60, 0.5);
-            border-radius: 8px; 
-            margin-bottom: 25px; 
-            font-weight: 600;
+        .msg { background: rgba(52,211,153,0.12); color: #6ee7b7; border: 1px solid rgba(52,211,153,0.35); }
+        .err { background: rgba(248,113,113,0.12); color: #fecaca; border: 1px solid rgba(248,113,113,0.35); }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.95em; }
+        th { color: var(--muted); text-transform: uppercase; font-size: 0.78em; }
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 0.8em;
+            font-weight: 700;
         }
-        .meta {
-            margin-top: 28px;
-            padding-top: 20px;
-            border-top: 1px solid rgba(255,255,255,0.08);
-            color: #a0aec0;
-            font-size: 0.95em;
-        }
-        .meta strong { color: #e2e8f0; }
-        code { background: rgba(0,0,0,0.4); padding: 2px 6px; border-radius: 4px; }
+        .badge.ok { background: rgba(52,211,153,0.15); color: var(--ok); }
+        .badge.no { background: rgba(248,113,113,0.12); color: var(--danger); }
+        code { font-family: 'JetBrains Mono', monospace; background: rgba(5,10,24,0.9); padding: 2px 6px; border-radius: 4px; }
+        .steps { color: var(--muted); line-height: 1.7; }
+        .steps strong { color: var(--text); }
     </style>
 </head>
 <body>
     <div class="sidebar">
-        <h2>Zuperming</h2>
+        <h2>ZUPERMING</h2>
         <a href="/admin">Dashboard</a>
         <a href="/admin/script" class="<%= product.id === 'premium' ? 'active' : '' %>">Script · Premium</a>
         <a href="/admin/script/sp" class="<%= product.id === 'service_provider' ? 'active' : '' %>">Script · Service Provider</a>
@@ -153,42 +147,92 @@
     </div>
 
     <div class="content">
-        <h1 style="margin-top: 0; margin-bottom: 30px;"><%= product.name %> · Script</h1>
+        <h1><%= product.name %> · Scripts</h1>
 
         <div class="card">
-            <h3 style="margin-top:0;">Upload Protected Script</h3>
-            <p class="hint">
-                Obfus dulu (manual), lalu upload file <code>.lua</code>.
-                Loader: <code><%= baseUrl %><%= product.loaderRoute %></code>
-            </p>
+            <h3>Cara update (simpel)</h3>
+            <div class="steps">
+                1. Pilih game (<strong>VD</strong> / <strong>GAG2</strong>)<br>
+                2. Upload file <code>.lua</code> yang sudah di-obfus<br>
+                3. Klik Save — user execute lagi = otomatis dapat versi baru<br>
+                4. <strong>Loader Discord tidak perlu diganti</strong>
+            </div>
+        </div>
 
-            <% if (message) { %>
-                <div class="msg"><%= message %></div>
-            <% } %>
-            <% if (error) { %>
-                <div class="err"><%= error %></div>
-            <% } %>
+        <% if (message) { %><div class="msg"><%= message %></div><% } %>
+        <% if (error) { %><div class="err"><%= error %></div><% } %>
 
-            <form action="<%= product.adminScriptPath %>" method="POST" enctype="multipart/form-data">
-                <div class="dropzone">
-                    <p style="margin: 0 0 12px; font-weight: 600;">Upload file .lua (sudah di-obfuscate)</p>
+        <div class="grid-2">
+            <div class="card">
+                <h3>Upload / Update Script</h3>
+                <p class="hint">Loader: <code><%= baseUrl %><%= product.loaderRoute %></code></p>
+                <form action="<%= product.adminScriptPath %>" method="POST" enctype="multipart/form-data">
+                    <label>Pilih Game</label>
+                    <select name="game_id" required>
+                        <option value="">-- pilih VD / GAG2 --</option>
+                        <% games.forEach(function(g) { %>
+                            <option value="<%= g.roblox_game_id %>"><%= g.name %> (<%= g.roblox_game_id %>)</option>
+                        <% }); %>
+                    </select>
+
+                    <label>File .lua (sudah obfus)</label>
                     <input type="file" name="script_file" accept=".lua,.txt,text/plain">
-                </div>
 
-                <div class="or">— atau paste isi script obfus di bawah —</div>
+                    <label>Atau paste script obfus</label>
+                    <textarea name="obfuscated_script" placeholder="-- paste di sini jika tidak upload file..."></textarea>
 
-                <textarea name="obfuscated_script" placeholder="-- paste obfuscated lua di sini..."></textarea>
-                <button type="submit">Save / Update Script</button>
-            </form>
+                    <button type="submit">Save / Update Script</button>
+                </form>
+            </div>
 
-            <% if (script) { %>
-                <div class="meta">
-                    <div><strong>Product:</strong> <%= product.name %></div>
-                    <div><strong>Last update:</strong> <%= script.updated_at || '—' %></div>
-                    <div><strong>Source:</strong> <%= script.raw_script || '—' %></div>
-                    <div><strong>Size:</strong> <%= script.obfuscated_script ? script.obfuscated_script.length.toLocaleString() + ' chars' : '—' %></div>
-                </div>
-            <% } %>
+            <div class="card">
+                <h3>Tambah Game Baru</h3>
+                <p class="hint">Tidak perlu edit loader. Tambah GameId di sini, upload script, selesai.</p>
+                <form action="<%= product.adminScriptPath %>/add-game" method="POST">
+                    <label>Nama Game</label>
+                    <input type="text" name="game_name" placeholder="contoh: Blox Fruits" required>
+
+                    <label>Roblox GameId</label>
+                    <input type="text" name="roblox_game_id" placeholder="contoh: 10200395747" required>
+
+                    <button type="submit">Add Game</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Games & Status Script</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>GameId</th>
+                        <th>Script</th>
+                        <th>Last Update</th>
+                        <th>Size</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% games.forEach(function(g) { %>
+                        <tr>
+                            <td><strong><%= g.name %></strong></td>
+                            <td><code><%= g.roblox_game_id %></code></td>
+                            <td>
+                                <% if (g.last_script_update) { %>
+                                    <span class="badge ok">Uploaded</span>
+                                <% } else { %>
+                                    <span class="badge no">Belum upload</span>
+                                <% } %>
+                            </td>
+                            <td><%= g.last_script_update || '—' %></td>
+                            <td><%= g.script_size ? Number(g.script_size).toLocaleString() + ' chars' : '—' %></td>
+                        </tr>
+                    <% }); %>
+                    <% if (games.length === 0) { %>
+                        <tr><td colspan="5" style="color:var(--muted); text-align:center; padding:24px;">Belum ada game.</td></tr>
+                    <% } %>
+                </tbody>
+            </table>
         </div>
     </div>
 </body>

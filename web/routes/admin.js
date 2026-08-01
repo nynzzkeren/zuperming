@@ -26,12 +26,24 @@ const requireAuth = (req, res, next) => {
 
 function renderScriptPage(res, productId, message, error) {
     const product = getProduct(productId);
-    db.get(
-        `SELECT * FROM scripts WHERE product = ? ORDER BY id DESC LIMIT 1`,
+    db.all(
+        `SELECT g.*, (
+            SELECT updated_at FROM scripts s
+            WHERE s.product = g.product AND s.game_id = g.roblox_game_id
+            ORDER BY s.id DESC LIMIT 1
+         ) AS last_script_update,
+         (
+            SELECT LENGTH(obfuscated_script) FROM scripts s
+            WHERE s.product = g.product AND s.game_id = g.roblox_game_id
+            ORDER BY s.id DESC LIMIT 1
+         ) AS script_size
+         FROM games g
+         WHERE g.product = ?
+         ORDER BY g.name ASC`,
         [productId],
-        (err, script) => {
+        (err, games) => {
             res.render('script', {
-                script,
+                games: games || [],
                 message: message || null,
                 error: error || null,
                 product,
@@ -98,10 +110,8 @@ router.post('/generate-key', requireAuth, (req, res) => {
     );
 });
 
-// Premium script manager
-router.get('/script', requireAuth, (req, res) => {
-    renderScriptPage(res, 'premium');
-});
+router.get('/script', requireAuth, (req, res) => renderScriptPage(res, 'premium'));
+router.get('/script/sp', requireAuth, (req, res) => renderScriptPage(res, 'service_provider'));
 
 router.post('/script', requireAuth, (req, res, next) => {
     upload.single('script_file')(req, res, (err) => {
@@ -110,11 +120,6 @@ router.post('/script', requireAuth, (req, res, next) => {
     });
 }, (req, res) => saveScript(req, res, 'premium'));
 
-// Service Provider script manager
-router.get('/script/sp', requireAuth, (req, res) => {
-    renderScriptPage(res, 'service_provider');
-});
-
 router.post('/script/sp', requireAuth, (req, res, next) => {
     upload.single('script_file')(req, res, (err) => {
         if (err) return renderScriptPage(res, 'service_provider', null, err.message);
@@ -122,28 +127,75 @@ router.post('/script/sp', requireAuth, (req, res, next) => {
     });
 }, (req, res) => saveScript(req, res, 'service_provider'));
 
+router.post('/script/add-game', requireAuth, (req, res) => {
+    addGame(req, res, 'premium');
+});
+
+router.post('/script/sp/add-game', requireAuth, (req, res) => {
+    addGame(req, res, 'service_provider');
+});
+
+function addGame(req, res, productId) {
+    const product = getProduct(productId);
+    const name = (req.body.game_name || '').trim();
+    const robloxGameId = (req.body.roblox_game_id || '').trim();
+
+    if (!name || !robloxGameId) {
+        return renderScriptPage(res, productId, null, 'Game name and Roblox GameId are required.');
+    }
+
+    db.run(
+        `INSERT INTO games (product, roblox_game_id, name) VALUES (?, ?, ?)`,
+        [productId, robloxGameId, name],
+        (err) => {
+            if (err) {
+                return renderScriptPage(res, productId, null, 'Failed to add game (maybe GameId already exists).');
+            }
+            renderScriptPage(res, productId, `Game "${name}" added. Sekarang upload script-nya.`);
+        }
+    );
+}
+
 function saveScript(req, res, productId) {
+    const gameId = (req.body.game_id || '').trim();
     const fromFile = req.file ? req.file.buffer.toString('utf8').trim() : '';
     const fromPaste = (req.body.obfuscated_script || '').trim();
     const obfuscated = fromFile || fromPaste;
 
-    if (!obfuscated) {
-        return renderScriptPage(res, productId, null, 'Upload a .lua file or paste the obfuscated script.');
+    if (!gameId) {
+        return renderScriptPage(res, productId, null, 'Pilih game dulu (VD / GAG2 / dll).');
     }
 
-    const sourceLabel = fromFile
-        ? `file:${req.file.originalname}`
-        : 'paste:manual-obfuscated';
+    if (!obfuscated) {
+        return renderScriptPage(res, productId, null, 'Upload file .lua atau paste script obfus.');
+    }
 
-    db.run(
-        `INSERT INTO scripts (product, raw_script, obfuscated_script, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)`,
-        [productId, sourceLabel, obfuscated],
-        (err) => {
-            if (err) return renderScriptPage(res, productId, null, 'Failed to save script: ' + err.message);
-            renderScriptPage(
-                res,
-                productId,
-                'Script updated! Users get this version on next execute. Loader tidak perlu diganti.'
+    db.get(
+        `SELECT * FROM games WHERE product = ? AND roblox_game_id = ?`,
+        [productId, gameId],
+        (err, game) => {
+            if (err || !game) {
+                return renderScriptPage(res, productId, null, 'Game tidak ditemukan. Tambah game dulu.');
+            }
+
+            const sourceLabel = fromFile
+                ? `file:${req.file.originalname}`
+                : 'paste:manual-obfuscated';
+
+            db.run(
+                `INSERT INTO scripts (product, game_id, raw_script, obfuscated_script, updated_at)
+                 VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+                [productId, gameId, sourceLabel, obfuscated],
+                (err) => {
+                    if (err) {
+                        return renderScriptPage(res, productId, null, 'Failed to save: ' + err.message);
+                    }
+                    renderScriptPage(
+                        res,
+                        productId,
+                        `Script ${game.name} updated! User execute lagi = dapat versi baru. Loader tidak perlu diganti.`
+                    );
+                }
             );
         }
     );

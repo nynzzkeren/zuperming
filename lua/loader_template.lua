@@ -14,8 +14,11 @@ if not ZUPER_KEY then
 end
 
 local hwid = game:GetService("RbxAnalyticsService"):GetClientId()
-local apiUrl = "{{BASE_URL}}/api/execute?key=" .. ZUPER_KEY .. "&hwid=" .. hwid
+local gameId = tostring(g.GameId)
+local apiUrl = "{{BASE_URL}}/api/execute?key=" .. ZUPER_KEY .. "&hwid=" .. hwid .. "&game_id=" .. gameId
 
+n("Detected GameId: " .. gameId)
+task.wait(0.5)
 n("Authenticating Key...")
 task.wait(1)
 
@@ -24,10 +27,9 @@ local success, result = pcall(function()
 end)
 
 if success then
-    -- Check if the server kicked us or threw a specific Zuperming error
     if string.find(result, "Zuperming:") and string.find(result, "Kick") then
         n("Authentication Failed!", 4)
-        loadstring(result)() -- This will execute the kick message from server
+        loadstring(result)()
         return
     end
 

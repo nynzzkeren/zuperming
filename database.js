@@ -1,7 +1,11 @@
-const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const fs = require('fs');
+const sqlite3 = require('sqlite3').verbose();
 
-const dbPath = path.resolve(__dirname, 'data', 'database.sqlite');
+const dataDir = path.resolve(__dirname, 'data');
+if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+
+const dbPath = path.resolve(dataDir, 'database.sqlite');
 
 const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
@@ -28,9 +32,19 @@ const db = new sqlite3.Database(dbPath, (err) => {
                 is_blacklisted BOOLEAN DEFAULT 0
             )`);
 
+            db.run(`CREATE TABLE IF NOT EXISTS games (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                product TEXT NOT NULL,
+                roblox_game_id TEXT NOT NULL,
+                name TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(product, roblox_game_id)
+            )`);
+
             db.run(`CREATE TABLE IF NOT EXISTS scripts (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 product TEXT DEFAULT 'premium',
+                game_id TEXT NOT NULL DEFAULT 'default',
                 raw_script TEXT NOT NULL,
                 obfuscated_script TEXT,
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -44,11 +58,26 @@ const db = new sqlite3.Database(dbPath, (err) => {
 
             db.run(`INSERT OR IGNORE INTO stats (id, total_executions, total_resets) VALUES (1, 0, 0)`);
 
-            // Migrate existing DBs that were created before product column
             db.run(`ALTER TABLE keys ADD COLUMN product TEXT DEFAULT 'premium'`, () => {});
             db.run(`ALTER TABLE scripts ADD COLUMN product TEXT DEFAULT 'premium'`, () => {});
+            db.run(`ALTER TABLE scripts ADD COLUMN game_id TEXT DEFAULT 'default'`, () => {});
             db.run(`UPDATE keys SET product = 'premium' WHERE product IS NULL`);
             db.run(`UPDATE scripts SET product = 'premium' WHERE product IS NULL`);
+            db.run(`UPDATE scripts SET game_id = 'default' WHERE game_id IS NULL`);
+
+            // Seed default games (from your old hub map)
+            const seed = [
+                ['premium', '10200395747', 'GAG2'],
+                ['premium', '6739698191', 'VD'],
+                ['service_provider', '10200395747', 'GAG2'],
+                ['service_provider', '6739698191', 'VD']
+            ];
+            seed.forEach(([product, roblox_game_id, name]) => {
+                db.run(
+                    `INSERT OR IGNORE INTO games (product, roblox_game_id, name) VALUES (?, ?, ?)`,
+                    [product, roblox_game_id, name]
+                );
+            });
         });
     }
 });

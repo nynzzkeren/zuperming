@@ -14,8 +14,11 @@ if not ZUPER_KEY then
 end
 
 local hwid = game:GetService("RbxAnalyticsService"):GetClientId()
-local apiUrl = "{{BASE_URL}}/api/sp/execute?key=" .. ZUPER_KEY .. "&hwid=" .. hwid
+local gameId = tostring(g.GameId)
+local apiUrl = "{{BASE_URL}}/api/sp/execute?key=" .. ZUPER_KEY .. "&hwid=" .. hwid .. "&game_id=" .. gameId
 
+n("Detected GameId: " .. gameId)
+task.wait(0.5)
 n("Authenticating Key...")
 task.wait(1)
 
