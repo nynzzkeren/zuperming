@@ -7,6 +7,13 @@ const bot = require('../../bot/bot');
 const { PRODUCTS, getProduct, getBaseUrl } = require('../../config/products');
 const { normalizeDuration, formatDurationLabel } = require('../../utils/keys');
 const { buildChangelogPayload } = require('../../utils/changelog');
+const {
+    getAuthorizeUrl,
+    exchangeCode,
+    fetchDiscordUser,
+    memberHasAdminRole,
+    createOAuthState
+} = require('../../utils/discordAuth');
 
 const upload = multer({
     storage: multer.memoryStorage(),
@@ -22,8 +29,15 @@ const upload = multer({
 });
 
 const requireAuth = (req, res, next) => {
-    if (req.session.loggedIn) next();
-    else res.redirect('/admin/login');
+    if (req.session.loggedIn && req.session.hasAdminRole) next();
+    else if (req.session.loggedIn && !req.session.hasAdminRole) {
+        res.render('access-denied', {
+            username: req.session.username || 'Unknown',
+            reason: req.session.deniedReason || 'missing_role'
+        });
+    } else {
+        res.redirect('/admin/login');
+    }
 };
 
 function renderScriptPage(res, productId, message, error) {
@@ -56,16 +70,57 @@ function renderScriptPage(res, productId, message, error) {
 }
 
 router.get('/login', (req, res) => {
-    res.render('login', { error: null });
+    if (req.session.loggedIn && req.session.hasAdminRole) {
+        return res.redirect('/admin');
+    }
+    res.render('login', { error: req.query.error || null });
 });
 
-router.post('/login', (req, res) => {
-    const { password } = req.body;
-    if (password === process.env.ADMIN_PASSWORD) {
+router.get('/auth/discord', (req, res) => {
+    if (!process.env.DISCORD_CLIENT_SECRET) {
+        return res.render('login', { error: 'DISCORD_CLIENT_SECRET belum di-set di .env' });
+    }
+
+    const state = createOAuthState();
+    req.session.oauthState = state;
+    res.redirect(getAuthorizeUrl(state));
+});
+
+router.get('/auth/discord/callback', async (req, res) => {
+    const { code, state, error: oauthError } = req.query;
+
+    if (oauthError) {
+        return res.render('login', { error: 'Discord login dibatalkan.' });
+    }
+
+    if (!code || !state || state !== req.session.oauthState) {
+        return res.render('login', { error: 'Invalid OAuth state. Coba login lagi.' });
+    }
+
+    delete req.session.oauthState;
+
+    try {
+        const tokenData = await exchangeCode(code);
+        const user = await fetchDiscordUser(tokenData.access_token);
+        const roleCheck = await memberHasAdminRole(bot.client, user.id);
+
+        req.session.discordId = user.id;
+        req.session.username = user.global_name || user.username;
         req.session.loggedIn = true;
-        res.redirect('/admin');
-    } else {
-        res.render('login', { error: 'Invalid password' });
+        req.session.hasAdminRole = roleCheck.allowed;
+        req.session.deniedReason = roleCheck.reason;
+
+        if (roleCheck.allowed) {
+            return res.redirect('/admin');
+        }
+
+        return res.render('access-denied', {
+            username: req.session.username,
+            reason: roleCheck.reason
+        });
+    } catch (e) {
+        console.error('Discord OAuth error:', e.message);
+        return res.render('login', { error: e.message || 'Discord login failed.' });
     }
 });
 
@@ -82,6 +137,7 @@ router.get('/', requireAuth, async (req, res) => {
         try {
             const guild = await bot.client.guilds.fetch(process.env.GUILD_ID);
             if (guild) {
+                await guild.members.fetch({ withPresences: true }).catch(() => null);
                 onlineMembers = guild.members.cache.filter(m => m.presence?.status !== 'offline' && !m.user.bot).size;
             }
         } catch (e) {
@@ -99,7 +155,8 @@ router.get('/', requireAuth, async (req, res) => {
                 products: PRODUCTS,
                 baseUrl: getBaseUrl(),
                 message: null,
-                error: null
+                error: null,
+                username: req.session.username
             });
         });
     });

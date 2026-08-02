@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Access Denied — Zuperming</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #05070f;
+            --panel: rgba(8, 12, 28, 0.82);
+            --border: rgba(248, 113, 113, 0.35);
+            --text: #e8eefc;
+            --muted: #8b9bc4;
+            --danger: #f87171;
+        }
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: linear-gradient(135deg, rgba(5,7,15,0.95), rgba(40,8,8,0.9));
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .box {
+            background: var(--panel);
+            backdrop-filter: blur(14px);
+            padding: 40px;
+            border-radius: 16px;
+            max-width: 420px;
+            width: 100%;
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+        h2 {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--danger);
+            margin: 0 0 12px;
+        }
+        p { color: var(--muted); line-height: 1.6; margin: 0 0 20px; }
+        a {
+            display: inline-block;
+            padding: 12px 20px;
+            border-radius: 10px;
+            background: rgba(248,113,113,0.15);
+            border: 1px solid var(--border);
+            color: var(--text);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        a:hover { background: rgba(248,113,113,0.25); }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h2>ACCESS DENIED</h2>
+        <p>
+            <% if (reason === 'not_in_guild') { %>
+                Akun Discord kamu tidak ada di server Zuperming.
+            <% } else { %>
+                Kamu tidak punya role <strong>Developer</strong> atau <strong>Owner</strong>.
+            <% } %>
+        </p>
+        <p style="font-size: 0.9rem;">Login sebagai: <strong><%= username %></strong></p>
+        <a href="/admin/logout">Logout</a>
+    </div>
+</body>
+</html>
