@@ -4,42 +4,12 @@ const crypto = require('crypto');
 const { getProduct, PRODUCTS, getProductRoleId, getBaseUrl } = require('../../config/products');
 const { normalizeDuration, computeExpiresAt, formatDurationLabel } = require('../../utils/keys');
 
-module.exports = {
-    data: new SlashCommandBuilder()
-        .setName('wl')
-        .setDescription('Whitelist user — auto key, no redeem, langsung Get Script (Admin)')
-        .addUserOption(o =>
-            o.setName('user').setDescription('User to whitelist').setRequired(true))
-        .addStringOption(o =>
-            o.setName('product')
-                .setDescription('Panel type')
-                .setRequired(true)
-                .addChoices(
-                    { name: 'Premium', value: 'premium' },
-                    { name: 'Service Provider', value: 'service_provider' },
-                    { name: 'Freemium', value: 'freemium' }
-                ))
-        .addStringOption(o =>
-            o.setName('duration')
-                .setDescription('Empty = permanent. Ex: 1d, 7d, 30d')
-                .setRequired(false)),
-    async execute(interaction) {
-        if (!interaction.member.permissions.has('Administrator')) {
-            return interaction.reply({ content: 'Admin only.', ephemeral: true });
-        }
-
-        await interaction.deferReply({ ephemeral: true });
-
-        const targetUser = interaction.options.getUser('user');
-        const product = getProduct(interaction.options.getString('product')) || PRODUCTS.premium;
-        const duration = normalizeDuration(interaction.options.getString('duration'));
-        const expiresAt = computeExpiresAt(duration);
+function whitelistUser(targetUser, product, duration, expiresAt, interaction) {
+    return new Promise((resolve) => {
         const key = `${product.keyPrefix}-` + crypto.randomBytes(8).toString('hex').toUpperCase();
-        const loaderScript =
-            `_G.key_script = "${key}"\nloadstring(game:HttpGet("${getBaseUrl()}${product.loaderRoute}"))()`;
+        const loaderScript = `_G.key_script = "${key}"\nloadstring(game:HttpGet("${getBaseUrl()}${product.loaderRoute}"))()`;
 
         db.serialize(() => {
-            // Clear previous used key for this user+product (replace whitelist)
             db.run(
                 `UPDATE keys SET status = 'unused', discord_id = NULL WHERE discord_id = ? AND product = ? AND status = 'used'`,
                 [targetUser.id, product.id]
@@ -52,7 +22,7 @@ module.exports = {
                 async function (err) {
                     if (err) {
                         console.error(err);
-                        return interaction.editReply({ content: 'DB error: ' + err.message });
+                        return resolve({ success: false, reason: err.message, user: targetUser });
                     }
 
                     db.run(
@@ -65,9 +35,11 @@ module.exports = {
                     const roleId = getProductRoleId(product);
                     if (roleId && interaction.guild) {
                         try {
-                            const member = await interaction.guild.members.fetch(targetUser.id);
-                            await member.roles.add(roleId);
-                            roleMsg = `\n✅ Role **${product.name}** given`;
+                            const member = await interaction.guild.members.fetch(targetUser.id).catch(()=>null);
+                            if (member) {
+                                await member.roles.add(roleId);
+                                roleMsg = `\n✅ Role **${product.name}** given`;
+                            }
                         } catch (e) {
                             roleMsg = `\n⚠️ Role gagal: ${e.message}`;
                         }
@@ -88,16 +60,93 @@ module.exports = {
                         // DMs closed — still ok
                     }
 
-                    return interaction.editReply({
-                        content:
-                            `✅ **${targetUser.tag}** whitelisted ke **${product.name}**\n` +
-                            `Key: \`${key}\`\n` +
-                            `Duration: **${formatDurationLabel(duration)}**` +
-                            roleMsg +
-                            `\nUser bisa langsung **Get Script** (tanpa redeem).`
-                    });
+                    resolve({ success: true, key, roleMsg, user: targetUser });
                 }
             );
         });
+    });
+}
+
+module.exports = {
+    data: new SlashCommandBuilder()
+        .setName('wl')
+        .setDescription('Whitelist user or role — auto key, no redeem, langsung Get Script (Admin)')
+        .addMentionableOption(o =>
+            o.setName('target').setDescription('User or Role to whitelist').setRequired(true))
+        .addStringOption(o =>
+            o.setName('product')
+                .setDescription('Panel type')
+                .setRequired(true)
+                .addChoices(
+                    { name: 'Premium', value: 'premium' },
+                    { name: 'Service Provider', value: 'service_provider' },
+                    { name: 'Freemium', value: 'freemium' }
+                ))
+        .addStringOption(o =>
+            o.setName('duration')
+                .setDescription('Empty = permanent. Ex: 1d, 7d, 30d')
+                .setRequired(false)),
+    async execute(interaction) {
+        if (!interaction.member.permissions.has('Administrator')) {
+            return interaction.reply({ content: 'Admin only.', ephemeral: true });
+        }
+
+        await interaction.deferReply({ ephemeral: true });
+
+        const target = interaction.options.getMentionable('target');
+        const product = getProduct(interaction.options.getString('product')) || PRODUCTS.premium;
+        const duration = normalizeDuration(interaction.options.getString('duration'));
+        const expiresAt = computeExpiresAt(duration);
+
+        // Check if target is a Role
+        if (target.members) {
+            // It's a role
+            const role = target;
+            await interaction.guild.members.fetch(); // Ensure all members are cached
+            const members = role.members;
+
+            if (members.size === 0) {
+                return interaction.editReply({ content: `Role **${role.name}** tidak memiliki member.` });
+            }
+
+            await interaction.editReply({ content: `🔄 Memulai mass whitelist untuk **${members.size}** member di role **${role.name}**... (Mungkin butuh waktu agak lama)` });
+
+            let successCount = 0;
+            let failCount = 0;
+
+            for (const [memberId, member] of members) {
+                if (!member.user.bot) {
+                    const result = await whitelistUser(member.user, product, duration, expiresAt, interaction);
+                    if (result.success) successCount++;
+                    else failCount++;
+                    
+                    // Small delay to prevent Discord API rate limiting
+                    await new Promise(r => setTimeout(r, 300));
+                }
+            }
+
+            return interaction.followUp({ 
+                content: `✅ Mass whitelist selesai untuk role **${role.name}**.\nBerhasil: **${successCount}**\nGagal: **${failCount}**`,
+                ephemeral: true 
+            });
+
+        } else {
+            // It's a single user
+            const targetUser = target.user || target;
+            const result = await whitelistUser(targetUser, product, duration, expiresAt, interaction);
+
+            if (!result.success) {
+                return interaction.editReply({ content: `❌ Gagal whitelist ${targetUser.tag}: ${result.reason}` });
+            }
+
+            return interaction.editReply({
+                content:
+                    `✅ **${targetUser.tag}** whitelisted ke **${product.name}**\n` +
+                    `Key: \`${result.key}\`\n` +
+                    `Duration: **${formatDurationLabel(duration)}**` +
+                    result.roleMsg +
+                    `\nUser bisa langsung **Get Script** (tanpa redeem).`
+            });
+        }
     },
 };
