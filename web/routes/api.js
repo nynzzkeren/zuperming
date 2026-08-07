@@ -7,7 +7,12 @@ const { getProduct, getBaseUrl } = require('../../config/products');
 const { isKeyExpired, computeExpiresAt } = require('../../utils/keys');
 const { buildExecutorWarnDm } = require('../../utils/changelog');
 
-function serveLoader(res, productId) {
+function serveLoader(req, res, productId) {
+    const ua = req.headers['user-agent'] || '';
+    if (!ua || ua.includes('Mozilla/') || ua.includes('Chrome/') || ua.includes('Safari/') || ua.includes('Edge/') || ua.includes('Opera/')) {
+        return res.status(404).send('404 Not Found');
+    }
+
     const product = getProduct(productId);
     if (!product) {
         return res.send('print("Unknown product")');
@@ -210,11 +215,11 @@ function serveScript(res, productId, brand, gameId) {
 }
 
 router.get('/execute', (req, res) => handleExecute(req, res, 'premium'));
-router.get('/loader', (req, res) => serveLoader(res, 'premium'));
+router.get('/loader', (req, res) => serveLoader(req, res, 'premium'));
 router.get('/sp/execute', (req, res) => handleExecute(req, res, 'service_provider'));
-router.get('/sp/loader', (req, res) => serveLoader(res, 'service_provider'));
+router.get('/sp/loader', (req, res) => serveLoader(req, res, 'service_provider'));
 router.get('/free/execute', (req, res) => handleExecute(req, res, 'freemium'));
-router.get('/free/loader', (req, res) => serveLoader(res, 'freemium'));
+router.get('/free/loader', (req, res) => serveLoader(req, res, 'freemium'));
 
 module.exports = router;
 module.exports.serveLoader = serveLoader;
