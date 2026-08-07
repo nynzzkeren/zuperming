@@ -9,7 +9,20 @@ const { buildExecutorWarnDm } = require('../../utils/changelog');
 
 function serveLoader(req, res, productId) {
     const ua = req.headers['user-agent'] || '';
-    if (!ua || ua.includes('Mozilla/') || ua.includes('Chrome/') || ua.includes('Safari/') || ua.includes('Edge/') || ua.includes('Opera/')) {
+
+    // Blok browser biasa — tapi izinkan Roblox/executor (tidak ada 'Mozilla/' dll)
+    const isBrowser = !ua
+        || ua.includes('Mozilla/')
+        || ua.includes('Chrome/')
+        || ua.includes('Safari/')
+        || ua.includes('Edge/')
+        || ua.includes('Opera/');
+
+    // Roblox HttpGet biasanya kirim UA yang mengandung 'Roblox' atau tidak ada UA sama sekali dari executor
+    // Jadi kita izinkan kalau UA mengandung 'Roblox' ATAU tidak ada tanda browser
+    const isRoblox = ua.toLowerCase().includes('roblox');
+
+    if (isBrowser && !isRoblox) {
         return res.status(404).send('404 Not Found');
     }
 
