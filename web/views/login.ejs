@@ -16,6 +16,7 @@
             --blue-bright: #60a5fa;
             --magenta: #e11d8f;
             --danger: #f87171;
+            --discord: #5865F2;
             --bg-image: url('https://cdn.discordapp.com/attachments/1482305764315107423/1532727199881363637/1783999829490.png?ex=6a6de6f1&is=6a6c9571&hm=0f7b740f2385acefcefdd24820f12617d61f6bd4158355a494e856172da7bbd5');
         }
         body {
@@ -41,7 +42,7 @@
             box-shadow: 0 24px 60px rgba(0,0,0,0.55), 0 0 40px rgba(59,130,246,0.12);
         }
         h2 {
-            margin: 0 0 24px;
+            margin: 0 0 8px;
             font-family: 'Orbitron', sans-serif;
             background: linear-gradient(90deg, var(--blue-bright), #a78bfa, var(--magenta));
             -webkit-background-clip: text;
@@ -49,30 +50,32 @@
             font-weight: 700;
             letter-spacing: 0.04em;
         }
-        input {
-            padding: 12px 14px;
-            margin: 0 0 16px;
-            width: 100%;
-            box-sizing: border-box;
-            border-radius: 10px;
-            border: 1px solid var(--border);
-            background: rgba(5, 10, 24, 0.85);
-            color: var(--text);
-            outline: none;
+        .subtitle {
+            color: var(--muted);
+            font-size: 0.9rem;
+            margin: 0 0 24px;
+            line-height: 1.5;
         }
-        input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(59,130,246,0.15); }
-        button {
-            padding: 12px;
+        .discord-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 14px;
             width: 100%;
-            background: linear-gradient(90deg, #2563eb, #7c3aed);
+            background: var(--discord);
             color: white;
             border: none;
             border-radius: 10px;
             cursor: pointer;
             font-weight: 700;
             font-family: inherit;
+            font-size: 1rem;
+            text-decoration: none;
+            box-sizing: border-box;
         }
-        button:hover { filter: brightness(1.08); }
+        .discord-btn:hover { filter: brightness(1.08); }
+        .discord-btn svg { width: 22px; height: 22px; fill: currentColor; }
         .error {
             color: var(--danger);
             margin-bottom: 14px;
@@ -80,17 +83,19 @@
             padding: 10px;
             border-radius: 8px;
             border: 1px solid rgba(248,113,113,0.3);
+            font-size: 0.9rem;
         }
     </style>
 </head>
 <body>
     <div class="login-box">
         <h2>ZUPERMING</h2>
+        <p class="subtitle">Login dengan Discord.<br>Hanya role <strong>Developer</strong> &amp; <strong>Owner</strong>.</p>
         <% if (error) { %><div class="error"><%= error %></div><% } %>
-        <form action="/admin/login" method="POST">
-            <input type="password" name="password" placeholder="Enter Admin Password" required>
-            <button type="submit">Authenticate</button>
-        </form>
+        <a href="/admin/auth/discord" class="discord-btn">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+            Login with Discord
+        </a>
     </div>
 </body>
 </html>

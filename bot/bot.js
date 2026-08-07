@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits, Partials, Collection, REST, Routes } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, Collection } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 
@@ -8,13 +8,13 @@ const client = new Client({
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMembers,
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildPresences
     ],
     partials: [Partials.Message, Partials.Channel, Partials.Reaction]
 });
 
 client.commands = new Collection();
-const commands = [];
 
 // Load Commands
 const commandsPath = path.join(__dirname, 'commands');
@@ -26,7 +26,6 @@ if (fs.existsSync(commandsPath)) {
         const command = require(filePath);
         if ('data' in command && 'execute' in command) {
             client.commands.set(command.data.name, command);
-            commands.push(command.data.toJSON());
         } else {
             console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
         }
@@ -48,27 +47,6 @@ if (fs.existsSync(eventsPath)) {
         }
     }
 }
-
-client.once('ready', async () => {
-    console.log(`Logged in as ${client.user.tag}!`);
-
-    // Register slash commands
-    if (process.env.CLIENT_ID && process.env.GUILD_ID && process.env.DISCORD_TOKEN) {
-        const rest = new REST().setToken(process.env.DISCORD_TOKEN);
-        try {
-            console.log(`Started refreshing ${commands.length} application (/) commands.`);
-            const data = await rest.put(
-                Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
-                { body: commands },
-            );
-            console.log(`Successfully reloaded ${data.length} application (/) commands.`);
-        } catch (error) {
-            console.error(error);
-        }
-    } else {
-        console.log("Missing CLIENT_ID, GUILD_ID, or DISCORD_TOKEN in .env. Skipping slash command registration.");
-    }
-});
 
 module.exports = {
     init: () => {
