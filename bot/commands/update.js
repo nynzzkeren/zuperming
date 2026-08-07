@@ -13,7 +13,8 @@ module.exports = {
                 .addChoices(
                     { name: 'Premium', value: 'Premium' },
                     { name: 'Service Provider', value: 'Service Provider' },
-                    { name: 'Service Provider & Premium', value: 'Service Provider & Premium' }
+                    { name: 'Service Provider & Premium', value: 'Service Provider & Premium' },
+                    { name: 'Freemium', value: 'Freemium' }
                 ))
         .addStringOption(o => o.setName('version').setDescription('Version e.g. 1.4').setRequired(true))
         .addStringOption(o => o.setName('status').setDescription('Status e.g. Undetected').setRequired(false))
