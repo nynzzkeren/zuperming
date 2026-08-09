@@ -52,7 +52,12 @@ function renderScriptPage(res, productId, message, error) {
             SELECT LENGTH(obfuscated_script) FROM scripts s
             WHERE s.product = g.product AND s.game_id = g.roblox_game_id
             ORDER BY s.id DESC LIMIT 1
-         ) AS script_size
+         ) AS script_size,
+         (
+            SELECT COUNT(*) FROM live_sessions ls
+            WHERE ls.product = g.product AND ls.game_id = g.roblox_game_id 
+            AND ls.last_seen > datetime('now', '-30 seconds')
+         ) AS active_players
          FROM games g
          WHERE g.product = ?
          ORDER BY g.name ASC`,
@@ -367,11 +372,27 @@ function saveScript(req, res, productId) {
                     if (err) {
                         return renderScriptPage(res, productId, null, 'Failed to save: ' + err.message);
                     }
-                    renderScriptPage(
-                        res,
-                        productId,
-                        `Script ${game.name} updated! User execute lagi = dapat versi baru. Loader tidak perlu diganti.`
-                    );
+                    
+                    const updateMessage = (req.body.update_message || '').trim();
+                    if (updateMessage) {
+                        db.run(
+                            `INSERT INTO notifications (product, game_id, message) VALUES (?, ?, ?)`,
+                            [productId, gameId, updateMessage],
+                            (err2) => {
+                                renderScriptPage(
+                                    res,
+                                    productId,
+                                    `Script ${game.name} updated! Notification sent. User execute lagi = dapat versi baru.`
+                                );
+                            }
+                        );
+                    } else {
+                        renderScriptPage(
+                            res,
+                            productId,
+                            `Script ${game.name} updated! User execute lagi = dapat versi baru. Loader tidak perlu diganti.`
+                        );
+                    }
                 }
             );
         }

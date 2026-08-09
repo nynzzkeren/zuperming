@@ -113,12 +113,17 @@ function buildChangelogPayload({
         container.addActionRowComponents((row) => row.addComponents(...buttons));
     }
 
-    return {
-        content: pingEveryone ? '@everyone' : undefined,
+    const payload = {
         components: [container],
         flags: MessageFlags.IsComponentsV2,
         allowedMentions: pingEveryone ? { parse: ['everyone'] } : { parse: [] }
     };
+
+    if (pingEveryone) {
+        payload.content = '@everyone';
+    }
+
+    return payload;
 }
 
 function buildExecutorWarnDm({ executorName, score, total }) {

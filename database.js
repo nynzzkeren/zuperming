@@ -60,6 +60,22 @@ const db = new sqlite3.Database(dbPath, (err) => {
                 total_resets INTEGER DEFAULT 0
             )`);
 
+            db.run(`CREATE TABLE IF NOT EXISTS live_sessions (
+                hwid TEXT PRIMARY KEY,
+                discord_id TEXT,
+                game_id TEXT,
+                product TEXT,
+                last_seen DATETIME DEFAULT CURRENT_TIMESTAMP
+            )`);
+
+            db.run(`CREATE TABLE IF NOT EXISTS notifications (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                game_id TEXT NOT NULL,
+                product TEXT NOT NULL,
+                message TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )`);
+
             db.run(`INSERT OR IGNORE INTO stats (id, total_executions, total_resets) VALUES (1, 0, 0)`);
 
             const alterIgnore = () => {};

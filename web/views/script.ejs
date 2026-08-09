@@ -203,6 +203,9 @@
                     <label>Atau paste script obfus</label>
                     <textarea name="obfuscated_script" placeholder="-- paste di sini jika tidak upload file..."></textarea>
 
+                    <label>Pesan Notifikasi (Opsional - Muncul ke player yg sedang main)</label>
+                    <input type="text" name="update_message" placeholder="Contoh: Ada update baru, silakan re-execute script!">
+
                     <button type="submit">Save / Update Script</button>
                 </form>
             </div>
@@ -230,6 +233,7 @@
                         <th>Name</th>
                         <th>GameId</th>
                         <th>Script</th>
+                        <th>Active Players</th>
                         <th>Last Update</th>
                         <th>Size</th>
                     </tr>
@@ -246,6 +250,7 @@
                                     <span class="badge no">Belum upload</span>
                                 <% } %>
                             </td>
+                            <td><span style="color:var(--ok); font-weight:bold;"><%= g.active_players || 0 %></span></td>
                             <td><%= g.last_script_update || '—' %></td>
                             <td><%= g.script_size ? Number(g.script_size).toLocaleString() + ' chars' : '—' %></td>
                         </tr>

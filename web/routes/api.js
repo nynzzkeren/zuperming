@@ -9,7 +9,20 @@ const { buildExecutorWarnDm } = require('../../utils/changelog');
 
 function serveLoader(req, res, productId) {
     const ua = req.headers['user-agent'] || '';
-    if (!ua || ua.includes('Mozilla/') || ua.includes('Chrome/') || ua.includes('Safari/') || ua.includes('Edge/') || ua.includes('Opera/')) {
+
+    // Blok browser biasa — tapi izinkan Roblox/executor (tidak ada 'Mozilla/' dll)
+    const isBrowser = !ua
+        || ua.includes('Mozilla/')
+        || ua.includes('Chrome/')
+        || ua.includes('Safari/')
+        || ua.includes('Edge/')
+        || ua.includes('Opera/');
+
+    // Roblox HttpGet biasanya kirim UA yang mengandung 'Roblox' atau tidak ada UA sama sekali dari executor
+    // Jadi kita izinkan kalau UA mengandung 'Roblox' ATAU tidak ada tanda browser
+    const isRoblox = ua.toLowerCase().includes('roblox');
+
+    if (isBrowser && !isRoblox) {
         return res.status(404).send('404 Not Found');
     }
 
@@ -206,14 +219,65 @@ function serveScript(res, productId, brand, gameId) {
                     }
 
                     db.run(`UPDATE stats SET total_executions = total_executions + 1 WHERE id = 1`);
+                    
+                    // Inject polling script
+                    const pollingCode = `
+task.spawn(function()
+    local last_id = 0
+    while task.wait(10) do
+        local success, res = pcall(function()
+            return game:HttpGet("{{BASE_URL}}/api/poll?product=${productId}&game_id=${gameId}&hwid=${req.query.hwid}&discord_id=${req.query.discord_id || ''}&last_id=" .. tostring(last_id))
+        end)
+        if success and res and res ~= "" then
+            local data = game:GetService("HttpService"):JSONDecode(res)
+            if data and data.message then
+                game:GetService("StarterGui"):SetCore("SendNotification", {
+                    Title = "Code by Kyouto",
+                    Text = data.message,
+                    Duration = 10
+                })
+                last_id = data.id or last_id
+            end
+        end
+    end
+end)
+`.replace(/\{\{BASE_URL\}\}/g, getBaseUrl());
+
                     res.type('text/plain');
-                    res.send(scriptRow.obfuscated_script);
+                    res.send(pollingCode + '\n' + scriptRow.obfuscated_script);
                 }
             );
         }
     );
 }
 
+function handlePoll(req, res) {
+    const { product, game_id, hwid, discord_id, last_id } = req.query;
+    if (!product || !game_id || !hwid) return res.send('');
+
+    // Update active session
+    db.run(
+        `INSERT INTO live_sessions (hwid, discord_id, game_id, product, last_seen) 
+         VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+         ON CONFLICT(hwid) DO UPDATE SET last_seen=CURRENT_TIMESTAMP, discord_id=excluded.discord_id, game_id=excluded.game_id, product=excluded.product`,
+        [hwid, discord_id || null, game_id, product]
+    );
+
+    // Check for new notifications
+    const lastIdNum = parseInt(last_id, 10) || 0;
+    db.get(
+        `SELECT id, message FROM notifications WHERE product = ? AND game_id = ? AND id > ? ORDER BY id DESC LIMIT 1`,
+        [product, game_id, lastIdNum],
+        (err, row) => {
+            if (err || !row) {
+                return res.send('');
+            }
+            res.json({ id: row.id, message: row.message });
+        }
+    );
+}
+
+router.get('/poll', handlePoll);
 router.get('/execute', (req, res) => handleExecute(req, res, 'premium'));
 router.get('/loader', (req, res) => serveLoader(req, res, 'premium'));
 router.get('/sp/execute', (req, res) => handleExecute(req, res, 'service_provider'));
@@ -224,3 +288,4 @@ router.get('/free/loader', (req, res) => serveLoader(req, res, 'freemium'));
 module.exports = router;
 module.exports.serveLoader = serveLoader;
 module.exports.handleExecute = handleExecute;
+module.exports.serveScript = serveScript;
