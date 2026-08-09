@@ -59,6 +59,9 @@ module.exports = {
         }
 
         try {
+            if (base.pingEveryone) {
+                await channel.send('@everyone');
+            }
             await channel.send(buildChangelogPayload(base));
         } catch (e1) {
             try {

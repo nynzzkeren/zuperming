@@ -256,6 +256,9 @@ router.post('/update', requireAuth, async (req, res) => {
         }
 
         try {
+            if (basePayload.pingEveryone) {
+                await channel.send('@everyone');
+            }
             await channel.send(buildChangelogPayload(basePayload));
         } catch (e1) {
             console.error('Update send failed, retry without thumbnail:', e1.message);

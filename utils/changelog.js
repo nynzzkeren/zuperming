@@ -119,10 +119,6 @@ function buildChangelogPayload({
         allowedMentions: pingEveryone ? { parse: ['everyone'] } : { parse: [] }
     };
 
-    if (pingEveryone) {
-        payload.content = '@everyone';
-    }
-
     return payload;
 }
 
