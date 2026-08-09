@@ -116,7 +116,7 @@ function handleExecute(req, res, productId) {
                     return res.send(`game.Players.LocalPlayer:Kick("${brand}: You are blacklisted.")`);
                 }
 
-                const afterAuth = () => serveScript(res, productId, brand, String(gameId));
+                const afterAuth = () => serveScript(req, res, productId, brand, String(gameId));
 
                 if (!userRow.hwid) {
                     db.run(`UPDATE users SET hwid = ? WHERE discord_id = ?`, [hwid, keyRow.discord_id], (err) => {
@@ -161,7 +161,7 @@ function handleFreemiumExecute(req, res, product, key, hwid, gameId) {
                     maybeWarnExecutor(row, req);
                 }
 
-                const finish = () => serveScript(res, 'freemium', brand, gameId);
+                const finish = () => serveScript(req, res, 'freemium', brand, gameId);
 
                 if (!row.bound_hwid) {
                     db.run(`UPDATE keys SET bound_hwid = ? WHERE id = ?`, [hwid, row.id], (e) => {
@@ -197,7 +197,7 @@ function handleFreemiumExecute(req, res, product, key, hwid, gameId) {
     );
 }
 
-function serveScript(res, productId, brand, gameId) {
+function serveScript(req, res, productId, brand, gameId) {
     db.get(
         `SELECT name FROM games WHERE product = ? AND roblox_game_id = ?`,
         [productId, gameId],
@@ -229,8 +229,8 @@ task.spawn(function()
             return game:HttpGet("{{BASE_URL}}/api/poll?product=${productId}&game_id=${gameId}&hwid=${req.query.hwid}&discord_id=${req.query.discord_id || ''}&last_id=" .. tostring(last_id))
         end)
         if success and res and res ~= "" then
-            local data = game:GetService("HttpService"):JSONDecode(res)
-            if data and data.message then
+            local s2, data = pcall(function() return game:GetService("HttpService"):JSONDecode(res) end)
+            if s2 and data and data.message then
                 game:GetService("StarterGui"):SetCore("SendNotification", {
                     Title = "Code by Kyouto",
                     Text = data.message,
