@@ -79,6 +79,93 @@ module.exports = {
         if (interaction.isButton()) {
             const { customId } = interaction;
             const product = resolveProductFromCustomId(customId);
+            if (customId === 'btn_add_game_modal') {
+                const modal = new ModalBuilder()
+                    .setCustomId('modal_add_game')
+                    .setTitle('Add New Game');
+
+                const productInput = new TextInputBuilder()
+                    .setCustomId('productInput')
+                    .setLabel('Product (premium, freemium, service_provider)')
+                    .setPlaceholder('premium')
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(true);
+
+                const gameIdInput = new TextInputBuilder()
+                    .setCustomId('gameIdInput')
+                    .setLabel('Roblox Game ID')
+                    .setPlaceholder('e.g., 10200395747')
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(true);
+
+                const gameNameInput = new TextInputBuilder()
+                    .setCustomId('gameNameInput')
+                    .setLabel('Game Name')
+                    .setPlaceholder('e.g., Grow a Garden 2')
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(true);
+
+                modal.addComponents(
+                    new ActionRowBuilder().addComponents(productInput),
+                    new ActionRowBuilder().addComponents(gameIdInput),
+                    new ActionRowBuilder().addComponents(gameNameInput)
+                );
+                return interaction.showModal(modal);
+            }
+
+            if (customId === 'btn_upload_script_flow') {
+                await interaction.reply({
+                    content: `**[Upload Script]**\nSilakan ketik balas di channel ini dengan format:\n\`Product_Type Roblox_Game_ID\`\nContoh: \`premium 10200395747\`\nDan pastikan kamu **ATTACH/LAMPIRKAN** file \`.lua\` atau \`.txt\` pada pesan tersebut.\n*(Waktu kamu 60 detik)*`,
+                    ephemeral: true
+                });
+
+                const filter = m => m.author.id === interaction.user.id && m.attachments.size > 0;
+                const collector = interaction.channel.createMessageCollector({ filter, time: 60000, max: 1 });
+
+                collector.on('collect', async m => {
+                    const contentArgs = m.content.trim().split(' ');
+                    if (contentArgs.length < 2) {
+                        return interaction.followUp({ content: 'Format salah. Harus ada Product Type dan Game ID di pesannya. Contoh: `premium 12345`', ephemeral: true });
+                    }
+                    const productArg = contentArgs[0].toLowerCase();
+                    const gameIdArg = contentArgs[1];
+                    const attachment = m.attachments.first();
+                    
+                    if (!attachment.name.endsWith('.lua') && !attachment.name.endsWith('.txt')) {
+                        return interaction.followUp({ content: 'File harus berakhiran .lua atau .txt', ephemeral: true });
+                    }
+
+                    try {
+                        const response = await fetch(attachment.url);
+                        const scriptContent = await response.text();
+
+                        // Check if game exists
+                        db.get(`SELECT * FROM games WHERE product = ? AND roblox_game_id = ?`, [productArg, gameIdArg], (err, gameRow) => {
+                            if (err || !gameRow) return interaction.followUp({ content: `Game ID ${gameIdArg} untuk produk ${productArg} belum terdaftar! Silahkan "Add New Game" dulu.`, ephemeral: true });
+
+                            db.run(
+                                `INSERT INTO scripts (product, game_id, raw_script, obfuscated_script, updated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+                                [productArg, gameIdArg, `discord_upload:${attachment.name}`, scriptContent],
+                                (err) => {
+                                    if (err) return interaction.followUp({ content: 'Gagal save ke database.', ephemeral: true });
+                                    m.delete().catch(()=>null); 
+                                    interaction.followUp({ content: `✅ Script untuk **${gameRow.name}** berhasil diupload dan otomatis live ke Web!`, ephemeral: true });
+                                }
+                            );
+                        });
+                    } catch (e) {
+                        interaction.followUp({ content: 'Gagal mendownload file.', ephemeral: true });
+                    }
+                });
+
+                collector.on('end', collected => {
+                    if (collected.size === 0) {
+                        interaction.followUp({ content: 'Waktu upload habis / dibatalkan.', ephemeral: true });
+                    }
+                });
+                return;
+            }
+
             const action = customId
                 .replace(/^btn_free_/, '')
                 .replace(/^btn_sp_/, '')
@@ -308,6 +395,22 @@ module.exports = {
         }
 
         if (interaction.isModalSubmit()) {
+            if (interaction.customId === 'modal_add_game') {
+                const product = interaction.fields.getTextInputValue('productInput').toLowerCase();
+                const gameId = interaction.fields.getTextInputValue('gameIdInput').trim();
+                const gameName = interaction.fields.getTextInputValue('gameNameInput').trim();
+
+                const validProducts = ['premium', 'freemium', 'service_provider'];
+                if (!validProducts.includes(product)) {
+                    return interaction.reply({ content: 'Product tidak valid. Harus premium, freemium, atau service_provider', ephemeral: true });
+                }
+
+                return db.run(`INSERT INTO games (product, roblox_game_id, name) VALUES (?, ?, ?)`, [product, gameId, gameName], (err) => {
+                    if (err) return interaction.reply({ content: 'Gagal menambahkan game. Mungkin Game ID dan Product ini sudah ada.', ephemeral: true });
+                    return interaction.reply({ content: `✅ Game **${gameName}** (${gameId}) untuk produk **${product}** berhasil ditambahkan! Silahkan cek \`/gamelist\` lagi.`, ephemeral: true });
+                });
+            }
+
             const product = resolveProductFromCustomId(interaction.customId);
             if (interaction.customId !== product.modalRedeem) return;
 
