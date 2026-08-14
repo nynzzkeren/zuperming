@@ -1,0 +1,98 @@
+const express = require('express');
+const router = express.Router();
+const crypto = require('crypto');
+const db = require('../../database');
+const { getBaseUrl } = require('../../config/products');
+
+function getClientIp(req) {
+    return req.headers['x-forwarded-for'] || req.connection.remoteAddress || req.ip;
+}
+
+// Generate random ZFREE key
+function generateFreemiumKey() {
+    return 'ZFREE-' + crypto.randomBytes(4).toString('hex').toUpperCase();
+}
+
+router.post('/start', (req, res) => {
+    const ip = getClientIp(req);
+    const cooldownHours = parseInt(process.env.FREEMIUM_COOLDOWN_HOURS || '24', 10);
+    const cooldownMs = cooldownHours * 60 * 60 * 1000;
+
+    // Check if IP recently got a key
+    db.get(
+        `SELECT created_at FROM freemium_sessions WHERE ip_address = ? AND status = 'completed' ORDER BY created_at DESC LIMIT 1`,
+        [ip],
+        (err, row) => {
+            if (err) return res.status(500).json({ error: 'Database error' });
+
+            if (row) {
+                const lastCompleted = new Date(row.created_at + 'Z').getTime(); // SQLite CURRENT_TIMESTAMP is UTC
+                if (Date.now() - lastCompleted < cooldownMs) {
+                    const remainingHours = Math.ceil((cooldownMs - (Date.now() - lastCompleted)) / (60 * 60 * 1000));
+                    return res.status(429).json({ error: `Cooldown active. Please wait ${remainingHours} hours before generating a new key.` });
+                }
+            }
+
+            // Create a new session
+            const sessionId = crypto.randomUUID();
+            db.run(
+                `INSERT INTO freemium_sessions (id, ip_address, status) VALUES (?, ?, 'pending')`,
+                [sessionId, ip],
+                (err) => {
+                    if (err) return res.status(500).json({ error: 'Failed to create session' });
+                    
+                    const baseUrl = getBaseUrl();
+                    const callbackUrl = encodeURIComponent(`${baseUrl}/api/freemium/callback?session_id=${sessionId}`);
+                    let adUrl = process.env.ADS_PROVIDER_URL || `${baseUrl}/api/freemium/callback?session_id={{DEST}}`;
+                    
+                    // Replace {{DEST}} with actual callback
+                    adUrl = adUrl.replace('{{DEST}}', callbackUrl);
+                    
+                    res.json({ success: true, redirect_url: adUrl, session_id: sessionId });
+                }
+            );
+        }
+    );
+});
+
+router.get('/callback', (req, res) => {
+    const sessionId = req.query.session_id;
+    if (!sessionId) return res.redirect('/get-key?error=missing_session');
+
+    // Verify session
+    db.get(`SELECT * FROM freemium_sessions WHERE id = ?`, [sessionId], (err, session) => {
+        if (err || !session) return res.redirect('/get-key?error=invalid_session');
+        if (session.status === 'completed') {
+            return res.redirect(`/get-key?session_id=${sessionId}`); // Already completed
+        }
+
+        // Generate key and complete session
+        const newKey = generateFreemiumKey();
+        const duration = process.env.FREEMIUM_KEY_DURATION || '24h';
+
+        db.run(
+            `INSERT INTO keys (key_string, duration, status, product) VALUES (?, ?, 'unused', 'freemium')`,
+            [newKey, duration],
+            function (err) {
+                if (err) return res.redirect('/get-key?error=key_generation_failed');
+                
+                db.run(
+                    `UPDATE freemium_sessions SET status = 'completed', generated_key = ? WHERE id = ?`,
+                    [newKey, sessionId],
+                    (err) => {
+                        res.redirect(`/get-key?session_id=${sessionId}`);
+                    }
+                );
+            }
+        );
+    });
+});
+
+router.get('/status/:sessionId', (req, res) => {
+    db.get(`SELECT status, generated_key FROM freemium_sessions WHERE id = ?`, [req.params.sessionId], (err, row) => {
+        if (err || !row) return res.status(404).json({ error: 'Session not found' });
+        res.json({ status: row.status, key: row.generated_key });
+    });
+});
+
+module.exports = router;

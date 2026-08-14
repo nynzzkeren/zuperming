@@ -76,6 +76,14 @@ const db = new sqlite3.Database(dbPath, (err) => {
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )`);
 
+            db.run(`CREATE TABLE IF NOT EXISTS freemium_sessions (
+                id TEXT PRIMARY KEY,
+                ip_address TEXT,
+                status TEXT DEFAULT 'pending',
+                generated_key TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )`);
+
             db.run(`INSERT OR IGNORE INTO stats (id, total_executions, total_resets) VALUES (1, 0, 0)`);
 
             const alterIgnore = () => {};

@@ -23,9 +23,11 @@ app.use(session({
 // Setup Routes
 const adminRoutes = require('./web/routes/admin');
 const apiRoutes = require('./web/routes/api');
+const freemiumRoutes = require('./web/routes/freemium');
 
 app.use('/admin', adminRoutes);
 app.use('/api', apiRoutes);
+app.use('/api/freemium', freemiumRoutes);
 
 // Public loadstring endpoints (clean URLs for executors)
 // https://zuperming.store/loader

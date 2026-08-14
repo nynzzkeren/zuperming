@@ -231,7 +231,7 @@ task.spawn(function()
         if success and res and res ~= "" then
             local s2, data = pcall(function() return game:GetService("HttpService"):JSONDecode(res) end)
             if s2 and data and data.message then
-                game.Players.LocalPlayer:Kick("Code by Kyouto\n\n" .. data.message)
+                game.Players.LocalPlayer:Kick("Code by Kyouto\\n\\n" .. data.message)
                 last_id = data.id or last_id
             end
         end

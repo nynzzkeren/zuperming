@@ -4,85 +4,337 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Get Freemium Key · Zuperming</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --text: #e8eefc;
-            --muted: #8b9bc4;
-            --blue: #60a5fa;
-            --magenta: #e11d8f;
+            --bg-color: #03050a;
+            --surface-color: #0a0f1d;
+            --border-color: rgba(96, 165, 250, 0.2);
+            --text-main: #e8eefc;
+            --text-muted: #8b9bc4;
+            --accent-blue: #3b82f6;
+            --accent-magenta: #e11d48;
+            --glow: 0 0 20px rgba(59, 130, 246, 0.4);
         }
-        * { box-sizing: border-box; }
-        body {
+
+        * {
+            box-sizing: border-box;
             margin: 0;
-            min-height: 100vh;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(59, 130, 246, 0.08), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(225, 29, 72, 0.08), transparent 25%);
+            color: var(--text-main);
             font-family: 'Space Grotesk', sans-serif;
-            color: var(--text);
+            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 24px;
-            background:
-                linear-gradient(145deg, rgba(5,7,15,0.94), rgba(10,20,55,0.9), rgba(18,8,30,0.92)),
-                #05070f;
+            padding: 20px;
         }
-        .box {
+
+        .container {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 40px;
             width: 100%;
-            max-width: 480px;
-            background: rgba(8, 12, 28, 0.85);
-            border: 1px solid rgba(59,130,246,0.25);
-            border-radius: 16px;
-            padding: 32px 28px;
+            max-width: 500px;
             text-align: center;
-            backdrop-filter: blur(12px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            position: relative;
+            overflow: hidden;
         }
-        h1 {
-            margin: 0 0 10px;
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-magenta));
+        }
+
+        .brand {
             font-family: 'Orbitron', sans-serif;
-            background: linear-gradient(90deg, var(--blue), #a78bfa, var(--magenta));
+            font-size: 2.5rem;
+            font-weight: 900;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            font-size: 1.4em;
+            text-transform: uppercase;
+            letter-spacing: 2px;
         }
-        p { color: var(--muted); line-height: 1.6; }
-        code {
-            display: block;
-            margin-top: 18px;
-            padding: 14px;
-            background: rgba(5,10,24,0.9);
-            border-radius: 10px;
-            border: 1px solid rgba(59,130,246,0.2);
-            text-align: left;
-            font-size: 0.85em;
-            white-space: pre-wrap;
+
+        .brand span {
+            background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-magenta) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: 16px 24px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #fff;
+            background: linear-gradient(45deg, var(--accent-blue), #6366f1);
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+            text-decoration: none;
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: var(--glow);
+            background: linear-gradient(45deg, #4f46e5, var(--accent-blue));
+        }
+
+        .btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            background: #374151;
+            box-shadow: none;
+        }
+
+        .error-msg {
+            color: #f87171;
+            background: rgba(248, 113, 113, 0.1);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.95rem;
+            display: none;
+        }
+
+        .footer-note {
+            margin-top: 25px;
+            font-size: 0.85rem;
+            color: #6b7280;
+        }
+
+        .footer-note a {
+            color: var(--accent-blue);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .footer-note a:hover {
+            text-decoration: underline;
+        }
+
+        /* Success State */
+        .success-state {
+            display: none;
+        }
+
+        .key-display {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px dashed var(--accent-magenta);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .key-text {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.5rem;
+            color: #fff;
+            font-weight: 700;
+            letter-spacing: 2px;
             word-break: break-all;
         }
-        a.btn {
-            display: inline-block;
-            margin-top: 20px;
-            padding: 12px 22px;
-            border-radius: 10px;
-            background: linear-gradient(90deg, #2563eb, #7c3aed);
-            color: white;
-            text-decoration: none;
-            font-weight: 700;
+
+        .code-block {
+            background: #0f172a;
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            color: #94a3b8;
+            font-size: 0.9rem;
+            text-align: left;
+            margin-bottom: 20px;
+            overflow-x: auto;
         }
+
+        .code-block .string { color: #a5b4fc; }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: none;
+        }
+        .btn-secondary:hover:not(:disabled) {
+            background: rgba(255,255,255,0.1);
+            box-shadow: none;
+        }
+
+        /* Loading Spinner */
+        .loader {
+            border: 3px solid rgba(255,255,255,0.1);
+            border-radius: 50%;
+            border-top: 3px solid #fff;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: none;
+            margin: 0 auto;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
     </style>
 </head>
 <body>
-    <div class="box">
-        <h1>ZUPERMING FREEMIUM</h1>
-        <p>
-            Halaman Get Key Freemium.<br>
-            Ambil key di sini, lalu paste ke loader Discord (<strong>Get Script</strong>).
-        </p>
-        <p style="font-size:0.9em;">
-            Ads / auto-key generator bisa dipasang di sini nanti.<br>
-            Sementara admin bisa generate key freemium via <code style="display:inline;padding:2px 6px;">/genkey</code>.
-        </p>
-        <code>_G.key_script = "ZFREE-XXXX"
-loadstring(game:HttpGet("<%= baseUrl %>/loader/free"))()</code>
-        <a class="btn" href="<%= baseUrl %>/loader/free" target="_blank">Open Freemium Loader</a>
+
+    <div class="container">
+        <div class="brand">Zuper<span>ming</span></div>
+        
+        <div id="errorBox" class="error-msg"></div>
+
+        <!-- Start State -->
+        <div id="startState">
+            <p class="subtitle">Get your free temporary key by completing a quick step. Premium keys available without ads.</p>
+            <button id="startBtn" class="btn">Get Free Key</button>
+            <div id="loadingIndicator" class="loader" style="margin-top:20px;"></div>
+        </div>
+
+        <!-- Success State -->
+        <div id="successState" class="success-state">
+            <p class="subtitle" style="color:#10b981;font-weight:600;">Key Generated Successfully!</p>
+            
+            <div class="key-display">
+                <div id="keyText" class="key-text">ZFREE-XXXXXX</div>
+            </div>
+
+            <div class="code-block">
+_G.key_script = <span class="string">"<span id="codeKeyText">ZFREE-XXXXXX</span>"</span>
+loadstring(game:HttpGet(<span class="string">"<%= baseUrl %>/loader/free"</span>))()
+            </div>
+
+            <div class="btn-group">
+                <button id="copyKeyBtn" class="btn btn-secondary" style="flex:1;">Copy Key</button>
+                <button id="copyScriptBtn" class="btn" style="flex:2;">Copy Loadstring</button>
+            </div>
+            
+            <p class="footer-note" style="margin-top:20px;color:#f87171;">⚠️ This is a temporary key. Do not share it.</p>
+        </div>
+
+        <p class="footer-note">Hate ads? Purchase a premium key on our <a href="#">Discord Server</a>.</p>
     </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const sessionId = urlParams.get('session_id');
+        const errorParam = urlParams.get('error');
+
+        const startState = document.getElementById('startState');
+        const successState = document.getElementById('successState');
+        const errorBox = document.getElementById('errorBox');
+        const startBtn = document.getElementById('startBtn');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+
+        const keyText = document.getElementById('keyText');
+        const codeKeyText = document.getElementById('codeKeyText');
+
+        if (errorParam) {
+            errorBox.style.display = 'block';
+            errorBox.textContent = `Error: ${errorParam.replace(/_/g, ' ')}`;
+        }
+
+        async function fetchSessionStatus(sid) {
+            try {
+                startState.style.display = 'none';
+                loadingIndicator.style.display = 'block';
+                
+                const res = await fetch(`/api/freemium/status/${sid}`);
+                const data = await res.json();
+                
+                loadingIndicator.style.display = 'none';
+
+                if (data.status === 'completed' && data.key) {
+                    successState.style.display = 'block';
+                    keyText.textContent = data.key;
+                    codeKeyText.textContent = data.key;
+                } else {
+                    startState.style.display = 'block';
+                    errorBox.style.display = 'block';
+                    errorBox.textContent = "Key generation pending or failed. Please try again.";
+                }
+            } catch (err) {
+                loadingIndicator.style.display = 'none';
+                startState.style.display = 'block';
+                errorBox.style.display = 'block';
+                errorBox.textContent = "Failed to fetch key status.";
+            }
+        }
+
+        if (sessionId) {
+            fetchSessionStatus(sessionId);
+        }
+
+        startBtn.addEventListener('click', async () => {
+            startBtn.disabled = true;
+            startBtn.textContent = "Please wait...";
+            errorBox.style.display = 'none';
+
+            try {
+                const res = await fetch('/api/freemium/start', { method: 'POST' });
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    // Redirect to Ad provider
+                    window.location.href = data.redirect_url;
+                } else {
+                    errorBox.style.display = 'block';
+                    errorBox.textContent = data.error || "Failed to start session";
+                    startBtn.disabled = false;
+                    startBtn.textContent = "Get Free Key";
+                }
+            } catch (err) {
+                errorBox.style.display = 'block';
+                errorBox.textContent = "Network error. Please try again later.";
+                startBtn.disabled = false;
+                startBtn.textContent = "Get Free Key";
+            }
+        });
+
+        document.getElementById('copyKeyBtn').addEventListener('click', () => {
+            navigator.clipboard.writeText(keyText.textContent);
+            const btn = document.getElementById('copyKeyBtn');
+            btn.textContent = "Copied!";
+            setTimeout(() => btn.textContent = "Copy Key", 2000);
+        });
+
+        document.getElementById('copyScriptBtn').addEventListener('click', () => {
+            const script = `_G.key_script = "${keyText.textContent}"\nloadstring(game:HttpGet("<%= baseUrl %>/loader/free"))()`;
+            navigator.clipboard.writeText(script);
+            const btn = document.getElementById('copyScriptBtn');
+            btn.textContent = "Copied!";
+            setTimeout(() => btn.textContent = "Copy Loadstring", 2000);
+        });
+    </script>
 </body>
 </html>
