@@ -15,6 +15,7 @@ function generateFreemiumKey() {
 
 router.post('/start', (req, res) => {
     const ip = getClientIp(req);
+    const provider = req.body.provider || 'linkvertise';
     const cooldownHours = parseInt(process.env.FREEMIUM_COOLDOWN_HOURS || '24', 10);
     const cooldownMs = cooldownHours * 60 * 60 * 1000;
 
@@ -43,7 +44,15 @@ router.post('/start', (req, res) => {
                     
                     const baseUrl = getBaseUrl();
                     const callbackUrl = encodeURIComponent(`${baseUrl}/api/freemium/callback?session_id=${sessionId}`);
-                    let adUrl = process.env.ADS_PROVIDER_URL || `${baseUrl}/api/freemium/callback?session_id={{DEST}}`;
+                    
+                    let adUrl;
+                    if (provider === 'lootlabs') {
+                        adUrl = process.env.LOOTLABS_URL;
+                    } else {
+                        adUrl = process.env.LINKVERTISE_URL || process.env.ADS_PROVIDER_URL;
+                    }
+                    
+                    if (!adUrl) adUrl = `${baseUrl}/api/freemium/callback?session_id={{DEST}}`;
                     
                     // Replace {{DEST}} with actual callback
                     adUrl = adUrl.replace('{{DEST}}', callbackUrl);
@@ -56,12 +65,15 @@ router.post('/start', (req, res) => {
 });
 
 router.get('/callback', (req, res) => {
-    const sessionId = req.query.session_id;
+    let sessionId = req.query.session_id;
+    if (Array.isArray(sessionId)) sessionId = sessionId[0];
+    
     if (!sessionId) return res.redirect('/get-key?error=missing_session');
 
     // Verify session
     db.get(`SELECT * FROM freemium_sessions WHERE id = ?`, [sessionId], (err, session) => {
-        if (err || !session) return res.redirect('/get-key?error=invalid_session');
+        if (err) return res.redirect('/get-key?error=database_error');
+        if (!session) return res.redirect('/get-key?error=invalid_session');
         if (session.status === 'completed') {
             return res.redirect(`/get-key?session_id=${sessionId}`); // Already completed
         }

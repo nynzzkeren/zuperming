@@ -295,17 +295,22 @@ loadstring(game:HttpGet(<span class="string">"<%= baseUrl %>/loader/free"</span>
             fetchSessionStatus(sessionId);
         }
 
+        const startBtn = document.getElementById('startBtn');
+
         startBtn.addEventListener('click', async () => {
             startBtn.disabled = true;
             startBtn.textContent = "Please wait...";
             errorBox.style.display = 'none';
 
             try {
-                const res = await fetch('/api/freemium/start', { method: 'POST' });
+                const res = await fetch('/api/freemium/start', { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ provider: 'lootlabs' })
+                });
                 const data = await res.json();
 
                 if (res.ok && data.success) {
-                    // Redirect to Ad provider
                     window.location.href = data.redirect_url;
                 } else {
                     errorBox.style.display = 'block';
