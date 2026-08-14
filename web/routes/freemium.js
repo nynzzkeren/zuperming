@@ -66,8 +66,19 @@ router.post('/start', (req, res) => {
                             apiRes.on('end', () => {
                                 try {
                                     const json = JSON.parse(responseData);
-                                    if (json && json.message && json.message.loot_url) {
-                                        return res.json({ success: true, redirect_url: json.message.loot_url, session_id: sessionId });
+                                    let lootUrl;
+                                    
+                                    // Handle both Object and Array responses because LootLabs docs vs actual response differ
+                                    if (json && json.message) {
+                                        if (Array.isArray(json.message) && json.message[0] && json.message[0].loot_url) {
+                                            lootUrl = json.message[0].loot_url;
+                                        } else if (json.message.loot_url) {
+                                            lootUrl = json.message.loot_url;
+                                        }
+                                    }
+
+                                    if (lootUrl) {
+                                        return res.json({ success: true, redirect_url: lootUrl, session_id: sessionId });
                                     } else {
                                         console.error('LootLabs API Error:', json);
                                         return res.status(500).json({ error: 'Failed to generate LootLabs link (Check API Token)' });
