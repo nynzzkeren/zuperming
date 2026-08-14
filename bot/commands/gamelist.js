@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, ContainerBuilder, MessageFlags } = require('discord.js');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -6,10 +6,11 @@ module.exports = {
         .setDescription('Shows the list of supported games (Admin only)')
         .setDefaultMemberPermissions(8), // Administrator
     async execute(interaction) {
-        const embed = new EmbedBuilder()
-            .setTitle('Zuperming List Game')
-            .setColor('#2F3136') // Dark color matching Discord
-            .setDescription(
+        const container = new ContainerBuilder();
+
+        container.addTextDisplayComponents(
+            (text) => text.setContent('# Zuperming List Game'),
+            (text) => text.setContent(
                 'This channel lists all the games available in the Zuperming Official\n' +
                 '🟢 Working Script\n' +
                 '🟠 Needs Update\n' +
@@ -24,8 +25,12 @@ module.exports = {
                 '• Fishit\n' +
                 '• CDID\n' +
                 '• Abyss'
-            );
+            )
+        );
 
-        await interaction.reply({ embeds: [embed] });
+        await interaction.reply({ 
+            components: [container],
+            flags: MessageFlags.IsComponentsV2
+        });
     },
 };

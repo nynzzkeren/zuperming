@@ -295,8 +295,6 @@ loadstring(game:HttpGet(<span class="string">"<%= baseUrl %>/loader/free"</span>
             fetchSessionStatus(sessionId);
         }
 
-        const startBtn = document.getElementById('startBtn');
-
         startBtn.addEventListener('click', async () => {
             startBtn.disabled = true;
             startBtn.textContent = "Please wait...";

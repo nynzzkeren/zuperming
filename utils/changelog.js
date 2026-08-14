@@ -114,6 +114,7 @@ function buildChangelogPayload({
     }
 
     const payload = {
+        content: pingEveryone ? '@everyone' : '',
         components: [container],
         flags: MessageFlags.IsComponentsV2,
         allowedMentions: pingEveryone ? { parse: ['everyone'] } : { parse: [] }
