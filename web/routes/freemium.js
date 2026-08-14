@@ -3,6 +3,7 @@ const router = express.Router();
 const crypto = require('crypto');
 const db = require('../../database');
 const { getBaseUrl } = require('../../config/products');
+const https = require('https');
 
 function getClientIp(req) {
     return req.headers['x-forwarded-for'] || req.connection.remoteAddress || req.ip;
@@ -45,19 +46,48 @@ router.post('/start', (req, res) => {
                     const baseUrl = getBaseUrl();
                     const callbackUrl = encodeURIComponent(`${baseUrl}/api/freemium/callback?session_id=${sessionId}`);
                     
-                    let adUrl;
                     if (provider === 'lootlabs') {
-                        adUrl = process.env.LOOTLABS_URL;
+                        const rawToken = process.env.LOOTLABS_API_TOKEN || process.env.LOOTLABS_URL;
+                        let apiToken = rawToken;
+                        
+                        // Extract API key if user accidentally pasted the whole URL
+                        if (rawToken && rawToken.includes('api_key=')) {
+                            const match = rawToken.match(/api_key=([^&]+)/);
+                            if (match) apiToken = match[1];
+                        }
+                        
+                        if (!apiToken) return res.status(500).json({ error: 'LOOTLABS_API_TOKEN is not set in .env' });
+
+                        const llUrl = `https://creators.lootlabs.gg/api/public/content_locker?api_token=${apiToken}&title=Zuperming+Key&url=${callbackUrl}&tier_id=1&number_of_tasks=1&theme=1`;
+                        
+                        https.get(llUrl, (apiRes) => {
+                            let responseData = '';
+                            apiRes.on('data', chunk => responseData += chunk);
+                            apiRes.on('end', () => {
+                                try {
+                                    const json = JSON.parse(responseData);
+                                    if (json && json.message && json.message.loot_url) {
+                                        return res.json({ success: true, redirect_url: json.message.loot_url, session_id: sessionId });
+                                    } else {
+                                        console.error('LootLabs API Error:', json);
+                                        return res.status(500).json({ error: 'Failed to generate LootLabs link (Check API Token)' });
+                                    }
+                                } catch (e) {
+                                    console.error('LootLabs JSON Error:', e);
+                                    return res.status(500).json({ error: 'Failed to parse LootLabs API response' });
+                                }
+                            });
+                        }).on('error', (err) => {
+                            console.error('LootLabs HTTP Error:', err);
+                            return res.status(500).json({ error: 'Failed to connect to LootLabs API' });
+                        });
+                        return; // Stop execution here for lootlabs
                     } else {
                         adUrl = process.env.LINKVERTISE_URL || process.env.ADS_PROVIDER_URL;
+                        if (!adUrl) adUrl = `${baseUrl}/api/freemium/callback?session_id={{DEST}}`;
+                        adUrl = adUrl.replace('{{DEST}}', callbackUrl);
+                        res.json({ success: true, redirect_url: adUrl, session_id: sessionId });
                     }
-                    
-                    if (!adUrl) adUrl = `${baseUrl}/api/freemium/callback?session_id={{DEST}}`;
-                    
-                    // Replace {{DEST}} with actual callback
-                    adUrl = adUrl.replace('{{DEST}}', callbackUrl);
-                    
-                    res.json({ success: true, redirect_url: adUrl, session_id: sessionId });
                 }
             );
         }
