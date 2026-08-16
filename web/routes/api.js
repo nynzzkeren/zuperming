@@ -349,10 +349,10 @@ const executeServiceProvider = (req, res) => handleExecute(req, res, 'service_pr
 const executeFreemium = (req, res) => handleExecute(req, res, 'freemium');
 const executeTestingDev = (req, res) => handleExecute(req, res, 'testing_dev');
 
-router.post('/api/execute', executePremium);
-router.post('/api/sp/execute', executeServiceProvider);
-router.post('/api/free/execute', executeFreemium);
-router.post('/api/dev/execute', executeTestingDev);
+router.get('/execute', executePremium);
+router.get('/sp/execute', executeServiceProvider);
+router.get('/free/execute', executeFreemium);
+router.get('/dev/execute', executeTestingDev);
 
 module.exports = router;
 module.exports.serveLoader = serveLoader;
