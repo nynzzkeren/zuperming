@@ -25,26 +25,27 @@ module.exports = {
                 return interaction.reply({ content: 'Database error', ephemeral: true });
             }
 
-            const premium = games.filter(g => g.product === 'premium');
-            const free = games.filter(g => g.product === 'freemium');
-            const sp = games.filter(g => g.product === 'service_provider');
+            const working = games.filter(g => g.status === 'Working Script' || g.status === 'Working');
+            const needsUpdate = games.filter(g => g.status === 'Needs Update');
+            const dead = games.filter(g => g.status === 'Dead Script' || g.status === 'Dead');
+            const unknown = games.filter(g => g.status !== 'Working Script' && g.status !== 'Working' && g.status !== 'Needs Update' && g.status !== 'Dead Script' && g.status !== 'Dead');
+            
+            // Push unknown ones to working as a fallback
+            working.push(...unknown);
 
             const formatList = (list) => {
-                if (list.length === 0) return 'No games yet.';
-                return list.map(g => {
-                    const status = g.script_count > 0 ? '🟢 Uploaded' : '🔴 Missing Script';
-                    return `• ${g.name} (ID: ${g.roblox_game_id}) - ${status}`;
-                }).join('\n');
+                if (list.length === 0) return '_None_';
+                return list.map(g => `• ${g.name}${g.product === 'freemium' ? ' (Free)' : ''}`).join('\n');
             };
 
             const container = new ContainerBuilder();
             container.addTextDisplayComponents(
-                (text) => text.setContent('# 🎮 Zuperming Game Manager'),
-                (text) => text.setContent('Live sync with the web dashboard. Manage all your games and scripts below.'),
+                (text) => text.setContent('# Zuperming List Game'),
+                (text) => text.setContent('This channel lists all the games available in the Zuperming Official\n🟢 Working Script\n🟠 Needs Update\n🔴 Dead Script'),
                 (text) => text.setContent(
-                    '**💎 Premium Games**\n' + formatList(premium) + '\n\n' +
-                    '**🎁 Free Games**\n' + formatList(free) + '\n\n' +
-                    '**🛠️ Service Provider Games**\n' + formatList(sp)
+                    '🟢 **Working Script**\n' + formatList(working) + '\n\n' +
+                    '🟠 **Needs Update**\n' + formatList(needsUpdate) + '\n\n' +
+                    '🔴 **Dead Script**\n' + formatList(dead)
                 )
             );
 

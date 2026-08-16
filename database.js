@@ -95,6 +95,8 @@ const db = new sqlite3.Database(dbPath, (err) => {
             db.run(`ALTER TABLE keys ADD COLUMN bound_hwid TEXT`, alterIgnore);
             db.run(`ALTER TABLE users ADD COLUMN last_executor_warn DATETIME`, alterIgnore);
             db.run(`ALTER TABLE users ADD COLUMN last_executor_name TEXT`, alterIgnore);
+            db.run(`ALTER TABLE users ADD COLUMN total_executions INTEGER DEFAULT 0`, alterIgnore);
+            db.run(`ALTER TABLE games ADD COLUMN status TEXT DEFAULT 'Working Script'`, alterIgnore);
 
             db.run(`UPDATE keys SET product = 'premium' WHERE product IS NULL`);
             db.run(`UPDATE keys SET duration = 'lifetime' WHERE duration IS NULL OR TRIM(duration) = ''`);

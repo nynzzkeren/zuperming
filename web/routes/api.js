@@ -219,14 +219,22 @@ function serveScript(req, res, productId, brand, gameId) {
                     }
 
                     db.run(`UPDATE stats SET total_executions = total_executions + 1 WHERE id = 1`);
+                    if (req.query.discord_id) {
+                        db.run(`UPDATE users SET total_executions = COALESCE(total_executions, 0) + 1 WHERE discord_id = ?`, [req.query.discord_id], () => {});
+                    }
                     
-                    // Inject polling script
+                    const rawUrl = `${getBaseUrl()}/api/poll?product=${productId}&game_id=${gameId}&hwid=${req.query.hwid}&discord_id=${req.query.discord_id || ''}&last_id=`;
+                    
+                    // Obfuscate the URL via string.char to prevent naive plaintext leaks
+                    const charCodes = Array.from(rawUrl).map(c => c.charCodeAt(0)).join(', ');
+
                     const pollingCode = `
 task.spawn(function()
+    local url_base = string.char(${charCodes})
     local last_id = 0
     while task.wait(10) do
         local success, res = pcall(function()
-            return game:HttpGet("{{BASE_URL}}/api/poll?product=${productId}&game_id=${gameId}&hwid=${req.query.hwid}&discord_id=${req.query.discord_id || ''}&last_id=" .. tostring(last_id))
+            return game:HttpGet(url_base .. tostring(last_id))
         end)
         if success and res and res ~= "" then
             local s2, data = pcall(function() return game:GetService("HttpService"):JSONDecode(res) end)
@@ -237,7 +245,7 @@ task.spawn(function()
         end
     end
 end)
-`.replace(/\{\{BASE_URL\}\}/g, getBaseUrl());
+`;
 
                     res.type('text/plain');
                     res.send(pollingCode + '\n' + scriptRow.obfuscated_script);

@@ -149,19 +149,30 @@ router.get('/', requireAuth, async (req, res) => {
             console.error('Could not fetch guild info', e.message);
         }
 
-        db.all(`SELECT * FROM keys ORDER BY created_at DESC LIMIT 15`, (err, keys) => {
-            res.render('dashboard', {
-                stats,
-                onlineMembers,
-                keys: (keys || []).map(k => ({
-                    ...k,
-                    duration_label: formatDurationLabel(k.duration)
-                })),
-                products: PRODUCTS,
-                baseUrl: getBaseUrl(),
-                message: null,
-                error: null,
-                username: req.session.username
+        db.all(`SELECT * FROM users ORDER BY total_executions DESC`, (err, users) => {
+            db.all(`
+                SELECT g.*, 
+                (SELECT updated_at FROM scripts s WHERE s.product = g.product AND s.game_id = g.roblox_game_id ORDER BY s.id DESC LIMIT 1) AS last_script_update,
+                (SELECT COUNT(*) FROM live_sessions ls WHERE ls.product = g.product AND ls.game_id = g.roblox_game_id AND ls.last_seen > datetime('now', '-30 seconds')) AS active_players
+                FROM games g ORDER BY g.name ASC
+            `, (err, games) => {
+                db.all(`SELECT * FROM keys ORDER BY created_at DESC LIMIT 15`, (err, keys) => {
+                    res.render('dashboard', {
+                        stats,
+                        onlineMembers,
+                        users: users || [],
+                        games: games || [],
+                        keys: (keys || []).map(k => ({
+                            ...k,
+                            duration_label: formatDurationLabel(k.duration)
+                        })),
+                        products: PRODUCTS,
+                        baseUrl: getBaseUrl(),
+                        message: null,
+                        error: null,
+                        username: req.session.username
+                    });
+                });
             });
         });
     });
@@ -176,6 +187,16 @@ router.post('/generate-key', requireAuth, (req, res) => {
     db.run(
         `INSERT INTO keys (key_string, duration, product) VALUES (?, ?, ?)`,
         [key, normalized, product.id],
+        () => res.redirect('/admin')
+    );
+});
+
+router.post('/game/status', requireAuth, (req, res) => {
+    const { game_id, status } = req.body;
+    if (!game_id || !status) return res.redirect('/admin');
+    db.run(
+        `UPDATE games SET status = ? WHERE id = ?`,
+        [status, game_id],
         () => res.redirect('/admin')
     );
 });
