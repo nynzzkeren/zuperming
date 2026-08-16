@@ -472,4 +472,44 @@ router.post('/upload-script', requireAuth, upload.single('script_file'), (req, r
     );
 });
 
+router.post('/dev-panel/script', requireAuth, (req, res) => {
+    const discordId = req.session.discordId;
+    
+    // Find existing testing dev key
+    db.get(`SELECT key_string FROM keys WHERE discord_id = ? AND product = 'testing_dev'`, [discordId], (err, row) => {
+        if (row) {
+            return res.json({ success: true, key: row.key_string, baseUrl: getBaseUrl() });
+        }
+        
+        // Generate a new key if not found
+        const key = `ZDEV-` + crypto.randomBytes(8).toString('hex').toUpperCase();
+        db.run(
+            `INSERT INTO keys (key_string, duration, product, discord_id, status) VALUES (?, ?, ?, ?, ?)`,
+            [key, 'lifetime', 'testing_dev', discordId, 'used'],
+            (err) => {
+                if (err) return res.json({ success: false, error: 'Failed to generate dev key.' });
+                res.json({ success: true, key: key, baseUrl: getBaseUrl() });
+            }
+        );
+    });
+});
+
+router.post('/dev-panel/reset-hwid', requireAuth, (req, res) => {
+    const discordId = req.session.discordId;
+    
+    db.get(`SELECT id FROM keys WHERE discord_id = ? AND product = 'testing_dev'`, [discordId], (err, row) => {
+        if (!row) return res.json({ success: false, error: 'No Dev Key found.' });
+        
+        db.run(`UPDATE keys SET bound_hwid = NULL WHERE id = ?`, [row.id], (err) => {
+            if (err) return res.json({ success: false, error: 'Failed to reset HWID.' });
+            
+            // Increment resets
+            db.run(`UPDATE stats SET total_resets = total_resets + 1 WHERE id = 1`);
+            db.run(`UPDATE users SET hwid = NULL WHERE discord_id = ?`, [discordId]);
+            
+            res.json({ success: true });
+        });
+    });
+});
+
 module.exports = router;

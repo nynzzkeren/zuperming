@@ -234,6 +234,27 @@
             border-bottom: 1px solid var(--border);
             padding-bottom: 10px;
         }
+
+        .terminal-box {
+            background: #000;
+            color: #4ade80;
+            font-family: 'Consolas', 'Courier New', monospace;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #334155;
+            white-space: pre-wrap;
+            word-break: break-all;
+            min-height: 150px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            position: relative;
+        }
+        .terminal-box::before {
+            content: 'user@zuperming:~$';
+            display: block;
+            color: #38bdf8;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
@@ -246,6 +267,7 @@
         <a class="nav-link" onclick="switchTab('keys', this)">Keys</a>
         <a class="nav-link" onclick="switchTab('updates', this)">Updates</a>
         <a class="nav-link" onclick="switchTab('logs', this)">Login Logs</a>
+        <a class="nav-link" onclick="switchTab('dev', this)">Dev Panel</a>
         <a href="/admin/logout" class="logout">Logout</a>
     </div>
 
@@ -622,6 +644,29 @@
             </div>
         </div>
 
+        <!-- DEV PANEL TAB -->
+        <div id="tab-dev" class="tab-content">
+            <div class="header">
+                <h1>Dev Panel</h1>
+                <p style="color:var(--muted)">Panel khusus Developer untuk testing script. Dilarang menyebarkan key.</p>
+            </div>
+            
+            <div class="panel" style="max-width: 800px;">
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <button onclick="getDevScript()" style="background: var(--success); box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.4);">
+                        <svg width="18" height="18" style="vertical-align: middle; margin-right: 5px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+                        Get Script
+                    </button>
+                    <button onclick="resetDevHWID()" style="background: var(--warning); color: #000; box-shadow: 0 4px 6px -1px rgba(245, 158, 11, 0.4);">
+                        <svg width="18" height="18" style="vertical-align: middle; margin-right: 5px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        Reset HWID
+                    </button>
+                </div>
+                
+                <div class="terminal-box" id="devTerminal">Click "Get Script" to generate your testing loadstring...</div>
+            </div>
+        </div>
+
     </div>
 
     <script>
@@ -686,6 +731,41 @@
                 const visibleRows = sec.querySelectorAll('.project-row:not([style*="display: none"])').length;
                 sec.style.display = visibleRows > 0 ? '' : 'none';
             });
+        }
+
+        function getDevScript() {
+            const term = document.getElementById('devTerminal');
+            term.innerText = 'Generating key and script...';
+            
+            fetch('/admin/dev-panel/script', { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        const code = `_G.Key = "${data.key}"\nloadstring(game:HttpGet("${data.baseUrl}/api/dev/execute?key=" .. _G.Key))()`;
+                        term.innerText = `[SUCCESS] Dev key acquired.\n\nCopy the following script to your executor:\n\n${code}`;
+                    } else {
+                        term.innerText = `[ERROR] ${data.error || 'Failed to get script'}`;
+                    }
+                }).catch(err => {
+                    term.innerText = `[ERROR] Network error: ${err.message}`;
+                });
+        }
+
+        function resetDevHWID() {
+            const term = document.getElementById('devTerminal');
+            term.innerText = 'Resetting HWID...';
+            
+            fetch('/admin/dev-panel/reset-hwid', { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        term.innerText = `[SUCCESS] HWID has been successfully reset! You can now execute the script on a new device/executor.`;
+                    } else {
+                        term.innerText = `[ERROR] ${data.error || 'Failed to reset HWID'}`;
+                    }
+                }).catch(err => {
+                    term.innerText = `[ERROR] Network error: ${err.message}`;
+                });
         }
     </script>
 </body>
