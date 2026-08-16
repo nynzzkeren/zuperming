@@ -263,9 +263,7 @@
         <h2>Zuperming</h2>
         <a class="nav-link active" onclick="switchTab('dashboard', this)">Overview</a>
         <a class="nav-link" onclick="switchTab('projects', this)">Projects</a>
-        <a class="nav-link" onclick="switchTab('users', this)">Users</a>
         <a class="nav-link" onclick="switchTab('keys', this)">Keys</a>
-        <a class="nav-link" onclick="switchTab('updates', this)">Updates</a>
         <a class="nav-link" onclick="switchTab('logs', this)">Login Logs</a>
         <a class="nav-link" onclick="switchTab('dev', this)">Dev Panel</a>
         <a href="/admin/logout" class="logout">Logout</a>
@@ -448,42 +446,6 @@
             <% } %>
         </div>
 
-        <!-- USERS TAB -->
-        <div id="tab-users" class="tab-content">
-            <div class="header">
-                <h1>Users</h1>
-            </div>
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Discord ID</th>
-                            <th>Executions</th>
-                            <th>HWID Resets</th>
-                            <th>Last Executor</th>
-                            <th>Last Warned</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <% users.forEach(function(u) { %>
-                            <tr>
-                                <td><code><%- u.discord_id %></code></td>
-                                <td><%- u.total_executions || 0 %></td>
-                                <% let badgeBg = u.hwid ? 'var(--success)' : 'var(--muted)'; %>
-                                <% let badgeText = u.hwid ? 'Bound' : 'Not Bound'; %>
-                                <td><span class="badge" style="background: <%- badgeBg %>; color: white; border:none;"><%- badgeText %></span></td>
-                                <td><%- u.last_executor_name || 'Unknown' %></td>
-                                <td style="color:var(--muted)"><%- u.last_executor_warn || '-' %></td>
-                            </tr>
-                        <% }); %>
-                        <% if(users.length === 0) { %>
-                            <tr><td colspan="5" style="text-align:center;color:var(--muted)">No users recorded yet.</td></tr>
-                        <% } %>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
         <!-- KEYS TAB -->
         <div id="tab-keys" class="tab-content">
             <div class="header">
@@ -541,66 +503,6 @@
                         <% } %>
                     </tbody>
                 </table>
-            </div>
-        </div>
-
-        <!-- UPDATES TAB -->
-        <div id="tab-updates" class="tab-content">
-            <div class="header">
-                <h1>Send Update</h1>
-            </div>
-            <div class="panel" style="max-width: 600px;">
-                <form action="/admin/update" method="POST">
-                    <div class="form-group">
-                        <label>Game Name</label>
-                        <input type="text" name="game" required placeholder="e.g. Blox Fruits">
-                    </div>
-                    <div class="form-group">
-                        <label>Version</label>
-                        <input type="text" name="version" required placeholder="e.g. v2.1.0">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Target Users</label>
-                        <div style="display: flex; gap: 15px; margin-top: 10px;">
-                            <label style="display:flex; align-items:center; gap:5px;"><input type="checkbox" name="types" value="Premium"> Premium</label>
-                            <label style="display:flex; align-items:center; gap:5px;"><input type="checkbox" name="types" value="Service Provider"> SP</label>
-                            <label style="display:flex; align-items:center; gap:5px;"><input type="checkbox" name="types" value="Freemium"> Free</label>
-                            <label style="display:flex; align-items:center; gap:5px;"><input type="checkbox" name="types" value="Testing Dev"> Dev</label>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Status</label>
-                        <select name="status">
-                            <option value="Undetected">🟢 Undetected</option>
-                            <option value="Updating">🟠 Updating</option>
-                            <option value="Detected">🔴 Detected</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Added / New Features (Optional)</label>
-                        <textarea name="added" rows="2" placeholder="e.g. Auto Farm Level"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>Improved / Fixed (Optional)</label>
-                        <textarea name="improved" rows="2" placeholder="e.g. Fixed teleport bypass"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>Removed (Optional)</label>
-                        <textarea name="removed" rows="2" placeholder="e.g. Old GUI"></textarea>
-                    </div>
-                    
-                    <div class="form-group" style="margin-top:20px;">
-                        <label style="display:flex; align-items:center; gap:10px; color: var(--text);">
-                            <input type="checkbox" name="ping_everyone" value="true">
-                            Ping @everyone
-                        </label>
-                    </div>
-                    
-                    <button type="submit" style="width: 100%; margin-top: 10px;">Send Update to Discord</button>
-                </form>
             </div>
         </div>
 

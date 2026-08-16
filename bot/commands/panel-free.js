@@ -50,6 +50,10 @@ module.exports = {
                 .setCustomId('btn_free_script')
                 .setLabel('Get Script')
                 .setStyle(ButtonStyle.Success),
+            new ButtonBuilder()
+                .setCustomId('btn_free_check_key')
+                .setLabel('Check Key')
+                .setStyle(ButtonStyle.Secondary),
             isUsableHttpUrl(getKeyUrl)
                 ? new ButtonBuilder()
                     .setLabel('Get Key')

@@ -172,12 +172,32 @@ module.exports = {
                 .replace(/^btn_/, '');
 
             // Freemium-only buttons
-            if (product.id === 'freemium' && (action === 'getkey' || action === 'support')) {
+            if (product.id === 'freemium' && (action === 'getkey' || action === 'support' || action === 'check_key')) {
                 if (action === 'getkey') {
                     const url = getFreemiumGetKeyUrl();
                     return interaction.reply({
                         content: `**Get Freemium Key:**\n${url}`,
                         ephemeral: true
+                    });
+                }
+                if (action === 'check_key') {
+                    return getValidKey(interaction.user.id, product.id, (err, row, reason) => {
+                        if (err) return interaction.reply({ content: 'Database error.', ephemeral: true });
+                        if (!row) {
+                            return interaction.reply({
+                                content: `Kamu belum mengklaim / me-redeem key apapun atau key sudah expired.\nAlasan: ${reason}`,
+                                ephemeral: true
+                            });
+                        }
+                        
+                        const expText = row.expires_at 
+                            ? `<t:${Math.floor(new Date(row.expires_at).getTime() / 1000)}:R>` 
+                            : 'Lifetime';
+                            
+                        return interaction.reply({
+                            content: `**Freemium Key Information**\n🔑 **Key:** \`${row.key_string}\`\n⏳ **Duration:** ${formatDurationLabel(row.duration)}\n📅 **Expires:** ${expText}\n💻 **HWID:** ${row.bound_hwid ? 'Bound' : 'Not Bound'}`,
+                            ephemeral: true
+                        });
                     });
                 }
                 return interaction.reply({
