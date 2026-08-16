@@ -30,6 +30,7 @@ const db = new sqlite3.Database(dbPath, (err) => {
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 discord_id TEXT,
                 username TEXT,
+                avatar_url TEXT,
                 role TEXT,
                 login_time DATETIME DEFAULT CURRENT_TIMESTAMP
             )`);
@@ -105,6 +106,7 @@ const db = new sqlite3.Database(dbPath, (err) => {
             db.run(`ALTER TABLE users ADD COLUMN last_executor_name TEXT`, alterIgnore);
             db.run(`ALTER TABLE users ADD COLUMN total_executions INTEGER DEFAULT 0`, alterIgnore);
             db.run(`ALTER TABLE games ADD COLUMN status TEXT DEFAULT 'Working Script'`, alterIgnore);
+            db.run(`ALTER TABLE login_logs ADD COLUMN avatar_url TEXT`, alterIgnore);
 
             db.run(`UPDATE keys SET product = 'premium' WHERE product IS NULL`);
             db.run(`UPDATE keys SET duration = 'lifetime' WHERE duration IS NULL OR TRIM(duration) = ''`);

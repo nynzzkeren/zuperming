@@ -118,7 +118,10 @@ router.get('/auth/discord/callback', async (req, res) => {
         if (roleCheck.allowed) {
             // Log successful login
             const roleName = user.id === '1459948430150336725' ? 'Developer' : (roleCheck.reason === 'guild_owner' ? 'Owner' : 'Admin');
-            db.run(`INSERT INTO login_logs (discord_id, username, role) VALUES (?, ?, ?)`, [user.id, user.global_name || user.username, roleName]);
+            const avatarUrl = user.avatar 
+                ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png` 
+                : `https://cdn.discordapp.com/embed/avatars/${Number(BigInt(user.id) >> 22n) % 6}.png`;
+            db.run(`INSERT INTO login_logs (discord_id, username, avatar_url, role) VALUES (?, ?, ?, ?)`, [user.id, user.global_name || user.username, avatarUrl, roleName]);
             return res.redirect('/admin');
         }
 

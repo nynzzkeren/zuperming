@@ -107,7 +107,11 @@
             opacity: 0.5;
         }
         .card h3 { margin: 0 0 10px 0; color: var(--muted); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
-        .card .value { font-size: 2.5rem; font-weight: 700; color: var(--text); margin-bottom: 10px; }
+        .card .value { font-size: 2.5rem; font-weight: 700; color: var(--text); margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+        .card .trend { font-size: 1rem; padding: 4px 8px; border-radius: 20px; font-weight: 600; display: flex; align-items: center; gap: 4px; }
+        .trend.up { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+        .trend.down { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
+
         .card .chart-placeholder {
             height: 30px;
             width: 100%;
@@ -115,12 +119,12 @@
             border-radius: 4px;
             position: relative;
             overflow: hidden;
+            display: flex;
+            align-items: flex-end;
+            padding-top: 5px;
         }
-        .card .chart-line {
-            position: absolute; bottom: 0; left: 0; width: 100%; height: 2px;
-            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
-            border-radius: 2px;
-        }
+        /* Simulated SVG chart line */
+        .chart-svg { width: 100%; height: 100%; preserveAspectRatio: none; }
         
         .table-container {
             background: var(--surface);
@@ -131,7 +135,7 @@
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
         table { width: 100%; border-collapse: collapse; text-align: left; }
-        th, td { padding: 16px 20px; border-bottom: 1px solid var(--border); }
+        th, td { padding: 16px 20px; border-bottom: 1px solid var(--border); vertical-align: middle; }
         th { color: var(--muted); font-weight: 600; font-size: 0.85rem; text-transform: uppercase; background: rgba(0,0,0,0.2); }
         tr:last-child td { border-bottom: none; }
         tr:hover td { background: var(--surface-hover); }
@@ -191,6 +195,45 @@
         .panel h2 { margin-top: 0; font-size: 1.2rem; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
         
         code { background: #1e293b; color: #38bdf8; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 0.85rem; }
+
+        .search-bar {
+            margin-bottom: 20px;
+            position: relative;
+            max-width: 400px;
+        }
+        .search-bar input {
+            padding-left: 40px;
+        }
+        .search-bar svg {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            fill: var(--muted);
+        }
+
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--border);
+        }
+        
+        .project-section {
+            margin-bottom: 40px;
+        }
+        .project-section h2 {
+            font-size: 1.1rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 10px;
+        }
     </style>
 </head>
 <body>
@@ -212,23 +255,47 @@
         <div id="tab-dashboard" class="tab-content active">
             <div class="header">
                 <h1>Dashboard</h1>
-                <p style="color:var(--muted)">Welcome back, <%= username %>.</p>
+                <p style="color:var(--muted)">Welcome back, <%- username %>.</p>
             </div>
             <div class="grid">
                 <div class="card">
                     <h3>Total Executions</h3>
-                    <div class="value"><%= stats.total_executions.toLocaleString() %></div>
-                    <div class="chart-placeholder"><div class="chart-line"></div></div>
+                    <div class="value">
+                        <%- stats.total_executions.toLocaleString() %>
+                        <span class="trend up"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg> 12%</span>
+                    </div>
+                    <div class="chart-placeholder">
+                        <svg class="chart-svg" viewBox="0 0 100 30" preserveAspectRatio="none">
+                            <path d="M0,25 C20,20 30,10 50,15 C70,20 80,5 100,2" fill="none" stroke="#3b82f6" stroke-width="2" />
+                            <path d="M0,25 C20,20 30,10 50,15 C70,20 80,5 100,2 L100,30 L0,30 Z" fill="rgba(59,130,246,0.1)" stroke="none" />
+                        </svg>
+                    </div>
                 </div>
                 <div class="card">
                     <h3>HWID Resets</h3>
-                    <div class="value"><%= stats.total_resets.toLocaleString() %></div>
-                    <div class="chart-placeholder"><div class="chart-line" style="background: linear-gradient(90deg, #10b981, #34d399);"></div></div>
+                    <div class="value">
+                        <%- stats.total_resets.toLocaleString() %>
+                        <span class="trend down"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg> 3%</span>
+                    </div>
+                    <div class="chart-placeholder">
+                        <svg class="chart-svg" viewBox="0 0 100 30" preserveAspectRatio="none">
+                            <path d="M0,10 C20,15 30,5 50,10 C70,15 80,25 100,20" fill="none" stroke="#10b981" stroke-width="2" />
+                            <path d="M0,10 C20,15 30,5 50,10 C70,15 80,25 100,20 L100,30 L0,30 Z" fill="rgba(16,185,129,0.1)" stroke="none" />
+                        </svg>
+                    </div>
                 </div>
                 <div class="card">
                     <h3>Online Members</h3>
-                    <div class="value"><%= onlineMembers.toLocaleString() %></div>
-                    <div class="chart-placeholder"><div class="chart-line" style="background: linear-gradient(90deg, #f59e0b, #fbbf24);"></div></div>
+                    <div class="value">
+                        <%- onlineMembers.toLocaleString() %>
+                        <span class="trend up"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg> 5%</span>
+                    </div>
+                    <div class="chart-placeholder">
+                        <svg class="chart-svg" viewBox="0 0 100 30" preserveAspectRatio="none">
+                            <path d="M0,20 C20,10 30,25 50,15 C70,5 80,15 100,5" fill="none" stroke="#f59e0b" stroke-width="2" />
+                            <path d="M0,20 C20,10 30,25 50,15 C70,5 80,15 100,5 L100,30 L0,30 Z" fill="rgba(245,158,11,0.1)" stroke="none" />
+                        </svg>
+                    </div>
                 </div>
             </div>
         </div>
@@ -246,9 +313,9 @@
                         <div class="form-group">
                             <label>Product Plan</label>
                             <select name="product" required>
-                                <% Object.values(products).forEach(p => { %>
-                                    <option value="<%= p.id %>"><%= p.name %></option>
-                                <% }) %>
+                                <% Object.values(products).forEach(function(p) { %>
+                                    <option value="<%- p.id %>"><%- p.name %></option>
+                                <% }); %>
                             </select>
                         </div>
                         <div class="form-group">
@@ -270,17 +337,17 @@
                         <div class="form-group">
                             <label>Target Game</label>
                             <select name="game_id" required>
-                                <% games.forEach(g => { %>
-                                    <option value="<%= g.roblox_game_id %>"><%= g.name %> (<%= g.product %>)</option>
-                                <% }) %>
+                                <% games.forEach(function(g) { %>
+                                    <option value="<%- g.roblox_game_id %>"><%- g.name %> (<%- g.product %>)</option>
+                                <% }); %>
                             </select>
                         </div>
                         <div class="form-group">
                             <label>Product Plan</label>
                             <select name="product" required>
-                                <% Object.values(products).forEach(p => { %>
-                                    <option value="<%= p.id %>"><%= p.name %></option>
-                                <% }) %>
+                                <% Object.values(products).forEach(function(p) { %>
+                                    <option value="<%- p.id %>"><%- p.name %></option>
+                                <% }); %>
                             </select>
                         </div>
                         <div class="form-group">
@@ -292,44 +359,71 @@
                 </div>
             </div>
 
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Game Name</th>
-                            <th>Game ID</th>
-                            <th>Plan</th>
-                            <th>Status</th>
-                            <th>Active Players</th>
-                            <th>Last Script Update</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <% games.forEach(g => { %>
-                            <tr>
-                                <td><strong><%= g.name %></strong></td>
-                                <td><code><%= g.roblox_game_id %></code></td>
-                                <td><span class="badge"><%= g.product.replace('_', ' ') %></span></td>
-                                <td>
-                                    <form action="/admin/game/status" method="POST" style="display:flex; gap:8px;">
-                                        <input type="hidden" name="game_id" value="<%= g.id %>">
-                                        <select name="status" style="padding: 6px; font-size: 0.8rem; border-color: #334155;" onchange="this.form.submit()">
-                                            <option value="Working Script" <%= g.status === 'Working Script' ? 'selected' : '' %>>🟢 Working</option>
-                                            <option value="Needs Update" <%= g.status === 'Needs Update' ? 'selected' : '' %>>🟠 Needs Update</option>
-                                            <option value="Dead Script" <%= g.status === 'Dead Script' ? 'selected' : '' %>>🔴 Dead</option>
-                                        </select>
-                                    </form>
-                                </td>
-                                <td><%= g.active_players || 0 %></td>
-                                <td style="color:var(--muted)"><%= g.last_script_update || 'Never' %></td>
-                            </tr>
-                        <% }) %>
-                        <% if(games.length === 0) { %>
-                            <tr><td colspan="6" style="text-align:center;color:var(--muted)">No projects found.</td></tr>
-                        <% } %>
-                    </tbody>
-                </table>
+            <div class="search-bar">
+                <svg viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <input type="text" id="projectSearch" placeholder="Search projects by name or ID..." onkeyup="filterProjects()">
             </div>
+
+            <% 
+            const groupedGames = {
+                'testing_dev': [],
+                'premium': [],
+                'service_provider': [],
+                'freemium': []
+            };
+            games.forEach(function(g) {
+                if (groupedGames[g.product]) groupedGames[g.product].push(g);
+                else groupedGames['premium'].push(g);
+            });
+            %>
+
+            <% Object.keys(groupedGames).forEach(function(groupKey) { %>
+                <% if (groupedGames[groupKey].length > 0) { %>
+                <div class="project-section">
+                    <h2><%- products[groupKey] ? products[groupKey].name : groupKey.replace('_', ' ') %> Scripts</h2>
+                    <div class="table-container">
+                        <table class="project-table">
+                            <thead>
+                                <tr>
+                                    <th>Game Name</th>
+                                    <th>Game ID</th>
+                                    <th>Status</th>
+                                    <th>Active Players</th>
+                                    <th>Last Script Update</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% groupedGames[groupKey].forEach(function(g) { %>
+                                    <tr class="project-row">
+                                        <td class="project-name"><strong><%- g.name %></strong></td>
+                                        <td class="project-id"><code><%- g.roblox_game_id %></code></td>
+                                        <td>
+                                            <form action="/admin/game/status" method="POST" style="display:flex; gap:8px;">
+                                                <input type="hidden" name="game_id" value="<%- g.id %>">
+                                                <% let selW = g.status === 'Working Script' ? 'selected' : ''; %>
+                                                <% let selN = g.status === 'Needs Update' ? 'selected' : ''; %>
+                                                <% let selD = g.status === 'Dead Script' ? 'selected' : ''; %>
+                                                <select name="status" style="padding: 6px; font-size: 0.8rem; border-color: #334155;" onchange="this.form.submit()">
+                                                    <option value="Working Script" <%- selW %>>🟢 Working</option>
+                                                    <option value="Needs Update" <%- selN %>>🟠 Needs Update</option>
+                                                    <option value="Dead Script" <%- selD %>>🔴 Dead</option>
+                                                </select>
+                                            </form>
+                                        </td>
+                                        <td><%- g.active_players || 0 %></td>
+                                        <td style="color:var(--muted)"><%- g.last_script_update || 'Never' %></td>
+                                    </tr>
+                                <% }); %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <% } %>
+            <% }); %>
+            
+            <% if(games.length === 0) { %>
+                <div class="panel" style="text-align:center;color:var(--muted)">No projects found.</div>
+            <% } %>
         </div>
 
         <!-- USERS TAB -->
@@ -349,15 +443,17 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <% users.forEach(u => { %>
+                        <% users.forEach(function(u) { %>
                             <tr>
-                                <td><code><%= u.discord_id %></code></td>
-                                <td><%= u.total_executions || 0 %></td>
-                                <td><span class="badge" style="background: <%= u.hwid ? 'var(--success)' : 'var(--muted)' %>; color: white; border:none;"><%= u.hwid ? 'Bound' : 'Not Bound' %></span></td>
-                                <td><%= u.last_executor_name || 'Unknown' %></td>
-                                <td style="color:var(--muted)"><%= u.last_executor_warn || '-' %></td>
+                                <td><code><%- u.discord_id %></code></td>
+                                <td><%- u.total_executions || 0 %></td>
+                                <% let badgeBg = u.hwid ? 'var(--success)' : 'var(--muted)'; %>
+                                <% let badgeText = u.hwid ? 'Bound' : 'Not Bound'; %>
+                                <td><span class="badge" style="background: <%- badgeBg %>; color: white; border:none;"><%- badgeText %></span></td>
+                                <td><%- u.last_executor_name || 'Unknown' %></td>
+                                <td style="color:var(--muted)"><%- u.last_executor_warn || '-' %></td>
                             </tr>
-                        <% }) %>
+                        <% }); %>
                         <% if(users.length === 0) { %>
                             <tr><td colspan="5" style="text-align:center;color:var(--muted)">No users recorded yet.</td></tr>
                         <% } %>
@@ -369,16 +465,16 @@
         <!-- KEYS TAB -->
         <div id="tab-keys" class="tab-content">
             <div class="header">
-                <h1>Keys</h1>
+                <h1>Keys (WL)</h1>
             </div>
             <div class="panel">
-                <h2>Generate New Key</h2>
+                <h2>Generate New Key / Whitelist Dev</h2>
                 <form action="/admin/generate-key" method="POST" class="form-row">
                     <div class="form-group" style="flex:2;">
                         <select name="product" required>
-                            <% Object.values(products).forEach(p => { %>
-                                <option value="<%= p.id %>"><%= p.name %></option>
-                            <% }) %>
+                            <% Object.values(products).forEach(function(p) { %>
+                                <option value="<%- p.id %>"><%- p.name %></option>
+                            <% }); %>
                         </select>
                     </div>
                     <div class="form-group" style="flex:2;">
@@ -402,11 +498,11 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <% keys.forEach(k => { %>
+                        <% keys.forEach(function(k) { %>
                             <tr>
-                                <td><code><%= k.key_string %></code></td>
-                                <td><span class="badge"><%= k.product.replace('_', ' ') %></span></td>
-                                <td><%= k.duration_label %></td>
+                                <td><code><%- k.key_string %></code></td>
+                                <td><span class="badge"><%- k.product.replace('_', ' ') %></span></td>
+                                <td><%- k.duration_label %></td>
                                 <td>
                                     <% if (k.status === 'used') { %>
                                         <span style="color:var(--danger)">● Used</span>
@@ -414,10 +510,10 @@
                                         <span style="color:var(--success)">● Unused</span>
                                     <% } %>
                                 </td>
-                                <td><%= k.discord_id ? `<code>${k.discord_id}</code>` : '-' %></td>
-                                <td style="color:var(--muted)"><%= k.created_at %></td>
+                                <td><%- k.discord_id ? `<code>${k.discord_id}</code>` : '-' %></td>
+                                <td style="color:var(--muted)"><%- k.created_at %></td>
                             </tr>
-                        <% }) %>
+                        <% }); %>
                         <% if(keys.length === 0) { %>
                             <tr><td colspan="6" style="text-align:center;color:var(--muted)">No keys generated yet.</td></tr>
                         <% } %>
@@ -495,21 +591,29 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>Username</th>
+                            <th>User</th>
                             <th>Discord ID</th>
                             <th>Role / Access Level</th>
                             <th>Login Time</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <% loginLogs.forEach(l => { %>
+                        <% loginLogs.forEach(function(l) { %>
                             <tr>
-                                <td><strong><%= l.username %></strong></td>
-                                <td><code><%= l.discord_id %></code></td>
-                                <td><span class="badge" style="background: <%= l.role === 'Developer' || l.role === 'Owner' ? 'var(--primary)' : '#1e293b' %>; color: white; border:none;"><%= l.role %></span></td>
-                                <td style="color:var(--muted)"><%= l.login_time %></td>
+                                <td style="display:flex; align-items:center; gap:12px;">
+                                    <% if (l.avatar_url) { %>
+                                        <img src="<%- l.avatar_url %>" class="avatar" alt="Avatar">
+                                    <% } else { %>
+                                        <div class="avatar" style="background:#334155;"></div>
+                                    <% } %>
+                                    <strong><%- l.username %></strong>
+                                </td>
+                                <td><code><%- l.discord_id %></code></td>
+                                <% let roleBg = (l.role === 'Developer' || l.role === 'Owner') ? 'var(--primary)' : '#1e293b'; %>
+                                <td><span class="badge" style="background: <%- roleBg %>; color: white; border:none;"><%- l.role %></span></td>
+                                <td style="color:var(--muted)"><%- l.login_time %></td>
                             </tr>
-                        <% }) %>
+                        <% }); %>
                         <% if(loginLogs.length === 0) { %>
                             <tr><td colspan="4" style="text-align:center;color:var(--muted)">No logins recorded.</td></tr>
                         <% } %>
@@ -564,6 +668,24 @@
                         statusLabel.innerText = '✗ Failed to connect.';
                     });
             }, 800);
+        }
+
+        function filterProjects() {
+            const query = document.getElementById('projectSearch').value.toLowerCase();
+            document.querySelectorAll('.project-row').forEach(row => {
+                const name = row.querySelector('.project-name').innerText.toLowerCase();
+                const id = row.querySelector('.project-id').innerText.toLowerCase();
+                if (name.includes(query) || id.includes(query)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+            // Hide section if empty
+            document.querySelectorAll('.project-section').forEach(sec => {
+                const visibleRows = sec.querySelectorAll('.project-row:not([style*="display: none"])').length;
+                sec.style.display = visibleRows > 0 ? '' : 'none';
+            });
         }
     </script>
 </body>
