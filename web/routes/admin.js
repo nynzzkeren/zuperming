@@ -429,8 +429,6 @@ function saveScript(req, res, productId) {
     );
 }
 
-const multer = require('multer');
-const upload = multer();
 
 router.get('/roblox-game-info', requireAuth, async (req, res) => {
     try {
