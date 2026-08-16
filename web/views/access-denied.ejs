@@ -3,69 +3,137 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Access Denied — Zuperming</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+    <title>Zuperming · Access Denied</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --bg: #05070f;
-            --panel: rgba(8, 12, 28, 0.82);
-            --border: rgba(248, 113, 113, 0.35);
-            --text: #e8eefc;
-            --muted: #8b9bc4;
-            --danger: #f87171;
-        }
+        *, *::before, *::after { box-sizing: border-box; }
+        
         body {
-            font-family: 'Space Grotesk', sans-serif;
-            background: linear-gradient(135deg, rgba(5,7,15,0.95), rgba(40,8,8,0.9));
-            color: var(--text);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
             margin: 0;
-            padding: 20px;
+            padding: 0;
+            background-color: #000000;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(30, 41, 59, 0.4), transparent 30%),
+                radial-gradient(circle at 85% 30%, rgba(69, 10, 10, 0.4), transparent 30%);
+            color: #f1f5f9;
+            font-family: 'Inter', -apple-system, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            position: relative;
         }
-        .box {
-            background: var(--panel);
-            backdrop-filter: blur(14px);
-            padding: 40px;
-            border-radius: 16px;
-            max-width: 420px;
+
+        body::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: 
+                linear-gradient(to right, #1e293b 1px, transparent 1px),
+                linear-gradient(to bottom, #1e293b 1px, transparent 1px);
+            background-size: 40px 40px;
+            opacity: 0.15;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .zp-auth-wrapper {
+            position: relative;
+            z-index: 10;
             width: 100%;
-            border: 1px solid var(--border);
+            max-width: 420px;
+            padding: 2.5rem;
+            background: rgba(9, 9, 11, 0.65);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: 12px;
+            backdrop-filter: blur(24px) saturate(150%);
+            box-shadow: 0 0 0 1px rgba(0,0,0,0.5), 0 30px 60px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(239, 68, 68, 0.1);
             text-align: center;
         }
-        h2 {
-            font-family: 'Orbitron', sans-serif;
-            color: var(--danger);
-            margin: 0 0 12px;
+
+        .zp-auth-brand-logo {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            font-size: 1.125rem;
+            letter-spacing: -0.02em;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
         }
-        p { color: var(--muted); line-height: 1.6; margin: 0 0 20px; }
-        a {
-            display: inline-block;
-            padding: 12px 20px;
-            border-radius: 10px;
-            background: rgba(248,113,113,0.15);
-            border: 1px solid var(--border);
-            color: var(--text);
-            text-decoration: none;
+
+        .zp-auth-brand-logo::before {
+            content: '';
+            display: block;
+            width: 16px;
+            height: 16px;
+            background: #ef4444;
+            border-radius: 4px;
+        }
+
+        .zp-error-code {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            font-size: 3.5rem;
+            color: #ef4444;
+            line-height: 1;
+            margin: 0 0 1rem;
+            text-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+        }
+
+        .zp-auth-title {
+            font-size: 1.25rem;
             font-weight: 600;
+            letter-spacing: -0.02em;
+            margin: 0 0 0.75rem;
+            color: #ffffff;
         }
-        a:hover { background: rgba(248,113,113,0.25); }
+
+        .zp-auth-subtitle {
+            font-size: 0.875rem;
+            color: #94a3b8;
+            margin: 0 0 2rem;
+            line-height: 1.6;
+        }
+
+        .zp-auth-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.75rem 1.5rem;
+            background-color: #ffffff;
+            color: #0f172a;
+            border: none;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .zp-auth-btn:hover {
+            background-color: #f8fafc;
+            transform: translateY(-1px);
+        }
+
+        .zp-auth-btn:active {
+            transform: translateY(0);
+        }
     </style>
 </head>
 <body>
-    <div class="box">
-        <h2>ACCESS DENIED</h2>
-        <p>
-            <% if (reason === 'not_in_guild') { %>
-                Akun Discord kamu tidak ada di server Zuperming.
-            <% } else { %>
-                Kamu tidak punya role <strong>Developer</strong> atau <strong>Owner</strong>.
-            <% } %>
-        </p>
-        <p style="font-size: 0.9rem;">Login sebagai: <strong><%= username %></strong></p>
-        <a href="/admin/logout">Logout</a>
+    <div class="zp-auth-wrapper">
+        <div class="zp-auth-brand-logo">ZUPERMING</div>
+        <div class="zp-error-code">403</div>
+        <h1 class="zp-auth-title">Access Restricted</h1>
+        <p class="zp-auth-subtitle">Your credentials do not meet the minimum clearance level required to access this system instance. Developer or Owner authorization is required.</p>
+        <a href="/admin/login" class="zp-auth-btn">Return to Portal</a>
     </div>
 </body>
 </html>

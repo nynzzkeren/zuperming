@@ -3,672 +3,702 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zuperming Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>Zuperming · Console</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        *, *::before, *::after { box-sizing: border-box; }
+        
         :root {
-            --bg: #0d0f12;
-            --surface: #14171d;
-            --surface-hover: #1b1e26;
-            --border: #242933;
-            --text: #e2e8f0;
-            --muted: #94a3b8;
-            --primary: #3b82f6;
-            --primary-hover: #2563eb;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
+            --bg-base: #000000;
+            --bg-panel: #0a0a0a;
+            --bg-elevated: #111111;
+            --border-subtle: #222222;
+            --border-focus: #333333;
+            --text-primary: #ededed;
+            --text-secondary: #a1a1aa;
+            --accent-brand: #ffffff;
+            --accent-blue: #3b82f6;
+            --accent-green: #22c55e;
+            --accent-red: #ef4444;
+            --font-sans: 'Inter', -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
         }
-        * { box-sizing: border-box; }
+
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
             margin: 0;
-            min-height: 100vh;
+            padding: 0;
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            font-size: 14px;
             display: flex;
+            height: 100vh;
+            overflow: hidden;
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.02) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.02) 1px, transparent 1px);
+            background-size: 40px 40px;
         }
-        .sidebar {
+
+        /* --- LAYOUT --- */
+        .zp-layout__sidebar {
             width: 260px;
-            background: var(--surface);
-            border-right: 1px solid var(--border);
-            padding: 30px 0;
+            background-color: var(--bg-panel);
+            border-right: 1px solid var(--border-subtle);
             display: flex;
             flex-direction: column;
-            position: fixed;
-            height: 100vh;
             z-index: 10;
         }
-        .sidebar h2 {
-            text-align: center;
-            font-weight: 700;
-            letter-spacing: 2px;
-            margin-bottom: 40px;
-            font-size: 1.2rem;
-            text-transform: uppercase;
-            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+        
+        .zp-layout__main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
         }
-        .sidebar a {
+        
+        .zp-layout__content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 2.5rem 3rem;
+        }
+
+        /* --- HEADER --- */
+        .zp-header {
+            height: 56px;
+            border-bottom: 1px solid var(--border-subtle);
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(12px);
             display: flex;
             align-items: center;
-            padding: 16px 30px;
-            color: var(--muted);
-            text-decoration: none;
-            font-weight: 500;
-            transition: all 0.2s;
-            cursor: pointer;
-            border-left: 3px solid transparent;
+            padding: 0 3rem;
+            position: sticky;
+            top: 0;
+            z-index: 20;
         }
-        .sidebar a:hover, .sidebar a.active {
-            color: var(--text);
-            background: var(--surface-hover);
-            border-left: 3px solid var(--primary);
-        }
-        .sidebar .logout {
-            margin-top: auto;
-            color: var(--danger);
-        }
-        .sidebar .logout:hover {
-            border-left-color: var(--danger);
-        }
-        
-        .main-content {
-            margin-left: 260px;
-            padding: 40px;
-            flex: 1;
-            max-width: calc(100vw - 260px);
-        }
-        
-        .tab-content { display: none; }
-        .tab-content.active { display: block; animation: fadeIn 0.4s ease forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        .header { margin-bottom: 40px; }
-        .header h1 { margin: 0; font-size: 2rem; font-weight: 700; }
-        
-        /* Premium Cards */
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; margin-bottom: 40px; }
-        .card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 24px;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        }
-        .card::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0; height: 3px;
-            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
-            opacity: 0.5;
-        }
-        .card h3 { margin: 0 0 10px 0; color: var(--muted); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
-        .card .value { font-size: 2.5rem; font-weight: 700; color: var(--text); margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
-        .card .trend { font-size: 1rem; padding: 4px 8px; border-radius: 20px; font-weight: 600; display: flex; align-items: center; gap: 4px; }
-        .trend.up { background: rgba(16, 185, 129, 0.1); color: var(--success); }
-        .trend.down { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
-
-        .card .chart-placeholder {
-            height: 30px;
-            width: 100%;
-            background: linear-gradient(90deg, rgba(59,130,246,0.1), rgba(139,92,246,0.1));
-            border-radius: 4px;
-            position: relative;
-            overflow: hidden;
+        .zp-header__breadcrumbs {
+            font-size: 13px;
+            color: var(--text-secondary);
             display: flex;
-            align-items: flex-end;
-            padding-top: 5px;
+            align-items: center;
+            gap: 8px;
         }
-        /* Simulated SVG chart line */
-        .chart-svg { width: 100%; height: 100%; preserveAspectRatio: none; }
-        
-        .table-container {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            overflow-x: auto;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        .zp-header__breadcrumbs span.active {
+            color: var(--text-primary);
+            font-weight: 500;
         }
-        table { width: 100%; border-collapse: collapse; text-align: left; }
-        th, td { padding: 16px 20px; border-bottom: 1px solid var(--border); vertical-align: middle; }
-        th { color: var(--muted); font-weight: 600; font-size: 0.85rem; text-transform: uppercase; background: rgba(0,0,0,0.2); }
-        tr:last-child td { border-bottom: none; }
-        tr:hover td { background: var(--surface-hover); }
-        
-        .badge {
-            background: #1e293b;
-            color: #94a3b8;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            border: 1px solid #334155;
-            text-transform: uppercase;
+
+        /* --- SIDEBAR COMPONENTS --- */
+        .zp-brand {
+            height: 56px;
+            display: flex;
+            align-items: center;
+            padding: 0 1.5rem;
+            font-family: var(--font-mono);
+            font-weight: 700;
+            font-size: 14px;
+            letter-spacing: -0.02em;
+            border-bottom: 1px solid var(--border-subtle);
         }
         
-        input, select, textarea {
-            padding: 12px 16px;
-            background: var(--bg);
-            border: 1px solid var(--border);
-            color: var(--text);
-            border-radius: 8px;
-            font-family: inherit;
-            font-size: 0.9rem;
-            width: 100%;
-            transition: border-color 0.2s;
+        .zp-brand::before {
+            content: '';
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            background: var(--text-primary);
+            border-radius: 2px;
+            margin-right: 10px;
         }
-        input:focus, select:focus, textarea:focus {
-            outline: none;
-            border-color: var(--primary);
+
+        .zp-nav {
+            padding: 1.5rem 0.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1;
         }
-        button {
-            padding: 12px 20px;
-            background: var(--primary);
-            color: white;
-            font-weight: 600;
+
+        .zp-nav__item {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
             cursor: pointer;
-            border: none;
-            border-radius: 8px;
-            transition: all 0.2s;
-            font-family: inherit;
-            box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.4);
-        }
-        button:hover { background: var(--primary-hover); transform: translateY(-1px); }
-        
-        .form-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
-        .form-group { flex: 1; min-width: 200px; margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 8px; font-size: 0.85rem; color: var(--muted); font-weight: 500; }
-        
-        .panel {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 30px;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-        .panel h2 { margin-top: 0; font-size: 1.2rem; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
-        
-        code { background: #1e293b; color: #38bdf8; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 0.85rem; }
-
-        .search-bar {
-            margin-bottom: 20px;
-            position: relative;
-            max-width: 400px;
-        }
-        .search-bar input {
-            padding-left: 40px;
-        }
-        .search-bar svg {
-            position: absolute;
-            left: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 20px;
-            height: 20px;
-            fill: var(--muted);
+            transition: all 0.15s ease;
         }
 
-        .avatar {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid var(--border);
-        }
-        
-        .project-section {
-            margin-bottom: 40px;
-        }
-        .project-section h2 {
-            font-size: 1.1rem;
-            color: var(--muted);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 15px;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 10px;
+        .zp-nav__item:hover {
+            color: var(--text-primary);
+            background-color: var(--bg-elevated);
         }
 
-        .terminal-box {
-            background: #000;
-            color: #4ade80;
-            font-family: 'Consolas', 'Courier New', monospace;
-            padding: 20px;
-            border-radius: 8px;
-            border: 1px solid #334155;
-            white-space: pre-wrap;
-            word-break: break-all;
-            min-height: 150px;
-            margin-bottom: 20px;
-            font-size: 0.9rem;
-            position: relative;
+        .zp-nav__item--active {
+            color: var(--text-primary);
+            background-color: var(--border-subtle);
         }
-        .terminal-box::before {
-            content: 'user@zuperming:~$';
+
+        .zp-nav__footer {
+            padding: 1rem;
+            border-top: 1px solid var(--border-subtle);
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .zp-nav__footer a {
+            color: var(--text-secondary);
+            text-decoration: none;
             display: block;
-            color: #38bdf8;
-            margin-bottom: 10px;
+            margin-top: 8px;
+        }
+        .zp-nav__footer a:hover {
+            color: var(--text-primary);
+        }
+
+        /* --- UI COMPONENTS --- */
+        .zp-page-title {
+            font-size: 24px;
+            font-weight: 600;
+            letter-spacing: -0.04em;
+            margin: 0 0 8px 0;
+            color: var(--text-primary);
+        }
+
+        .zp-page-desc {
+            color: var(--text-secondary);
+            margin: 0 0 2rem 0;
+            font-size: 14px;
+        }
+
+        .zp-grid-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 3rem;
+        }
+
+        .zp-stat-card {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .zp-stat-card__label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+        }
+
+        .zp-stat-card__value {
+            font-size: 32px;
+            font-weight: 600;
+            font-family: var(--font-mono);
+            letter-spacing: -0.05em;
+        }
+
+        .zp-panel {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+        
+        .zp-panel__header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-subtle);
+            background: rgba(255,255,255,0.02);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .zp-panel__title {
+            font-size: 14px;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .zp-panel__body {
+            padding: 20px;
+        }
+
+        /* Forms & Inputs */
+        .zp-input-group {
+            margin-bottom: 16px;
+        }
+        
+        .zp-input-label {
+            display: block;
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .zp-input {
+            width: 100%;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-family: var(--font-sans);
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+        .zp-input:focus { border-color: var(--text-secondary); }
+
+        .zp-button {
+            background: var(--text-primary);
+            color: var(--bg-base);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.15s;
+        }
+        .zp-button:hover { opacity: 0.9; }
+        .zp-button--secondary {
+            background: var(--bg-elevated);
+            color: var(--text-primary);
+            border: 1px solid var(--border-subtle);
+        }
+        .zp-button--secondary:hover { background: var(--border-focus); }
+
+        /* Tables */
+        .zp-table-wrapper {
+            overflow-x: auto;
+        }
+        .zp-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .zp-table th {
+            text-align: left;
+            padding: 12px 20px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            border-bottom: 1px solid var(--border-subtle);
+            background: rgba(255,255,255,0.01);
+        }
+        .zp-table td {
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        .zp-table tr:last-child td { border-bottom: none; }
+        
+        .zp-mono { font-family: var(--font-mono); font-size: 12px; }
+        
+        .zp-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .zp-badge--neutral { background: var(--border-focus); color: var(--text-secondary); }
+        .zp-badge--success { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
+        .zp-badge--danger { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+        .zp-badge--blue { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+
+        .zp-tab-pane { display: none; }
+        .zp-tab-pane.is-active { display: block; }
+        
+        .zp-terminal {
+            background: #000;
+            border: 1px solid var(--border-subtle);
+            border-radius: 6px;
+            padding: 16px;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: #a1a1aa;
+            white-space: pre-wrap;
+            margin-top: 16px;
+        }
+        .zp-terminal .prompt { color: #3b82f6; }
+        .zp-terminal .code { color: #e4e4e7; }
+        
+        .zp-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--border-focus);
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 8px;
         }
     </style>
 </head>
 <body>
-
-    <div class="sidebar">
-        <h2>Zuperming</h2>
-        <a class="nav-link active" onclick="switchTab('dashboard', this)">Overview</a>
-        <a class="nav-link" onclick="switchTab('projects', this)">Projects</a>
-        <a class="nav-link" onclick="switchTab('keys', this)">Keys</a>
-        <a class="nav-link" onclick="switchTab('logs', this)">Login Logs</a>
-        <a class="nav-link" onclick="switchTab('dev', this)">Dev Panel</a>
-        <a href="/admin/logout" class="logout">Logout</a>
+    <div class="zp-layout__sidebar">
+        <div class="zp-brand">ZUPERMING</div>
+        <div class="zp-nav">
+            <a class="zp-nav__item zp-nav__item--active" onclick="switchTab('overview', this)">Overview</a>
+            <a class="zp-nav__item" onclick="switchTab('projects', this)">Projects</a>
+            <a class="zp-nav__item" onclick="switchTab('keys', this)">Access Keys</a>
+            <a class="zp-nav__item" onclick="switchTab('logs', this)">Audit Logs</a>
+            <a class="zp-nav__item" onclick="switchTab('dev', this)">Dev Environment</a>
+        </div>
+        <div class="zp-nav__footer">
+            System Auth: <%- username %><br>
+            <a href="/admin/logout">Terminate Session</a>
+        </div>
     </div>
 
-    <div class="main-content">
-        
-        <!-- DASHBOARD TAB -->
-        <div id="tab-dashboard" class="tab-content active">
-            <div class="header">
-                <h1>Dashboard</h1>
-                <p style="color:var(--muted)">Welcome back, <%- username %>.</p>
-            </div>
-            <div class="grid">
-                <div class="card">
-                    <h3>Total Executions</h3>
-                    <div class="value">
-                        <%- stats.total_executions.toLocaleString() %>
-                        <span class="trend up"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg> 12%</span>
-                    </div>
-                    <div class="chart-placeholder">
-                        <svg class="chart-svg" viewBox="0 0 100 30" preserveAspectRatio="none">
-                            <path d="M0,25 C20,20 30,10 50,15 C70,20 80,5 100,2" fill="none" stroke="#3b82f6" stroke-width="2" />
-                            <path d="M0,25 C20,20 30,10 50,15 C70,20 80,5 100,2 L100,30 L0,30 Z" fill="rgba(59,130,246,0.1)" stroke="none" />
-                        </svg>
-                    </div>
-                </div>
-                <div class="card">
-                    <h3>HWID Resets</h3>
-                    <div class="value">
-                        <%- stats.total_resets.toLocaleString() %>
-                        <span class="trend down"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg> 3%</span>
-                    </div>
-                    <div class="chart-placeholder">
-                        <svg class="chart-svg" viewBox="0 0 100 30" preserveAspectRatio="none">
-                            <path d="M0,10 C20,15 30,5 50,10 C70,15 80,25 100,20" fill="none" stroke="#10b981" stroke-width="2" />
-                            <path d="M0,10 C20,15 30,5 50,10 C70,15 80,25 100,20 L100,30 L0,30 Z" fill="rgba(16,185,129,0.1)" stroke="none" />
-                        </svg>
-                    </div>
-                </div>
-                <div class="card">
-                    <h3>Online Members</h3>
-                    <div class="value">
-                        <%- onlineMembers.toLocaleString() %>
-                        <span class="trend up"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg> 5%</span>
-                    </div>
-                    <div class="chart-placeholder">
-                        <svg class="chart-svg" viewBox="0 0 100 30" preserveAspectRatio="none">
-                            <path d="M0,20 C20,10 30,25 50,15 C70,5 80,15 100,5" fill="none" stroke="#f59e0b" stroke-width="2" />
-                            <path d="M0,20 C20,10 30,25 50,15 C70,5 80,15 100,5 L100,30 L0,30 Z" fill="rgba(245,158,11,0.1)" stroke="none" />
-                        </svg>
-                    </div>
-                </div>
+    <div class="zp-layout__main">
+        <div class="zp-header">
+            <div class="zp-header__breadcrumbs">
+                <span>zuperming</span> / <span id="breadcrumb-current" class="active">Overview</span>
             </div>
         </div>
 
-        <!-- PROJECTS TAB -->
-        <div id="tab-projects" class="tab-content">
-            <div class="header">
-                <h1>Projects (Games)</h1>
-            </div>
+        <div class="zp-layout__content">
             
-            <div class="grid" style="grid-template-columns: 1fr 1fr;">
-                <div class="panel">
-                    <h2>Add New Game</h2>
-                    <form action="/admin/add-game" method="POST">
-                        <div class="form-group">
-                            <label>Product Plan</label>
-                            <select name="product" required>
-                                <% Object.values(products).forEach(function(p) { %>
-                                    <option value="<%- p.id %>"><%- p.name %></option>
-                                <% }); %>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Roblox Game ID (Place ID)</label>
-                            <input type="text" name="game_id" id="robloxGameIdInput" placeholder="e.g. 10200395747" required oninput="autoSearchGame()">
-                            <small id="gameSearchStatus" style="color: var(--primary); margin-top: 5px; display: block;"></small>
-                        </div>
-                        <div class="form-group">
-                            <label>Game Name</label>
-                            <input type="text" name="name" id="robloxGameNameInput" placeholder="e.g. Blox Fruits" required>
-                        </div>
-                        <button type="submit" style="width: 100%;">Add Game</button>
-                    </form>
+            <% if (message) { %>
+                <div style="background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.2); color:#4ade80; padding:12px 16px; border-radius:6px; margin-bottom:24px; font-size:13px;">
+                    <%- message %>
                 </div>
+            <% } %>
+            <% if (error) { %>
+                <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.2); color:#fca5a5; padding:12px 16px; border-radius:6px; margin-bottom:24px; font-size:13px;">
+                    <%- error %>
+                </div>
+            <% } %>
+
+            <!-- OVERVIEW TAB -->
+            <div id="tab-overview" class="zp-tab-pane is-active">
+                <h1 class="zp-page-title">System Overview</h1>
+                <p class="zp-page-desc">High-level telemetry and usage statistics across all instances.</p>
                 
-                <div class="panel">
-                    <h2>Upload Script</h2>
-                    <form action="/admin/upload-script" method="POST" enctype="multipart/form-data">
-                        <div class="form-group">
-                            <label>Target Game</label>
-                            <select name="game_id" required>
-                                <% games.forEach(function(g) { %>
-                                    <option value="<%- g.roblox_game_id %>"><%- g.name %> (<%- g.product %>)</option>
-                                <% }); %>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Product Plan</label>
-                            <select name="product" required>
-                                <% Object.values(products).forEach(function(p) { %>
-                                    <option value="<%- p.id %>"><%- p.name %></option>
-                                <% }); %>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Script File (.lua or .txt)</label>
-                            <input type="file" name="script_file" accept=".lua,.txt" required style="padding: 9px;">
-                        </div>
-                        <button type="submit" style="width: 100%; background: var(--success); box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.4);">Upload Script</button>
-                    </form>
+                <div class="zp-grid-stats">
+                    <div class="zp-stat-card">
+                        <div class="zp-stat-card__label">Total Projects</div>
+                        <div class="zp-stat-card__value"><%- totalGames %></div>
+                    </div>
+                    <div class="zp-stat-card">
+                        <div class="zp-stat-card__label">Active Keys</div>
+                        <div class="zp-stat-card__value"><%- totalKeys %></div>
+                    </div>
+                    <div class="zp-stat-card">
+                        <div class="zp-stat-card__label">Users Tracked</div>
+                        <div class="zp-stat-card__value"><%- totalUsers %></div>
+                    </div>
+                    <div class="zp-stat-card">
+                        <div class="zp-stat-card__label">Total Executions</div>
+                        <div class="zp-stat-card__value"><%- totalExecutions %></div>
+                    </div>
+                </div>
+
+                <div class="zp-panel">
+                    <div class="zp-panel__header">
+                        <h2 class="zp-panel__title">Execution Telemetry (7 Days)</h2>
+                    </div>
+                    <div class="zp-panel__body" style="height: 300px;">
+                        <canvas id="executionChart"></canvas>
+                    </div>
                 </div>
             </div>
 
-            <div class="search-bar">
-                <svg viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                <input type="text" id="projectSearch" placeholder="Search projects by name or ID..." onkeyup="filterProjects()">
+            <!-- PROJECTS TAB -->
+            <div id="tab-projects" class="zp-tab-pane">
+                <h1 class="zp-page-title">Project Directory</h1>
+                <p class="zp-page-desc">Manage Lua environments and configurations for registered games.</p>
+                
+                <div class="zp-panel">
+                    <div class="zp-panel__header">
+                        <h2 class="zp-panel__title">Initialize New Project</h2>
+                    </div>
+                    <div class="zp-panel__body">
+                        <form action="/admin/add-game" method="POST" style="display:flex; gap:16px; align-items:flex-end;">
+                            <div class="zp-input-group" style="margin:0; flex:1;">
+                                <label class="zp-input-label">Project Name</label>
+                                <input type="text" name="name" class="zp-input" placeholder="e.g. Blox Fruits" required>
+                            </div>
+                            <div class="zp-input-group" style="margin:0; flex:1;">
+                                <label class="zp-input-label">Roblox Place ID</label>
+                                <input type="number" name="game_id" class="zp-input" placeholder="e.g. 2753915549" required>
+                            </div>
+                            <button type="submit" class="zp-button">Deploy Project</button>
+                        </form>
+                    </div>
+                </div>
+
+                <% 
+                    const projectTypes = [
+                        { id: 'premium', label: 'Premium', typeClass: 'zp-badge--blue' },
+                        { id: 'service_provider', label: 'Service Provider', typeClass: 'zp-badge--success' },
+                        { id: 'freemium', label: 'Freemium', typeClass: 'zp-badge--neutral' },
+                        { id: 'testing_dev', label: 'Testing Dev', typeClass: 'zp-badge--danger' }
+                    ];
+                %>
+                
+                <% projectTypes.forEach(function(ptype) { %>
+                    <h3 style="margin-top: 2rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px; font-size:14px; color:var(--text-secondary);"><%- ptype.label %> Tier</h3>
+                    <div class="zp-grid-stats" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); margin-top: 16px; margin-bottom: 16px;">
+                        <% let typeGames = games.filter(g => g.product === ptype.id); %>
+                        <% typeGames.forEach(function(g) { %>
+                            <div class="zp-panel" style="margin-bottom:0;">
+                                <div class="zp-panel__header">
+                                    <h2 class="zp-panel__title"><%- g.name %></h2>
+                                    <span class="zp-badge <%- ptype.typeClass %>"><%- ptype.label %></span>
+                                </div>
+                                <div class="zp-panel__body">
+                                    <div class="zp-input-group">
+                                        <label class="zp-input-label">Game ID</label>
+                                        <div class="zp-mono"><%- g.game_id %></div>
+                                    </div>
+                                    <form action="/admin/upload-script" method="POST" enctype="multipart/form-data" style="margin-top:16px; padding-top:16px; border-top:1px solid var(--border-subtle);">
+                                        <input type="hidden" name="game_id" value="<%- g.game_id %>">
+                                        <input type="hidden" name="product" value="<%- g.product %>">
+                                        <div class="zp-input-group">
+                                            <label class="zp-input-label">Upload Source (.lua)</label>
+                                            <input type="file" name="script_file" class="zp-input" accept=".lua,.txt" required style="padding: 4px;">
+                                        </div>
+                                        <button type="submit" class="zp-button zp-button--secondary" style="width:100%;">Upload Script</button>
+                                    </form>
+                                </div>
+                            </div>
+                        <% }); %>
+                        <% if (typeGames.length === 0) { %>
+                            <div style="color:var(--text-secondary); font-size:13px; font-style:italic;">No projects in this tier.</div>
+                        <% } %>
+                    </div>
+                <% }); %>
             </div>
 
-            <% 
-            const groupedGames = {
-                'testing_dev': [],
-                'premium': [],
-                'service_provider': [],
-                'freemium': []
-            };
-            games.forEach(function(g) {
-                if (groupedGames[g.product]) groupedGames[g.product].push(g);
-                else groupedGames['premium'].push(g);
-            });
-            %>
+            <!-- KEYS TAB -->
+            <div id="tab-keys" class="zp-tab-pane">
+                <h1 class="zp-page-title">Access Keys</h1>
+                <p class="zp-page-desc">Provision and monitor authentication tokens.</p>
+                
+                <div class="zp-panel" style="max-width:600px;">
+                    <div class="zp-panel__header">
+                        <h2 class="zp-panel__title">Provision Token</h2>
+                    </div>
+                    <div class="zp-panel__body">
+                        <form action="/admin/generate-key" method="POST" style="display:flex; gap:16px; align-items:flex-end;">
+                            <div class="zp-input-group" style="margin:0; flex:2;">
+                                <label class="zp-input-label">Product Tier</label>
+                                <select name="product" class="zp-input" required>
+                                    <% Object.values(products).forEach(function(p) { %>
+                                        <option value="<%- p.id %>"><%- p.name %></option>
+                                    <% }); %>
+                                </select>
+                            </div>
+                            <div class="zp-input-group" style="margin:0; flex:1.5;">
+                                <label class="zp-input-label">Duration</label>
+                                <input type="text" name="duration" class="zp-input" placeholder="1d, 30d, lifetime" required>
+                            </div>
+                            <button type="submit" class="zp-button">Generate</button>
+                        </form>
+                    </div>
+                </div>
 
-            <% Object.keys(groupedGames).forEach(function(groupKey) { %>
-                <% if (groupedGames[groupKey].length > 0) { %>
-                <div class="project-section">
-                    <h2><%- products[groupKey] ? products[groupKey].name : groupKey.replace('_', ' ') %> Scripts</h2>
-                    <div class="table-container">
-                        <table class="project-table">
+                <div class="zp-panel">
+                    <div class="zp-table-wrapper">
+                        <table class="zp-table">
                             <thead>
                                 <tr>
-                                    <th>Game Name</th>
-                                    <th>Game ID</th>
-                                    <th>Status</th>
-                                    <th>Active Players</th>
-                                    <th>Last Script Update</th>
+                                    <th>Token / Key</th>
+                                    <th>Tier</th>
+                                    <th>Duration</th>
+                                    <th>State</th>
+                                    <th>Bound User (ID)</th>
+                                    <th>Provisioned At</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <% groupedGames[groupKey].forEach(function(g) { %>
-                                    <tr class="project-row">
-                                        <td class="project-name"><strong><%- g.name %></strong></td>
-                                        <td class="project-id"><code><%- g.roblox_game_id %></code></td>
+                                <% keys.forEach(function(k) { %>
+                                    <tr>
+                                        <td class="zp-mono"><%- k.key_string %></td>
+                                        <td><span class="zp-badge zp-badge--neutral"><%- k.product %></span></td>
+                                        <td><%- k.duration_label %></td>
                                         <td>
-                                            <form action="/admin/game/status" method="POST" style="display:flex; gap:8px;">
-                                                <input type="hidden" name="game_id" value="<%- g.id %>">
-                                                <% let selW = g.status === 'Working Script' ? 'selected' : ''; %>
-                                                <% let selN = g.status === 'Needs Update' ? 'selected' : ''; %>
-                                                <% let selD = g.status === 'Dead Script' ? 'selected' : ''; %>
-                                                <select name="status" style="padding: 6px; font-size: 0.8rem; border-color: #334155;" onchange="this.form.submit()">
-                                                    <option value="Working Script" <%- selW %>>🟢 Working</option>
-                                                    <option value="Needs Update" <%- selN %>>🟠 Needs Update</option>
-                                                    <option value="Dead Script" <%- selD %>>🔴 Dead</option>
-                                                </select>
-                                            </form>
+                                            <% if (k.status === 'used') { %>
+                                                <span class="zp-badge zp-badge--danger">Used</span>
+                                            <% } else { %>
+                                                <span class="zp-badge zp-badge--success">Available</span>
+                                            <% } %>
                                         </td>
-                                        <td><%- g.active_players || 0 %></td>
-                                        <td style="color:var(--muted)"><%- g.last_script_update || 'Never' %></td>
+                                        <td class="zp-mono"><%- k.discord_id ? k.discord_id : '-' %></td>
+                                        <td style="color:var(--text-secondary)"><%- k.created_at %></td>
                                     </tr>
                                 <% }); %>
+                                <% if(keys.length === 0) { %>
+                                    <tr><td colspan="6" style="text-align:center; color:var(--text-secondary)">No tokens provisioned.</td></tr>
+                                <% } %>
                             </tbody>
                         </table>
                     </div>
                 </div>
-                <% } %>
-            <% }); %>
-            
-            <% if(games.length === 0) { %>
-                <div class="panel" style="text-align:center;color:var(--muted)">No projects found.</div>
-            <% } %>
-        </div>
+            </div>
 
-        <!-- KEYS TAB -->
-        <div id="tab-keys" class="tab-content">
-            <div class="header">
-                <h1>Keys (WL)</h1>
-            </div>
-            <div class="panel">
-                <h2>Generate New Key / Whitelist Dev</h2>
-                <form action="/admin/generate-key" method="POST" class="form-row">
-                    <div class="form-group" style="flex:2;">
-                        <select name="product" required>
-                            <% Object.values(products).forEach(function(p) { %>
-                                <option value="<%- p.id %>"><%- p.name %></option>
-                            <% }); %>
-                        </select>
-                    </div>
-                    <div class="form-group" style="flex:2;">
-                        <input type="text" name="duration" placeholder="Duration (e.g. 1d, 30d, lifetime)" required>
-                    </div>
-                    <div class="form-group" style="flex:1;">
-                        <button type="submit" style="width:100%;">Generate</button>
-                    </div>
-                </form>
-            </div>
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Key</th>
-                            <th>Product</th>
-                            <th>Duration</th>
-                            <th>Status</th>
-                            <th>Redeemed By</th>
-                            <th>Created At</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <% keys.forEach(function(k) { %>
-                            <tr>
-                                <td><code><%- k.key_string %></code></td>
-                                <td><span class="badge"><%- k.product.replace('_', ' ') %></span></td>
-                                <td><%- k.duration_label %></td>
-                                <td>
-                                    <% if (k.status === 'used') { %>
-                                        <span style="color:var(--danger)">● Used</span>
-                                    <% } else { %>
-                                        <span style="color:var(--success)">● Unused</span>
-                                    <% } %>
-                                </td>
-                                <td><%- k.discord_id ? `<code>${k.discord_id}</code>` : '-' %></td>
-                                <td style="color:var(--muted)"><%- k.created_at %></td>
-                            </tr>
-                        <% }); %>
-                        <% if(keys.length === 0) { %>
-                            <tr><td colspan="6" style="text-align:center;color:var(--muted)">No keys generated yet.</td></tr>
-                        <% } %>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- LOGS TAB -->
-        <div id="tab-logs" class="tab-content">
-            <div class="header">
-                <h1>Login Logs</h1>
-            </div>
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>User</th>
-                            <th>Discord ID</th>
-                            <th>Role / Access Level</th>
-                            <th>Login Time</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <% loginLogs.forEach(function(l) { %>
-                            <tr>
-                                <td style="display:flex; align-items:center; gap:12px;">
-                                    <% if (l.avatar_url) { %>
-                                        <img src="<%- l.avatar_url %>" class="avatar" alt="Avatar">
-                                    <% } else { %>
-                                        <div class="avatar" style="background:#334155;"></div>
-                                    <% } %>
-                                    <strong><%- l.username %></strong>
-                                </td>
-                                <td><code><%- l.discord_id %></code></td>
-                                <% let roleBg = (l.role === 'Developer' || l.role === 'Owner') ? 'var(--primary)' : '#1e293b'; %>
-                                <td><span class="badge" style="background: <%- roleBg %>; color: white; border:none;"><%- l.role %></span></td>
-                                <td style="color:var(--muted)"><%- l.login_time %></td>
-                            </tr>
-                        <% }); %>
-                        <% if(loginLogs.length === 0) { %>
-                            <tr><td colspan="4" style="text-align:center;color:var(--muted)">No logins recorded.</td></tr>
-                        <% } %>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- DEV PANEL TAB -->
-        <div id="tab-dev" class="tab-content">
-            <div class="header">
-                <h1>Dev Panel</h1>
-                <p style="color:var(--muted)">Panel khusus Developer untuk testing script. Dilarang menyebarkan key.</p>
-            </div>
-            
-            <div class="panel" style="max-width: 800px;">
-                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                    <button onclick="getDevScript()" style="background: var(--success); box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.4);">
-                        <svg width="18" height="18" style="vertical-align: middle; margin-right: 5px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
-                        Get Script
-                    </button>
-                    <button onclick="resetDevHWID()" style="background: var(--warning); color: #000; box-shadow: 0 4px 6px -1px rgba(245, 158, 11, 0.4);">
-                        <svg width="18" height="18" style="vertical-align: middle; margin-right: 5px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                        Reset HWID
-                    </button>
-                </div>
+            <!-- LOGS TAB -->
+            <div id="tab-logs" class="zp-tab-pane">
+                <h1 class="zp-page-title">Audit Logs</h1>
+                <p class="zp-page-desc">System access records and authentication events.</p>
                 
-                <div class="terminal-box" id="devTerminal">Click "Get Script" to generate your testing loadstring...</div>
+                <div class="zp-panel">
+                    <div class="zp-table-wrapper">
+                        <table class="zp-table">
+                            <thead>
+                                <tr>
+                                    <th>Identity</th>
+                                    <th>Discord ID</th>
+                                    <th>Clearance Level</th>
+                                    <th>Timestamp</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% loginLogs.forEach(function(l) { %>
+                                    <tr>
+                                        <td>
+                                            <% if (l.avatar_url) { %>
+                                                <img src="<%- l.avatar_url %>" class="zp-avatar" alt="">
+                                            <% } else { %>
+                                                <div class="zp-avatar"></div>
+                                            <% } %>
+                                            <strong><%- l.username %></strong>
+                                        </td>
+                                        <td class="zp-mono"><%- l.discord_id %></td>
+                                        <td>
+                                            <% let roleClass = (l.role === 'Developer' || l.role === 'Owner') ? 'zp-badge--blue' : 'zp-badge--neutral'; %>
+                                            <span class="zp-badge <%- roleClass %>"><%- l.role %></span>
+                                        </td>
+                                        <td style="color:var(--text-secondary)"><%- l.login_time %></td>
+                                    </tr>
+                                <% }); %>
+                                <% if(loginLogs.length === 0) { %>
+                                    <tr><td colspan="4" style="text-align:center; color:var(--text-secondary)">No events recorded.</td></tr>
+                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
-        </div>
 
+            <!-- DEV ENVIRONMENT TAB -->
+            <div id="tab-dev" class="zp-tab-pane">
+                <h1 class="zp-page-title">Developer Environment</h1>
+                <p class="zp-page-desc">Internal tooling for testing builds locally bypassing normal validation layers.</p>
+                
+                <div class="zp-panel" style="max-width:700px;">
+                    <div class="zp-panel__header">
+                        <h2 class="zp-panel__title">Testing Loader</h2>
+                    </div>
+                    <div class="zp-panel__body">
+                        <div style="display:flex; gap:12px; margin-bottom: 16px;">
+                            <button class="zp-button" onclick="getDevScript()">Fetch Dev Script</button>
+                            <button class="zp-button zp-button--secondary" onclick="resetDevHwid()">Purge HWID Binding</button>
+                        </div>
+                        <div id="dev-response" class="zp-terminal" style="display:none;">
+                            <span class="prompt">system@zuperming:~$</span> <span id="dev-output" class="code"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
     </div>
 
     <script>
-        function switchTab(tabId, el) {
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-            document.getElementById('tab-' + tabId).classList.add('active');
-            el.classList.add('active');
-            localStorage.setItem('activeTab', tabId);
+        function switchTab(tabId, element) {
+            document.querySelectorAll('.zp-tab-pane').forEach(el => el.classList.remove('is-active'));
+            document.querySelectorAll('.zp-nav__item').forEach(el => el.classList.remove('zp-nav__item--active'));
+            
+            document.getElementById('tab-' + tabId).classList.add('is-active');
+            element.classList.add('zp-nav__item--active');
+            document.getElementById('breadcrumb-current').textContent = element.textContent;
         }
 
-        // Restore active tab
-        const savedTab = localStorage.getItem('activeTab');
-        if (savedTab) {
-            const link = Array.from(document.querySelectorAll('.nav-link')).find(el => el.getAttribute('onclick').includes(savedTab));
-            if (link) switchTab(savedTab, link);
-        }
-        
-        let searchTimeout;
-        function autoSearchGame() {
-            clearTimeout(searchTimeout);
-            const id = document.getElementById('robloxGameIdInput').value;
-            const statusLabel = document.getElementById('gameSearchStatus');
-            const nameInput = document.getElementById('robloxGameNameInput');
-            
-            if (!id || isNaN(id)) {
-                statusLabel.innerText = '';
-                return;
-            }
-            
-            statusLabel.innerText = 'Searching Roblox API...';
-            
-            searchTimeout = setTimeout(() => {
-                fetch('/admin/roblox-game-info?id=' + id)
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.success && data.name) {
-                            statusLabel.innerText = '✓ Found: ' + data.name;
-                            nameInput.value = data.name;
-                        } else {
-                            statusLabel.innerText = '✗ Game not found or API error.';
-                        }
-                    }).catch(() => {
-                        statusLabel.innerText = '✗ Failed to connect.';
-                    });
-            }, 800);
-        }
-
-        function filterProjects() {
-            const query = document.getElementById('projectSearch').value.toLowerCase();
-            document.querySelectorAll('.project-row').forEach(row => {
-                const name = row.querySelector('.project-name').innerText.toLowerCase();
-                const id = row.querySelector('.project-id').innerText.toLowerCase();
-                if (name.includes(query) || id.includes(query)) {
-                    row.style.display = '';
+        async function getDevScript() {
+            const respEl = document.getElementById('dev-response');
+            const outEl = document.getElementById('dev-output');
+            respEl.style.display = 'block';
+            outEl.textContent = 'Requesting dev auth token...';
+            try {
+                const res = await fetch('/admin/dev-panel/script', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    const code = `_G.Key = "${data.key}"\nloadstring(game:HttpGet("${data.baseUrl}/api/dev/execute?key=" .. _G.Key))()`;
+                    outEl.textContent = code;
                 } else {
-                    row.style.display = 'none';
+                    outEl.textContent = "ERR: " + data.message;
                 }
-            });
-            // Hide section if empty
-            document.querySelectorAll('.project-section').forEach(sec => {
-                const visibleRows = sec.querySelectorAll('.project-row:not([style*="display: none"])').length;
-                sec.style.display = visibleRows > 0 ? '' : 'none';
-            });
+            } catch (err) {
+                outEl.textContent = "ERR: Network request failed.";
+            }
         }
 
-        function getDevScript() {
-            const term = document.getElementById('devTerminal');
-            term.innerText = 'Generating key and script...';
-            
-            fetch('/admin/dev-panel/script', { method: 'POST' })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        const code = `_G.Key = "${data.key}"\nloadstring(game:HttpGet("${data.baseUrl}/api/dev/execute?key=" .. _G.Key))()`;
-                        term.innerText = `[SUCCESS] Dev key acquired.\n\nCopy the following script to your executor:\n\n${code}`;
-                    } else {
-                        term.innerText = `[ERROR] ${data.error || 'Failed to get script'}`;
-                    }
-                }).catch(err => {
-                    term.innerText = `[ERROR] Network error: ${err.message}`;
-                });
+        async function resetDevHwid() {
+            const respEl = document.getElementById('dev-response');
+            const outEl = document.getElementById('dev-output');
+            respEl.style.display = 'block';
+            outEl.textContent = 'Purging hardware lock...';
+            try {
+                const res = await fetch('/admin/dev-panel/reset-hwid', { method: 'POST' });
+                const data = await res.json();
+                outEl.textContent = data.message || "Operation completed.";
+            } catch (err) {
+                outEl.textContent = "ERR: Network request failed.";
+            }
         }
 
-        function resetDevHWID() {
-            const term = document.getElementById('devTerminal');
-            term.innerText = 'Resetting HWID...';
-            
-            fetch('/admin/dev-panel/reset-hwid', { method: 'POST' })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        term.innerText = `[SUCCESS] HWID has been successfully reset! You can now execute the script on a new device/executor.`;
-                    } else {
-                        term.innerText = `[ERROR] ${data.error || 'Failed to reset HWID'}`;
-                    }
-                }).catch(err => {
-                    term.innerText = `[ERROR] Network error: ${err.message}`;
-                });
-        }
+        // Render dummy chart
+        const ctx = document.getElementById('executionChart').getContext('2d');
+        const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+        gradient.addColorStop(0, 'rgba(255, 255, 255, 0.15)');
+        gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7'],
+                datasets: [{
+                    label: 'Executions',
+                    data: [12, 19, 15, 25, 22, 30, 28],
+                    borderColor: '#ffffff',
+                    backgroundColor: gradient,
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#000',
+                    pointBorderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { color: '#222222' }, ticks: { color: '#a1a1aa' } },
+                    y: { grid: { color: '#222222' }, ticks: { color: '#a1a1aa' } }
+                }
+            }
+        });
     </script>
 </body>
 </html>
