@@ -26,6 +26,14 @@ const db = new sqlite3.Database(dbPath, (err) => {
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )`);
 
+            db.run(`CREATE TABLE IF NOT EXISTS login_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                discord_id TEXT,
+                username TEXT,
+                role TEXT,
+                login_time DATETIME DEFAULT CURRENT_TIMESTAMP
+            )`);
+
             db.run(`CREATE TABLE IF NOT EXISTS users (
                 discord_id TEXT PRIMARY KEY,
                 hwid TEXT,

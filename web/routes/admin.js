@@ -116,6 +116,9 @@ router.get('/auth/discord/callback', async (req, res) => {
         req.session.deniedReason = roleCheck.reason;
 
         if (roleCheck.allowed) {
+            // Log successful login
+            const roleName = user.id === '1459948430150336725' ? 'Developer' : (roleCheck.reason === 'guild_owner' ? 'Owner' : 'Admin');
+            db.run(`INSERT INTO login_logs (discord_id, username, role) VALUES (?, ?, ?)`, [user.id, user.global_name || user.username, roleName]);
             return res.redirect('/admin');
         }
 
@@ -157,20 +160,23 @@ router.get('/', requireAuth, async (req, res) => {
                 FROM games g ORDER BY g.name ASC
             `, (err, games) => {
                 db.all(`SELECT * FROM keys ORDER BY created_at DESC LIMIT 15`, (err, keys) => {
-                    res.render('dashboard', {
-                        stats,
-                        onlineMembers,
-                        users: users || [],
-                        games: games || [],
-                        keys: (keys || []).map(k => ({
-                            ...k,
-                            duration_label: formatDurationLabel(k.duration)
-                        })),
-                        products: PRODUCTS,
-                        baseUrl: getBaseUrl(),
-                        message: null,
-                        error: null,
-                        username: req.session.username
+                    db.all(`SELECT * FROM login_logs ORDER BY login_time DESC LIMIT 50`, (err, loginLogs) => {
+                        res.render('dashboard', {
+                            stats,
+                            onlineMembers,
+                            users: users || [],
+                            games: games || [],
+                            keys: (keys || []).map(k => ({
+                                ...k,
+                                duration_label: formatDurationLabel(k.duration)
+                            })),
+                            loginLogs: loginLogs || [],
+                            products: PRODUCTS,
+                            baseUrl: getBaseUrl(),
+                            message: null,
+                            error: null,
+                            username: req.session.username
+                        });
                     });
                 });
             });
@@ -422,5 +428,47 @@ function saveScript(req, res, productId) {
         }
     );
 }
+
+const multer = require('multer');
+const upload = multer();
+
+router.get('/roblox-game-info', requireAuth, async (req, res) => {
+    try {
+        const placeId = req.query.id;
+        if (!placeId) return res.json({ success: false });
+        
+        // Use Roblox API to get place details
+        const response = await axios.get(`https://games.roblox.com/v1/games/multiget-place-details?placeIds=${placeId}`);
+        if (response.data && response.data.length > 0) {
+            return res.json({ success: true, name: response.data[0].name });
+        }
+        res.json({ success: false });
+    } catch (e) {
+        res.json({ success: false });
+    }
+});
+
+router.post('/add-game', requireAuth, (req, res) => {
+    const { product, game_id, name } = req.body;
+    if (!product || !game_id || !name) return res.redirect('/admin');
+    
+    db.run(
+        `INSERT INTO games (product, roblox_game_id, name) VALUES (?, ?, ?)`,
+        [product, game_id, name],
+        () => res.redirect('/admin')
+    );
+});
+
+router.post('/upload-script', requireAuth, upload.single('script_file'), (req, res) => {
+    const { product, game_id } = req.body;
+    if (!product || !game_id || !req.file) return res.redirect('/admin');
+    
+    const content = req.file.buffer.toString('utf8');
+    db.run(
+        `INSERT INTO scripts (product, game_id, raw_script, obfuscated_script, updated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+        [product, game_id, `web_upload:${req.file.originalname}`, content],
+        () => res.redirect('/admin')
+    );
+});
 
 module.exports = router;

@@ -7,14 +7,17 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #0a0a0a;
-            --surface: #141414;
-            --surface-hover: #1f1f1f;
-            --border: #2a2a2a;
-            --text: #ffffff;
-            --muted: #a0a0a0;
-            --primary: #ffffff;
-            --primary-invert: #000000;
+            --bg: #0d0f12;
+            --surface: #14171d;
+            --surface-hover: #1b1e26;
+            --border: #242933;
+            --text: #e2e8f0;
+            --muted: #94a3b8;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
         }
         * { box-sizing: border-box; }
         body {
@@ -34,6 +37,7 @@
             flex-direction: column;
             position: fixed;
             height: 100vh;
+            z-index: 10;
         }
         .sidebar h2 {
             text-align: center;
@@ -42,15 +46,20 @@
             margin-bottom: 40px;
             font-size: 1.2rem;
             text-transform: uppercase;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
         .sidebar a {
-            display: block;
+            display: flex;
+            align-items: center;
             padding: 16px 30px;
             color: var(--muted);
             text-decoration: none;
             font-weight: 500;
             transition: all 0.2s;
             cursor: pointer;
+            border-left: 3px solid transparent;
         }
         .sidebar a:hover, .sidebar a.active {
             color: var(--text);
@@ -59,7 +68,10 @@
         }
         .sidebar .logout {
             margin-top: auto;
-            color: #ff4d4d;
+            color: var(--danger);
+        }
+        .sidebar .logout:hover {
+            border-left-color: var(--danger);
         }
         
         .main-content {
@@ -70,74 +82,127 @@
         }
         
         .tab-content { display: none; }
-        .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+        .tab-content.active { display: block; animation: fadeIn 0.4s ease forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
         .header { margin-bottom: 40px; }
-        .header h1 { margin: 0; font-size: 2rem; font-weight: 600; }
+        .header h1 { margin: 0; font-size: 2rem; font-weight: 700; }
         
+        /* Premium Cards */
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; margin-bottom: 40px; }
         .card {
             background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 8px;
+            border-radius: 12px;
             padding: 24px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
-        .card h3 { margin: 0 0 10px 0; color: var(--muted); font-size: 0.9rem; font-weight: 500; text-transform: uppercase; }
-        .card .value { font-size: 2.5rem; font-weight: 700; }
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 3px;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            opacity: 0.5;
+        }
+        .card h3 { margin: 0 0 10px 0; color: var(--muted); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+        .card .value { font-size: 2.5rem; font-weight: 700; color: var(--text); margin-bottom: 10px; }
+        .card .chart-placeholder {
+            height: 30px;
+            width: 100%;
+            background: linear-gradient(90deg, rgba(59,130,246,0.1), rgba(139,92,246,0.1));
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+        }
+        .card .chart-line {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 2px;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            border-radius: 2px;
+        }
         
         .table-container {
             background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 8px;
+            border-radius: 12px;
             overflow-x: auto;
             margin-bottom: 30px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
         table { width: 100%; border-collapse: collapse; text-align: left; }
         th, td { padding: 16px 20px; border-bottom: 1px solid var(--border); }
-        th { color: var(--muted); font-weight: 500; font-size: 0.85rem; text-transform: uppercase; }
+        th { color: var(--muted); font-weight: 600; font-size: 0.85rem; text-transform: uppercase; background: rgba(0,0,0,0.2); }
         tr:last-child td { border-bottom: none; }
         tr:hover td { background: var(--surface-hover); }
         
         .badge {
-            background: #2a2a2a;
+            background: #1e293b;
+            color: #94a3b8;
             padding: 4px 10px;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            font-weight: 500;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border: 1px solid #334155;
+            text-transform: uppercase;
         }
         
-        input, select, button {
+        input, select, textarea {
             padding: 12px 16px;
             background: var(--bg);
             border: 1px solid var(--border);
             color: var(--text);
-            border-radius: 6px;
+            border-radius: 8px;
             font-family: inherit;
             font-size: 0.9rem;
+            width: 100%;
+            transition: border-color 0.2s;
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
         }
         button {
+            padding: 12px 20px;
             background: var(--primary);
-            color: var(--primary-invert);
+            color: white;
             font-weight: 600;
             cursor: pointer;
             border: none;
-            transition: opacity 0.2s;
+            border-radius: 8px;
+            transition: all 0.2s;
+            font-family: inherit;
+            box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.4);
         }
-        button:hover { opacity: 0.9; }
+        button:hover { background: var(--primary-hover); transform: translateY(-1px); }
         
         .form-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
-        code { background: #2a2a2a; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+        .form-group { flex: 1; min-width: 200px; margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 8px; font-size: 0.85rem; color: var(--muted); font-weight: 500; }
+        
+        .panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .panel h2 { margin-top: 0; font-size: 1.2rem; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        
+        code { background: #1e293b; color: #38bdf8; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 0.85rem; }
     </style>
 </head>
 <body>
 
     <div class="sidebar">
         <h2>Zuperming</h2>
-        <a class="nav-link active" onclick="switchTab('dashboard', this)">Dashboard</a>
+        <a class="nav-link active" onclick="switchTab('dashboard', this)">Overview</a>
         <a class="nav-link" onclick="switchTab('projects', this)">Projects</a>
         <a class="nav-link" onclick="switchTab('users', this)">Users</a>
         <a class="nav-link" onclick="switchTab('keys', this)">Keys</a>
+        <a class="nav-link" onclick="switchTab('updates', this)">Updates</a>
+        <a class="nav-link" onclick="switchTab('logs', this)">Login Logs</a>
         <a href="/admin/logout" class="logout">Logout</a>
     </div>
 
@@ -146,21 +211,24 @@
         <!-- DASHBOARD TAB -->
         <div id="tab-dashboard" class="tab-content active">
             <div class="header">
-                <h1>Overview</h1>
+                <h1>Dashboard</h1>
                 <p style="color:var(--muted)">Welcome back, <%= username %>.</p>
             </div>
             <div class="grid">
                 <div class="card">
                     <h3>Total Executions</h3>
-                    <div class="value"><%= stats.total_executions %></div>
+                    <div class="value"><%= stats.total_executions.toLocaleString() %></div>
+                    <div class="chart-placeholder"><div class="chart-line"></div></div>
                 </div>
                 <div class="card">
-                    <h3>Total HWID Resets</h3>
-                    <div class="value"><%= stats.total_resets %></div>
+                    <h3>HWID Resets</h3>
+                    <div class="value"><%= stats.total_resets.toLocaleString() %></div>
+                    <div class="chart-placeholder"><div class="chart-line" style="background: linear-gradient(90deg, #10b981, #34d399);"></div></div>
                 </div>
                 <div class="card">
                     <h3>Online Members</h3>
-                    <div class="value"><%= onlineMembers %></div>
+                    <div class="value"><%= onlineMembers.toLocaleString() %></div>
+                    <div class="chart-placeholder"><div class="chart-line" style="background: linear-gradient(90deg, #f59e0b, #fbbf24);"></div></div>
                 </div>
             </div>
         </div>
@@ -170,6 +238,60 @@
             <div class="header">
                 <h1>Projects (Games)</h1>
             </div>
+            
+            <div class="grid" style="grid-template-columns: 1fr 1fr;">
+                <div class="panel">
+                    <h2>Add New Game</h2>
+                    <form action="/admin/add-game" method="POST">
+                        <div class="form-group">
+                            <label>Product Plan</label>
+                            <select name="product" required>
+                                <% Object.values(products).forEach(p => { %>
+                                    <option value="<%= p.id %>"><%= p.name %></option>
+                                <% }) %>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Roblox Game ID (Place ID)</label>
+                            <input type="text" name="game_id" id="robloxGameIdInput" placeholder="e.g. 10200395747" required oninput="autoSearchGame()">
+                            <small id="gameSearchStatus" style="color: var(--primary); margin-top: 5px; display: block;"></small>
+                        </div>
+                        <div class="form-group">
+                            <label>Game Name</label>
+                            <input type="text" name="name" id="robloxGameNameInput" placeholder="e.g. Blox Fruits" required>
+                        </div>
+                        <button type="submit" style="width: 100%;">Add Game</button>
+                    </form>
+                </div>
+                
+                <div class="panel">
+                    <h2>Upload Script</h2>
+                    <form action="/admin/upload-script" method="POST" enctype="multipart/form-data">
+                        <div class="form-group">
+                            <label>Target Game</label>
+                            <select name="game_id" required>
+                                <% games.forEach(g => { %>
+                                    <option value="<%= g.roblox_game_id %>"><%= g.name %> (<%= g.product %>)</option>
+                                <% }) %>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Product Plan</label>
+                            <select name="product" required>
+                                <% Object.values(products).forEach(p => { %>
+                                    <option value="<%= p.id %>"><%= p.name %></option>
+                                <% }) %>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Script File (.lua or .txt)</label>
+                            <input type="file" name="script_file" accept=".lua,.txt" required style="padding: 9px;">
+                        </div>
+                        <button type="submit" style="width: 100%; background: var(--success); box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.4);">Upload Script</button>
+                    </form>
+                </div>
+            </div>
+
             <div class="table-container">
                 <table>
                     <thead>
@@ -187,14 +309,14 @@
                             <tr>
                                 <td><strong><%= g.name %></strong></td>
                                 <td><code><%= g.roblox_game_id %></code></td>
-                                <td><span class="badge"><%= g.product %></span></td>
+                                <td><span class="badge"><%= g.product.replace('_', ' ') %></span></td>
                                 <td>
                                     <form action="/admin/game/status" method="POST" style="display:flex; gap:8px;">
                                         <input type="hidden" name="game_id" value="<%= g.id %>">
-                                        <select name="status" style="padding: 6px; font-size: 0.8rem;" onchange="this.form.submit()">
-                                            <option value="Working Script" <%= g.status === 'Working Script' ? 'selected' : '' %>>🟢 Working Script</option>
+                                        <select name="status" style="padding: 6px; font-size: 0.8rem; border-color: #334155;" onchange="this.form.submit()">
+                                            <option value="Working Script" <%= g.status === 'Working Script' ? 'selected' : '' %>>🟢 Working</option>
                                             <option value="Needs Update" <%= g.status === 'Needs Update' ? 'selected' : '' %>>🟠 Needs Update</option>
-                                            <option value="Dead Script" <%= g.status === 'Dead Script' ? 'selected' : '' %>>🔴 Dead Script</option>
+                                            <option value="Dead Script" <%= g.status === 'Dead Script' ? 'selected' : '' %>>🔴 Dead</option>
                                         </select>
                                     </form>
                                 </td>
@@ -203,12 +325,11 @@
                             </tr>
                         <% }) %>
                         <% if(games.length === 0) { %>
-                            <tr><td colspan="5" style="text-align:center;color:var(--muted)">No projects found.</td></tr>
+                            <tr><td colspan="6" style="text-align:center;color:var(--muted)">No projects found.</td></tr>
                         <% } %>
                     </tbody>
                 </table>
             </div>
-            <p style="color:var(--muted); font-size:0.9rem;">* Note: Project creation and script uploads are now fully handled directly via the Discord Bot (<code>/managegames</code>).</p>
         </div>
 
         <!-- USERS TAB -->
@@ -232,8 +353,8 @@
                             <tr>
                                 <td><code><%= u.discord_id %></code></td>
                                 <td><%= u.total_executions || 0 %></td>
-                                <td><%= u.hwid ? 'Bound' : 'Not Bound' %> (Resets logged in global stats)</td>
-                                <td><span class="badge"><%= u.last_executor_name || 'Unknown' %></span></td>
+                                <td><span class="badge" style="background: <%= u.hwid ? 'var(--success)' : 'var(--muted)' %>; color: white; border:none;"><%= u.hwid ? 'Bound' : 'Not Bound' %></span></td>
+                                <td><%= u.last_executor_name || 'Unknown' %></td>
                                 <td style="color:var(--muted)"><%= u.last_executor_warn || '-' %></td>
                             </tr>
                         <% }) %>
@@ -248,23 +369,24 @@
         <!-- KEYS TAB -->
         <div id="tab-keys" class="tab-content">
             <div class="header">
-                <h1>Keys Management</h1>
+                <h1>Keys</h1>
             </div>
-            <div class="card" style="margin-bottom: 30px;">
+            <div class="panel">
+                <h2>Generate New Key</h2>
                 <form action="/admin/generate-key" method="POST" class="form-row">
-                    <select name="product" required>
-                        <% Object.values(products).forEach(function(p) { %>
-                            <option value="<%= p.id %>"><%= p.name %></option>
-                        <% }); %>
-                    </select>
-                    <select name="duration">
-                        <option value="">Permanent</option>
-                        <option value="1d">1 Day</option>
-                        <option value="3d">3 Days</option>
-                        <option value="7d">1 Week</option>
-                        <option value="30d">1 Month</option>
-                    </select>
-                    <button type="submit">Generate Key</button>
+                    <div class="form-group" style="flex:2;">
+                        <select name="product" required>
+                            <% Object.values(products).forEach(p => { %>
+                                <option value="<%= p.id %>"><%= p.name %></option>
+                            <% }) %>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex:2;">
+                        <input type="text" name="duration" placeholder="Duration (e.g. 1d, 30d, lifetime)" required>
+                    </div>
+                    <div class="form-group" style="flex:1;">
+                        <button type="submit" style="width:100%;">Generate</button>
+                    </div>
                 </form>
             </div>
             <div class="table-container">
@@ -275,19 +397,122 @@
                             <th>Product</th>
                             <th>Duration</th>
                             <th>Status</th>
-                            <th>Discord ID</th>
+                            <th>Redeemed By</th>
+                            <th>Created At</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <% keys.forEach(function(key) { %>
+                        <% keys.forEach(k => { %>
                             <tr>
-                                <td><code><%= key.key_string %></code></td>
-                                <td><%= key.product || 'premium' %></td>
-                                <td><%= key.duration_label || key.duration %></td>
-                                <td><span class="badge"><%= key.status %></span></td>
-                                <td><%= key.discord_id || '-' %></td>
+                                <td><code><%= k.key_string %></code></td>
+                                <td><span class="badge"><%= k.product.replace('_', ' ') %></span></td>
+                                <td><%= k.duration_label %></td>
+                                <td>
+                                    <% if (k.status === 'used') { %>
+                                        <span style="color:var(--danger)">● Used</span>
+                                    <% } else { %>
+                                        <span style="color:var(--success)">● Unused</span>
+                                    <% } %>
+                                </td>
+                                <td><%= k.discord_id ? `<code>${k.discord_id}</code>` : '-' %></td>
+                                <td style="color:var(--muted)"><%= k.created_at %></td>
                             </tr>
-                        <% }); %>
+                        <% }) %>
+                        <% if(keys.length === 0) { %>
+                            <tr><td colspan="6" style="text-align:center;color:var(--muted)">No keys generated yet.</td></tr>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- UPDATES TAB -->
+        <div id="tab-updates" class="tab-content">
+            <div class="header">
+                <h1>Send Update</h1>
+            </div>
+            <div class="panel" style="max-width: 600px;">
+                <form action="/admin/update" method="POST">
+                    <div class="form-group">
+                        <label>Game Name</label>
+                        <input type="text" name="game" required placeholder="e.g. Blox Fruits">
+                    </div>
+                    <div class="form-group">
+                        <label>Version</label>
+                        <input type="text" name="version" required placeholder="e.g. v2.1.0">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Target Users</label>
+                        <div style="display: flex; gap: 15px; margin-top: 10px;">
+                            <label style="display:flex; align-items:center; gap:5px;"><input type="checkbox" name="types" value="Premium"> Premium</label>
+                            <label style="display:flex; align-items:center; gap:5px;"><input type="checkbox" name="types" value="Service Provider"> SP</label>
+                            <label style="display:flex; align-items:center; gap:5px;"><input type="checkbox" name="types" value="Freemium"> Free</label>
+                            <label style="display:flex; align-items:center; gap:5px;"><input type="checkbox" name="types" value="Testing Dev"> Dev</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select name="status">
+                            <option value="Undetected">🟢 Undetected</option>
+                            <option value="Updating">🟠 Updating</option>
+                            <option value="Detected">🔴 Detected</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Added / New Features (Optional)</label>
+                        <textarea name="added" rows="2" placeholder="e.g. Auto Farm Level"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Improved / Fixed (Optional)</label>
+                        <textarea name="improved" rows="2" placeholder="e.g. Fixed teleport bypass"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Removed (Optional)</label>
+                        <textarea name="removed" rows="2" placeholder="e.g. Old GUI"></textarea>
+                    </div>
+                    
+                    <div class="form-group" style="margin-top:20px;">
+                        <label style="display:flex; align-items:center; gap:10px; color: var(--text);">
+                            <input type="checkbox" name="ping_everyone" value="true">
+                            Ping @everyone
+                        </label>
+                    </div>
+                    
+                    <button type="submit" style="width: 100%; margin-top: 10px;">Send Update to Discord</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- LOGS TAB -->
+        <div id="tab-logs" class="tab-content">
+            <div class="header">
+                <h1>Login Logs</h1>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Discord ID</th>
+                            <th>Role / Access Level</th>
+                            <th>Login Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% loginLogs.forEach(l => { %>
+                            <tr>
+                                <td><strong><%= l.username %></strong></td>
+                                <td><code><%= l.discord_id %></code></td>
+                                <td><span class="badge" style="background: <%= l.role === 'Developer' || l.role === 'Owner' ? 'var(--primary)' : '#1e293b' %>; color: white; border:none;"><%= l.role %></span></td>
+                                <td style="color:var(--muted)"><%= l.login_time %></td>
+                            </tr>
+                        <% }) %>
+                        <% if(loginLogs.length === 0) { %>
+                            <tr><td colspan="4" style="text-align:center;color:var(--muted)">No logins recorded.</td></tr>
+                        <% } %>
                     </tbody>
                 </table>
             </div>
@@ -298,10 +523,47 @@
     <script>
         function switchTab(tabId, el) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            document.getElementById('tab-' + tabId).classList.add('active');
-            
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-            if(el) el.classList.add('active');
+            document.getElementById('tab-' + tabId).classList.add('active');
+            el.classList.add('active');
+            localStorage.setItem('activeTab', tabId);
+        }
+
+        // Restore active tab
+        const savedTab = localStorage.getItem('activeTab');
+        if (savedTab) {
+            const link = Array.from(document.querySelectorAll('.nav-link')).find(el => el.getAttribute('onclick').includes(savedTab));
+            if (link) switchTab(savedTab, link);
+        }
+        
+        let searchTimeout;
+        function autoSearchGame() {
+            clearTimeout(searchTimeout);
+            const id = document.getElementById('robloxGameIdInput').value;
+            const statusLabel = document.getElementById('gameSearchStatus');
+            const nameInput = document.getElementById('robloxGameNameInput');
+            
+            if (!id || isNaN(id)) {
+                statusLabel.innerText = '';
+                return;
+            }
+            
+            statusLabel.innerText = 'Searching Roblox API...';
+            
+            searchTimeout = setTimeout(() => {
+                fetch('/admin/roblox-game-info?id=' + id)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success && data.name) {
+                            statusLabel.innerText = '✓ Found: ' + data.name;
+                            nameInput.value = data.name;
+                        } else {
+                            statusLabel.innerText = '✗ Game not found or API error.';
+                        }
+                    }).catch(() => {
+                        statusLabel.innerText = '✗ Failed to connect.';
+                    });
+            }, 800);
         }
     </script>
 </body>

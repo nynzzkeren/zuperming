@@ -281,13 +281,78 @@ function handlePoll(req, res) {
     );
 }
 
+const createLoaderRoute = (router, pathPrefix, productKey, loaderTemplateName) => {
+    router.get(`${pathPrefix}`, (req, res) => {
+        const luaScript = `
+-- ${PRODUCTS[productKey].brand} Loader
+local HttpService = game:GetService("HttpService")
+local executor = identifyexecutor and identifyexecutor() or "Unknown Executor"
+
+local function requestExecute()
+    local hwid = game:GetService("RbxAnalyticsService"):GetClientId()
+    local url = "${getBaseUrl()}${PRODUCTS[productKey].executeRoute}"
+    
+    local headers = {
+        ["Content-Type"] = "application/json",
+        ["User-Agent"] = "ZupermingLoader/1.0"
+    }
+    
+    local body = HttpService:JSONEncode({
+        key = _G.key_script,
+        hwid = hwid,
+        executor = executor,
+        game_id = tostring(game.PlaceId)
+    })
+    
+    local success, response = pcall(function()
+        return request({
+            Url = url,
+            Method = "POST",
+            Headers = headers,
+            Body = body
+        })
+    end)
+    
+    if success and response then
+        local decoded
+        local s2, e2 = pcall(function() decoded = HttpService:JSONDecode(response.Body) end)
+        if s2 and decoded then
+            if decoded.success and decoded.script then
+                loadstring(decoded.script)()
+            else
+                game.Players.LocalPlayer:Kick("Zuperming: " .. (decoded.message or "Unknown error"))
+            end
+        else
+            game.Players.LocalPlayer:Kick("Zuperming: Failed to decode response from server.")
+        end
+    else
+        game.Players.LocalPlayer:Kick("Zuperming: Server did not respond properly. Please contact support.")
+    end
+end
+
+requestExecute()
+        `;
+        res.type('text/plain');
+        res.send(luaScript);
+    });
+};
+
+createLoaderRoute(router, '/loader', 'premium');
+createLoaderRoute(router, '/loader/sp', 'service_provider');
+createLoaderRoute(router, '/loader/free', 'freemium');
+createLoaderRoute(router, '/loader/dev', 'testing_dev');
+
 router.get('/poll', handlePoll);
-router.get('/execute', (req, res) => handleExecute(req, res, 'premium'));
-router.get('/loader', (req, res) => serveLoader(req, res, 'premium'));
-router.get('/sp/execute', (req, res) => handleExecute(req, res, 'service_provider'));
-router.get('/sp/loader', (req, res) => serveLoader(req, res, 'service_provider'));
-router.get('/free/execute', (req, res) => handleExecute(req, res, 'freemium'));
-router.get('/free/loader', (req, res) => serveLoader(req, res, 'freemium'));
+
+const executePremium = (req, res) => handleExecute(req, res, 'premium');
+const executeServiceProvider = (req, res) => handleExecute(req, res, 'service_provider');
+const executeFreemium = (req, res) => handleExecute(req, res, 'freemium');
+const executeTestingDev = (req, res) => handleExecute(req, res, 'testing_dev');
+
+router.post('/api/execute', executePremium);
+router.post('/api/sp/execute', executeServiceProvider);
+router.post('/api/free/execute', executeFreemium);
+router.post('/api/dev/execute', executeTestingDev);
 
 module.exports = router;
 module.exports.serveLoader = serveLoader;

@@ -37,6 +37,19 @@ const PRODUCTS = {
         btnPrefix: 'btn_free_',
         modalRedeem: 'modal_free_redeem',
         roleEnv: 'FREE_BUYER_ROLE_ID'
+    },
+    testing_dev: {
+        id: 'testing_dev',
+        name: 'Zuperming Developer',
+        keyPrefix: 'ZDEV',
+        brand: 'Zuperming Developer',
+        loaderFile: 'loader_dev.lua',
+        loaderRoute: '/loader/dev',
+        executeRoute: '/api/dev/execute',
+        adminScriptPath: '/admin/script/dev',
+        btnPrefix: 'btn_dev_',
+        modalRedeem: 'modal_dev_redeem',
+        roleEnv: 'DEVELOPER_ROLE_ID'
     }
 };
 
