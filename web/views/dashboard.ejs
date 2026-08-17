@@ -515,7 +515,14 @@
                         <% typeGames.forEach(function(g) { %>
                             <div class="zp-panel" style="margin-bottom:0;">
                                 <div class="zp-panel__header">
-                                    <h2 class="zp-panel__title"><%- g.name %></h2>
+                                    <div>
+                                        <h2 class="zp-panel__title" style="display:inline-block; margin-right:8px;"><%- g.name %></h2>
+                                        <% if (g.last_script_update) { %>
+                                            <span id="upload-status-<%- g.game_id || g.roblox_game_id %>" class="zp-badge zp-badge--success">Uploaded</span>
+                                        <% } else { %>
+                                            <span id="upload-status-<%- g.game_id || g.roblox_game_id %>" class="zp-badge zp-badge--danger">Not Uploaded</span>
+                                        <% } %>
+                                    </div>
                                     <span class="zp-badge <%- ptype.typeClass %>"><%- ptype.label %></span>
                                 </div>
                                 <div class="zp-panel__body">
@@ -751,6 +758,13 @@
                         btn.style.borderColor = '';
                         form.reset();
                         document.getElementById('file-name-' + gameId).innerText = 'Choose .lua File';
+                        
+                        // Update badge
+                        const statusBadge = document.getElementById('upload-status-' + gameId);
+                        if(statusBadge) {
+                            statusBadge.className = 'zp-badge zp-badge--success';
+                            statusBadge.innerText = 'Uploaded';
+                        }
                     }, 3000);
                 } else {
                     alert('Upload failed: ' + (data.error || 'Unknown error'));
