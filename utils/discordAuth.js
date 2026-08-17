@@ -14,6 +14,7 @@ function getAuthorizeUrl(state) {
         redirect_uri: getRedirectUri(),
         response_type: 'code',
         scope: 'identify',
+        prompt: 'none',
         state
     });
     return `https://discord.com/api/oauth2/authorize?${params.toString()}`;

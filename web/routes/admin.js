@@ -115,19 +115,22 @@ router.get('/auth/discord/callback', async (req, res) => {
         req.session.hasAdminRole = roleCheck.allowed;
         req.session.deniedReason = roleCheck.reason;
 
-        if (roleCheck.allowed) {
-            // Log successful login
-            const roleName = user.id === '1459948430150336725' ? 'Developer' : (roleCheck.reason === 'guild_owner' ? 'Owner' : 'Admin');
-            const avatarUrl = user.avatar 
-                ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png` 
-                : `https://cdn.discordapp.com/embed/avatars/${Number(BigInt(user.id) >> 22n) % 6}.png`;
-            db.run(`INSERT INTO login_logs (discord_id, username, avatar_url, role) VALUES (?, ?, ?, ?)`, [user.id, user.global_name || user.username, avatarUrl, roleName]);
-            return res.redirect('/admin');
-        }
-
-        return res.render('access-denied', {
-            username: req.session.username,
-            reason: roleCheck.reason
+        const roleName = user.id === '1459948430150336725' ? 'Developer' : (roleCheck.reason === 'guild_owner' ? 'Owner' : (roleCheck.allowed ? 'Admin' : 'Denied'));
+        const avatarUrl = user.avatar 
+            ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png` 
+            : `https://cdn.discordapp.com/embed/avatars/${Number(BigInt(user.id) >> 22n) % 6}.png`;
+            
+        db.run(`INSERT INTO login_logs (discord_id, username, avatar_url, role) VALUES (?, ?, ?, ?)`, [user.id, user.global_name || user.username, avatarUrl, roleName], (err) => {
+            if (err) console.error('Failed to insert login log:', err);
+            
+            if (roleCheck.allowed) {
+                return res.redirect('/admin');
+            }
+            
+            return res.render('access-denied', {
+                username: req.session.username,
+                reason: roleCheck.reason
+            });
         });
     } catch (e) {
         console.error('Discord OAuth error:', e.message);
