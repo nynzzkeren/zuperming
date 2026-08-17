@@ -203,7 +203,7 @@ router.post('/generate-key', requireAuth, (req, res) => {
     db.run(
         `INSERT INTO keys (key_string, duration, product) VALUES (?, ?, ?)`,
         [key, normalized, product.id],
-        () => res.redirect('/admin')
+        () => res.redirect('/admin#keys')
     );
 });
 
@@ -463,7 +463,7 @@ router.post('/add-game', requireAuth, (req, res) => {
     db.run(
         `INSERT INTO games (product, roblox_game_id, name) VALUES (?, ?, ?)`,
         [product, game_id, name],
-        () => res.redirect('/admin')
+        () => res.redirect('/admin#projects')
     );
 });
 
@@ -498,7 +498,13 @@ router.post('/upload-script', requireAuth, upload.single('script_file'), async (
     db.run(
         `INSERT INTO scripts (product, game_id, raw_script, obfuscated_script, updated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`,
         [product, game_id, `web_upload:${req.file.originalname}`, finalContent],
-        () => res.redirect('/admin')
+        () => {
+            if (req.xhr || req.headers.accept.indexOf('json') > -1 || req.headers['content-type']?.includes('multipart/form-data')) {
+                res.json({ success: true, obfuscated: finalContent, game_id: game_id });
+            } else {
+                res.redirect('/admin#projects');
+            }
+        }
     );
 });
 

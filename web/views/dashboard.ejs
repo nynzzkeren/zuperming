@@ -350,6 +350,50 @@
             vertical-align: middle;
             margin-right: 8px;
         }
+
+        .zp-spinner {
+            border: 2px solid rgba(255,255,255,0.1);
+            border-left-color: var(--accent-brand);
+            border-radius: 50%;
+            width: 14px;
+            height: 14px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .zp-file-upload-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: 10px;
+            background: var(--bg-elevated);
+            border: 1px dashed var(--text-secondary);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s ease;
+        }
+        .zp-file-upload-btn:hover {
+            border-color: var(--text-primary);
+            color: var(--text-primary);
+            background: rgba(255,255,255,0.05);
+        }
+
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            .zp-layout__sidebar { width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border-subtle); position: sticky; top: 0; }
+            .zp-brand { justify-content: center; }
+            .zp-nav { flex-direction: row; padding: 0.5rem; overflow-x: auto; white-space: nowrap; gap: 8px; }
+            .zp-nav__footer { display: none; }
+            .zp-layout__content { padding: 1.5rem; }
+            .zp-header { display: none; }
+            .zp-grid-stats { grid-template-columns: 1fr; }
+            .zp-panel__body form { flex-direction: column; align-items: stretch !important; }
+        }
     </style>
 </head>
 <body>
@@ -479,12 +523,15 @@
                                         <label class="zp-input-label">Game ID</label>
                                         <div class="zp-mono"><%- g.game_id %></div>
                                     </div>
-                                    <form action="/admin/upload-script" method="POST" enctype="multipart/form-data" style="margin-top:16px; padding-top:16px; border-top:1px solid var(--border-subtle);">
+                                    <form onsubmit="handleUpload(event, '<%- g.game_id %>', '<%- g.product %>')" style="margin-top:16px; padding-top:16px; border-top:1px solid var(--border-subtle);">
                                         <input type="hidden" name="game_id" value="<%- g.game_id %>">
                                         <input type="hidden" name="product" value="<%- g.product %>">
                                         <div class="zp-input-group">
                                             <label class="zp-input-label">Upload Source (.lua)</label>
-                                            <input type="file" name="script_file" class="zp-input" accept=".lua,.txt" required style="padding: 4px;">
+                                            <label class="zp-file-upload-btn">
+                                                <span id="file-name-<%- g.game_id %>">Choose .lua File</span>
+                                                <input type="file" name="script_file" accept=".lua,.txt" required style="display: none;" onchange="document.getElementById('file-name-<%- g.game_id %>').innerText = this.files[0].name">
+                                            </label>
                                         </div>
                                         <div class="zp-input-group" style="display:flex; align-items:center; gap:8px;">
                                             <input type="checkbox" name="auto_obfuscate" id="obf_<%- g.product %>_<%- g.game_id %>" value="true" checked>
@@ -638,13 +685,83 @@
     </div>
 
     <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            const hash = window.location.hash.substring(1);
+            if (hash && document.getElementById('tab-' + hash)) {
+                const navItem = document.querySelector(`.zp-nav__item[onclick*="switchTab('${hash}'"]`);
+                if(navItem) switchTab(hash, navItem);
+            }
+        });
+
         function switchTab(tabId, element) {
+            window.location.hash = tabId;
             document.querySelectorAll('.zp-tab-pane').forEach(el => el.classList.remove('is-active'));
             document.querySelectorAll('.zp-nav__item').forEach(el => el.classList.remove('zp-nav__item--active'));
             
             document.getElementById('tab-' + tabId).classList.add('is-active');
             element.classList.add('zp-nav__item--active');
             document.getElementById('breadcrumb-current').textContent = element.textContent;
+        }
+
+        async function handleUpload(event, gameId, product) {
+            event.preventDefault();
+            const form = event.target;
+            const btn = form.querySelector('button[type="submit"]');
+            const originalText = btn.innerHTML;
+            
+            const formData = new FormData(form);
+            
+            btn.disabled = true;
+            btn.innerHTML = '<span class="zp-spinner"></span> Uploading & Obfuscating...';
+            
+            try {
+                const res = await fetch('/admin/upload-script', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (res.redirected) {
+                    window.location.href = res.url;
+                    return;
+                }
+                
+                const data = await res.json();
+                if (data.success) {
+                    btn.innerHTML = 'Success!';
+                    btn.style.background = 'var(--accent-green)';
+                    btn.style.color = 'var(--bg-base)';
+                    btn.style.borderColor = 'var(--accent-green)';
+                    
+                    // Trigger download
+                    const blob = new Blob([data.obfuscated], { type: 'text/plain' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `obfuscated_${gameId}.txt`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    a.remove();
+                    
+                    setTimeout(() => {
+                        btn.disabled = false;
+                        btn.innerHTML = originalText;
+                        btn.style.background = '';
+                        btn.style.color = '';
+                        btn.style.borderColor = '';
+                        form.reset();
+                        document.getElementById('file-name-' + gameId).innerText = 'Choose .lua File';
+                    }, 3000);
+                } else {
+                    alert('Upload failed: ' + (data.error || 'Unknown error'));
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
+            } catch (err) {
+                alert('Request failed');
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
         }
 
         async function getDevScript() {

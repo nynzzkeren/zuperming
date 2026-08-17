@@ -59,7 +59,7 @@ if execQuality == "bad" or execQuality == "medium" then
 end
 
 local hwid = game:GetService("RbxAnalyticsService"):GetClientId()
-local gameId = tostring(g.GameId)
+local gameId = tostring(g.PlaceId)
 local base = "{{BASE_URL}}"
 local apiUrl = base .. "/api/sp/execute?key=" .. ZUPER_KEY .. "&hwid=" .. hwid .. "&game_id=" .. gameId
     .. "&executor=" .. g:GetService("HttpService"):UrlEncode(tostring(execName))
