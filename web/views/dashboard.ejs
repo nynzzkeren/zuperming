@@ -477,6 +477,10 @@
                                             <label class="zp-input-label">Upload Source (.lua)</label>
                                             <input type="file" name="script_file" class="zp-input" accept=".lua,.txt" required style="padding: 4px;">
                                         </div>
+                                        <div class="zp-input-group" style="display:flex; align-items:center; gap:8px;">
+                                            <input type="checkbox" name="auto_obfuscate" id="obf_<%- g.product %>_<%- g.game_id %>" value="true" checked>
+                                            <label for="obf_<%- g.product %>_<%- g.game_id %>" style="font-size:12px; color:var(--text-secondary); cursor:pointer;">Auto-Obfuscate (BETA)</label>
+                                        </div>
                                         <button type="submit" class="zp-button zp-button--secondary" style="width:100%;">Upload Script</button>
                                     </form>
                                 </div>

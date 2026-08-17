@@ -460,14 +460,43 @@ router.post('/add-game', requireAuth, (req, res) => {
     );
 });
 
-router.post('/upload-script', requireAuth, upload.single('script_file'), (req, res) => {
-    const { product, game_id } = req.body;
+const axios = require('axios');
+
+router.post('/upload-script', requireAuth, upload.single('script_file'), async (req, res) => {
+    const { product, game_id, auto_obfuscate } = req.body;
     if (!product || !game_id || !req.file) return res.redirect('/admin');
     
     const content = req.file.buffer.toString('utf8');
+    let finalContent = content;
+
+    if (auto_obfuscate) {
+        try {
+            // Step 1: Upload script to get sessionId
+            const newScriptRes = await axios.post('https://luaobfuscator.com/api/obfuscator/newscript', content, {
+                headers: { 'Content-Type': 'text/plain' }
+            });
+            const sessionId = newScriptRes.data.sessionId;
+
+            // Step 2: Obfuscate the session
+            const obfRes = await axios.post('https://luaobfuscator.com/api/obfuscator/obfuscate', {
+                sessionId: sessionId,
+                config: {
+                    MinifyAll: true,
+                    Virtualize: true,
+                    EncryptStrings: true,
+                    MutateControlFlow: true
+                }
+            });
+            finalContent = obfRes.data.code;
+        } catch (e) {
+            console.error('Failed to obfuscate script:', e.message);
+            // Fallback to original content if obfuscation fails, could also send an error flash message here
+        }
+    }
+
     db.run(
         `INSERT INTO scripts (product, game_id, raw_script, obfuscated_script, updated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-        [product, game_id, `web_upload:${req.file.originalname}`, content],
+        [product, game_id, `web_upload:${req.file.originalname}`, finalContent],
         () => res.redirect('/admin')
     );
 });
