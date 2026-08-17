@@ -441,6 +441,15 @@
                                 <label class="zp-input-label">Roblox Place ID</label>
                                 <input type="number" name="game_id" class="zp-input" placeholder="e.g. 2753915549" required>
                             </div>
+                            <div class="zp-input-group" style="margin:0; flex:1;">
+                                <label class="zp-input-label">Product Tier</label>
+                                <select name="product" class="zp-input" required>
+                                    <option value="" disabled selected>Select Tier...</option>
+                                    <% Object.values(products).forEach(function(p) { %>
+                                        <option value="<%- p.id %>"><%- p.name %></option>
+                                    <% }); %>
+                                </select>
+                            </div>
                             <button type="submit" class="zp-button">Deploy Project</button>
                         </form>
                     </div>

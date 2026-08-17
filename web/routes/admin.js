@@ -478,26 +478,20 @@ router.post('/upload-script', requireAuth, upload.single('script_file'), async (
 
     if (auto_obfuscate) {
         try {
-            // Step 1: Upload script to get sessionId
-            const newScriptRes = await axios.post('https://luaobfuscator.com/api/obfuscator/newscript', content, {
-                headers: { 'Content-Type': 'text/plain' }
+            const obfRes = await axios.post('https://wearedevs.net/api/obfuscate', {
+                script: content
+            }, {
+                headers: { 'Content-Type': 'application/json' }
             });
-            const sessionId = newScriptRes.data.sessionId;
-
-            // Step 2: Obfuscate the session
-            const obfRes = await axios.post('https://luaobfuscator.com/api/obfuscator/obfuscate', {
-                sessionId: sessionId,
-                config: {
-                    MinifyAll: true,
-                    Virtualize: true,
-                    EncryptStrings: true,
-                    MutateControlFlow: true
-                }
-            });
-            finalContent = obfRes.data.code;
+            
+            if (obfRes.data && obfRes.data.obfuscated) {
+                finalContent = obfRes.data.obfuscated;
+            } else {
+                throw new Error('Invalid response from obfuscator');
+            }
         } catch (e) {
             console.error('Failed to obfuscate script:', e.message);
-            // Fallback to original content if obfuscation fails, could also send an error flash message here
+            // Fallback to original content if obfuscation fails
         }
     }
 
