@@ -164,12 +164,15 @@ router.get('/', requireAuth, async (req, res) => {
             `, (err, games) => {
                 db.all(`SELECT * FROM keys ORDER BY created_at DESC LIMIT 15`, (err, keys) => {
                     db.all(`SELECT * FROM login_logs ORDER BY login_time DESC LIMIT 50`, (err, loginLogs) => {
+                        const gamesList = games || [];
+                        const keysList = keys || [];
+                        const usersList = users || [];
                         res.render('dashboard', {
                             stats,
                             onlineMembers,
-                            users: users || [],
-                            games: games || [],
-                            keys: (keys || []).map(k => ({
+                            users: usersList,
+                            games: gamesList,
+                            keys: keysList.map(k => ({
                                 ...k,
                                 duration_label: formatDurationLabel(k.duration)
                             })),
@@ -178,7 +181,11 @@ router.get('/', requireAuth, async (req, res) => {
                             baseUrl: getBaseUrl(),
                             message: null,
                             error: null,
-                            username: req.session.username
+                            username: req.session.username,
+                            totalGames: gamesList.length,
+                            totalKeys: keysList.filter(k => k.status !== 'used').length,
+                            totalUsers: usersList.length,
+                            totalExecutions: (stats && stats.total_executions) ? stats.total_executions : 0
                         });
                     });
                 });
