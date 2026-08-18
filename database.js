@@ -103,6 +103,13 @@ const db = new sqlite3.Database(dbPath, (err) => {
 
             db.run(`INSERT OR IGNORE INTO stats (id, total_executions, total_resets) VALUES (1, 0, 0)`);
 
+            // Settings / config table (key-value store)
+            db.run(`CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )`);
+
             const alterIgnore = () => {};
             db.run(`ALTER TABLE keys ADD COLUMN product TEXT DEFAULT 'premium'`, alterIgnore);
             db.run(`ALTER TABLE keys ADD COLUMN redeemed_at DATETIME`, alterIgnore);

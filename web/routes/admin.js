@@ -590,4 +590,32 @@ router.post('/dev-panel/reset-hwid', requireAuth, (req, res) => {
     });
 });
 
+// ─── ROBLOX GAME SEARCH PROXY ───────────────────────────────────────────────
+// Proxied to avoid CORS issues in the dashboard frontend
+router.get('/search-game', requireAuth, async (req, res) => {
+    const q = String(req.query.q || '').trim().slice(0, 100);
+    if (!q || q.length < 2) return res.json({ games: [] });
+
+    try {
+        const apiUrl = `https://apis.roblox.com/search-api/v1/search?keyword=${encodeURIComponent(q)}&numberOfResults=8&pageToken=`;
+        const resp = await fetch(apiUrl, {
+            headers: { 'Accept': 'application/json', 'User-Agent': 'ZupermingAdmin/1.0' },
+            signal: AbortSignal.timeout(5000)
+        });
+        if (!resp.ok) return res.json({ games: [] });
+        const data = await resp.json();
+
+        const games = (data.searchResults || []).map(item => ({
+            name: item.name || item.contentName || 'Unknown',
+            gameId: String(item.contentId || item.universeId || item.id || ''),
+        })).filter(g => g.gameId);
+
+        return res.json({ games });
+    } catch {
+        return res.json({ games: [] });
+    }
+});
+// ────────────────────────────────────────────────────────────────────────────
+
 module.exports = router;
+

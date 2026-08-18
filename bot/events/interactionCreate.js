@@ -78,6 +78,23 @@ module.exports = {
 
         if (interaction.isButton()) {
             const { customId } = interaction;
+
+            // ─── BYPASS COPY BUTTON ────────────────────────────────────────────
+            if (customId.startsWith('btn_bypass_copy_')) {
+                const cacheId = customId.replace('btn_bypass_copy_', '');
+                const { cacheGet } = require('../commands/bypass');
+                const result = cacheGet(cacheId);
+                if (!result) {
+                    return interaction.reply({
+                        content: 'Result sudah expired (>10 menit). Jalankan `/bypass` lagi.',
+                        ephemeral: true
+                    });
+                }
+                // Send plain text so mobile can easily copy it
+                return interaction.reply({ content: result, ephemeral: true });
+            }
+            // ──────────────────────────────────────────────────────────────────
+
             const product = resolveProductFromCustomId(customId);
             if (customId === 'btn_add_game_modal') {
                 const modal = new ModalBuilder()
