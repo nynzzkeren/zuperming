@@ -945,15 +945,28 @@
             <div class="panel">
                 <div class="panel-hd"><span class="panel-title"><span class="panel-dot"></span> New Project</span></div>
                 <div class="panel-bd">
+                    <!-- Game Search -->
+                    <div style="margin-bottom:14px;">
+                        <label class="lbl">Search Roblox Game (Optional)</label>
+                        <div style="position:relative;">
+                            <input type="text" id="game-search-inp" class="inp" placeholder="e.g. Blox Fruits, Grow a Garden..." autocomplete="off"
+                                oninput="onGameSearch(this.value)" style="padding-right:36px;">
+                            <div id="game-search-spinner" style="position:absolute;right:11px;top:50%;transform:translateY(-50%);display:none;">
+                                <span class="spin spin-white" style="width:10px;height:10px;border-width:1.5px;"></span>
+                            </div>
+                        </div>
+                        <div id="game-search-results" style="display:none;margin-top:4px;background:var(--gray-800);border:1px solid var(--border-md);border-radius:var(--r);overflow:hidden;"></div>
+                    </div>
+
                     <form action="/admin/add-game" method="POST">
                         <div class="form-row">
                             <div class="field">
                                 <label class="lbl">Project Name</label>
-                                <input type="text" name="name" class="inp" placeholder="e.g. Blox Fruits" required>
+                                <input type="text" name="name" id="proj-name" class="inp" placeholder="e.g. Blox Fruits" required>
                             </div>
                             <div class="field">
                                 <label class="lbl">Roblox Game ID</label>
-                                <input type="number" name="game_id" class="inp" placeholder="e.g. 2753915549" required>
+                                <input type="number" name="game_id" id="proj-game-id" class="inp" placeholder="e.g. 2753915549" required>
                             </div>
                             <div class="field">
                                 <label class="lbl">Product Tier</label>
@@ -1364,6 +1377,62 @@
         } catch {
             out.innerHTML = `<span class="p">$</span> <span class="er">ERR: Network request failed</span>`;
         }
+    }
+
+    /* ─── GAME SEARCH ─── */
+    let searchTimer;
+    async function onGameSearch(query) {
+        clearTimeout(searchTimer);
+        const resultsDiv = document.getElementById('game-search-results');
+        const spinner = document.getElementById('game-search-spinner');
+        
+        if (!query || query.length < 2) {
+            resultsDiv.style.display = 'none';
+            spinner.style.display = 'none';
+            return;
+        }
+
+        spinner.style.display = 'block';
+        
+        searchTimer = setTimeout(async () => {
+            try {
+                const res = await fetch('/admin/search-game?q=' + encodeURIComponent(query));
+                const data = await res.json();
+                
+                spinner.style.display = 'none';
+                
+                if (!data.games || data.games.length === 0) {
+                    resultsDiv.innerHTML = '<div style="padding:8px 12px;color:var(--gray-500);font-size:12px;">No results found.</div>';
+                    resultsDiv.style.display = 'block';
+                    return;
+                }
+                
+                let html = '';
+                data.games.forEach(g => {
+                    html += `
+                        <div class="nav-item" style="border-radius:0;border-bottom:1px solid var(--border);padding:10px 12px;display:flex;justify-content:space-between;align-items:center;"
+                             onclick="selectGame('${g.name.replace(/'/g, "\\'")}', '${g.gameId}')">
+                            <span style="font-weight:600;color:var(--white);">${g.name}</span>
+                            <span style="font-family:var(--mono);font-size:11px;color:var(--gray-400);">ID: ${g.gameId}</span>
+                        </div>
+                    `;
+                });
+                
+                resultsDiv.innerHTML = html;
+                resultsDiv.style.display = 'block';
+            } catch {
+                spinner.style.display = 'none';
+                resultsDiv.style.display = 'none';
+            }
+        }, 500);
+    }
+
+    function selectGame(name, id) {
+        document.getElementById('proj-name').value = name;
+        document.getElementById('proj-game-id').value = id;
+        document.getElementById('game-search-inp').value = '';
+        document.getElementById('game-search-results').style.display = 'none';
+        toast('Game details autofilled!');
     }
 
     /* ─── CHART ─── */

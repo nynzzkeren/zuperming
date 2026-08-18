@@ -1,50 +1,31 @@
-const q = 'blox fruits';
+async function searchRobloxGame(gameName) {
+  try {
+    const searchUrl = `https://apis.roblox.com/search-api/omni-search?searchQuery=${encodeURIComponent(gameName)}&sessionId=1`;
+    const res = await fetch(searchUrl);
+    const data = await res.json();
 
-async function testDDG() {
-    console.log('Testing DuckDuckGo...');
-    try {
-        const res = await fetch(`https://html.duckduckgo.com/html/?q=site:roblox.com/games+${encodeURIComponent(q)}`);
-        const html = await res.text();
-        const matches = [...html.matchAll(/roblox\.com\/games\/(\d+)\/([^<"'\s]+)/g)];
-        const games = [];
-        const seen = new Set();
-        for (const m of matches) {
-            if (!seen.has(m[1])) {
-                seen.add(m[1]);
-                let name = decodeURIComponent(m[2]).replace(/-/g, ' ');
-                // remove trailing stuff
-                if (name.includes('&')) name = name.split('&')[0];
-                if (name.includes('%')) name = decodeURIComponent(name);
-                games.push({ id: m[1], name });
-            }
-        }
-        console.log('DDG Results:', games.slice(0, 5));
-    } catch (e) {
-        console.error('DDG Error:', e);
+    const searchGroup = data.searchResults?.find(group => group.contents && group.contents.length > 0);
+    
+    if (!searchGroup || searchGroup.contents.length === 0) {
+      return null;
     }
+
+    // returning array of top 5
+    return searchGroup.contents.slice(0, 5).map(topGame => ({
+      name: topGame.name,
+      universeId: topGame.targetId,
+      placeId: topGame.rootPlaceId
+    }));
+  } catch (error) {
+    console.error("Error fetching game:", error);
+    return null;
+  }
 }
 
-async function testRoPro() {
-    console.log('Testing RoPro...');
-    try {
-        const res = await fetch(`https://api.ropro.io/gameSearchInternal.php?q=${encodeURIComponent(q)}`);
-        console.log('RoPro status:', res.status);
-        const data = await res.text();
-        console.log('RoPro data:', data.slice(0, 200));
-    } catch (e) {
-        console.error('RoPro error:', e);
-    }
-}
+(async () => {
+  const fisch = await searchRobloxGame("Fisch");
+  console.log('Fisch:', fisch);
 
-async function testRoMonitor() {
-    console.log('Testing RoMonitor...');
-    try {
-        // rolimons uses universe id mainly, hard to search. let's just use duckduckgo.
-    } catch(e) {}
-}
-
-async function run() {
-    await testDDG();
-    await testRoPro();
-}
-run();
+  const bloxFruits = await searchRobloxGame("Blox Fruits");
+  console.log('Blox Fruits:', bloxFruits);
+})();
