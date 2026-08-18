@@ -3,627 +3,1272 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zuperming · Console</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <title>ZUPERMING · Console</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        *, *::before, *::after { box-sizing: border-box; }
-        
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
         :root {
-            --bg-base: #000000;
-            --bg-panel: #0a0a0a;
-            --bg-elevated: #111111;
-            --border-subtle: #222222;
-            --border-focus: #333333;
-            --text-primary: #ededed;
-            --text-secondary: #a1a1aa;
-            --accent-brand: #ffffff;
-            --accent-blue: #3b82f6;
-            --accent-green: #22c55e;
-            --accent-red: #ef4444;
-            --font-sans: 'Inter', -apple-system, sans-serif;
+            --bg-void: #020205;
+            --bg-base: #080810;
+            --bg-panel: rgba(14, 14, 24, 0.8);
+            --bg-elevated: rgba(22, 22, 38, 0.9);
+            --bg-hover: rgba(30, 30, 52, 0.7);
+            --border: rgba(255,255,255,0.06);
+            --border-glow: rgba(99,102,241,0.3);
+            --text-primary: #f0f0ff;
+            --text-secondary: #7878a0;
+            --text-dim: #3a3a5c;
+            --accent: #6366f1;
+            --accent-2: #8b5cf6;
+            --accent-cyan: #06b6d4;
+            --accent-green: #10b981;
+            --accent-red: #f43f5e;
+            --accent-yellow: #f59e0b;
+            --font-sans: 'Inter', system-ui, sans-serif;
             --font-mono: 'JetBrains Mono', monospace;
+            --sidebar-w: 240px;
+            --radius: 12px;
+            --radius-sm: 8px;
         }
+
+        html { height: 100%; }
 
         body {
-            margin: 0;
-            padding: 0;
-            background-color: var(--bg-base);
+            min-height: 100%;
+            background: var(--bg-void);
             color: var(--text-primary);
             font-family: var(--font-sans);
-            font-size: 14px;
+            font-size: 13.5px;
             display: flex;
-            height: 100vh;
             overflow: hidden;
-            background-image: 
-                linear-gradient(to right, rgba(255,255,255,0.02) 1px, transparent 1px),
-                linear-gradient(to bottom, rgba(255,255,255,0.02) 1px, transparent 1px);
-            background-size: 40px 40px;
+            height: 100vh;
         }
 
-        /* --- LAYOUT --- */
-        .zp-layout__sidebar {
-            width: 260px;
-            background-color: var(--bg-panel);
-            border-right: 1px solid var(--border-subtle);
+        /* ─── AMBIENT BG ─── */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(ellipse 80% 60% at 15% -10%, rgba(99,102,241,0.12) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 50% at 90% 110%, rgba(139,92,246,0.10) 0%, transparent 60%),
+                radial-gradient(ellipse 40% 40% at 50% 50%, rgba(6,182,212,0.03) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ─── GRID PATTERN ─── */
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+            background-size: 32px 32px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ─── SIDEBAR ─── */
+        .sidebar {
+            width: var(--sidebar-w);
+            min-height: 100vh;
+            background: var(--bg-panel);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border-right: 1px solid var(--border);
             display: flex;
             flex-direction: column;
+            position: relative;
             z-index: 10;
+            flex-shrink: 0;
         }
-        
-        .zp-layout__main {
+
+        .sidebar::after {
+            content: '';
+            position: absolute;
+            top: 0; right: -1px;
+            width: 1px; height: 100%;
+            background: linear-gradient(to bottom, transparent, rgba(99,102,241,0.5) 40%, rgba(139,92,246,0.3) 60%, transparent);
+        }
+
+        .sidebar-brand {
+            padding: 22px 20px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand-icon {
+            width: 30px;
+            height: 30px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 900;
+            font-family: var(--font-mono);
+            color: #fff;
+            box-shadow: 0 0 20px rgba(99,102,241,0.4);
+            position: relative;
+        }
+
+        .brand-icon::after {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            border-radius: 9px;
+            background: linear-gradient(135deg, rgba(99,102,241,0.4), rgba(139,92,246,0.4));
+            z-index: -1;
+            filter: blur(6px);
+        }
+
+        .brand-text {
+            font-family: var(--font-mono);
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            color: var(--text-primary);
+        }
+
+        .brand-text span {
+            display: block;
+            font-size: 9px;
+            letter-spacing: 0.2em;
+            color: var(--text-secondary);
+            font-weight: 400;
+            margin-top: 1px;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 16px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .nav-section-label {
+            font-size: 9px;
+            font-weight: 600;
+            letter-spacing: 0.15em;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            padding: 12px 10px 4px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 12px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.18s ease;
+            position: relative;
+            user-select: none;
+        }
+
+        .nav-item:hover {
+            color: var(--text-primary);
+            background: var(--bg-hover);
+        }
+
+        .nav-item.active {
+            color: var(--text-primary);
+            background: rgba(99,102,241,0.1);
+        }
+
+        .nav-item.active::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 20%; bottom: 20%;
+            width: 2px;
+            border-radius: 2px;
+            background: linear-gradient(to bottom, var(--accent), var(--accent-2));
+            box-shadow: 0 0 8px var(--accent);
+        }
+
+        .nav-icon {
+            width: 16px;
+            height: 16px;
+            opacity: 0.7;
+            flex-shrink: 0;
+        }
+
+        .nav-item.active .nav-icon,
+        .nav-item:hover .nav-icon { opacity: 1; }
+
+        .sidebar-footer {
+            padding: 14px 16px;
+            border-top: 1px solid var(--border);
+        }
+
+        .user-chip {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            border-radius: var(--radius-sm);
+            background: var(--bg-hover);
+            border: 1px solid var(--border);
+        }
+
+        .user-avatar {
+            width: 26px;
+            height: 26px;
+            border-radius: 6px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .user-info { flex: 1; min-width: 0; }
+        .user-name { font-size: 12px; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .user-role { font-size: 10px; color: var(--text-secondary); margin-top: 1px; }
+
+        .logout-btn {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 11px;
+            padding: 4px;
+            border-radius: 4px;
+            transition: color 0.15s;
+            flex-shrink: 0;
+        }
+        .logout-btn:hover { color: var(--accent-red); }
+
+        /* ─── MAIN ─── */
+        .main {
             flex: 1;
             display: flex;
             flex-direction: column;
             overflow: hidden;
             position: relative;
-        }
-        
-        .zp-layout__content {
-            flex: 1;
-            overflow-y: auto;
-            padding: 2.5rem 3rem;
+            z-index: 1;
         }
 
-        /* --- HEADER --- */
-        .zp-header {
-            height: 56px;
-            border-bottom: 1px solid var(--border-subtle);
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(12px);
+        /* ─── TOPBAR ─── */
+        .topbar {
+            height: 52px;
+            border-bottom: 1px solid var(--border);
+            background: rgba(8,8,16,0.7);
+            backdrop-filter: blur(20px);
             display: flex;
             align-items: center;
-            padding: 0 3rem;
-            position: sticky;
-            top: 0;
-            z-index: 20;
+            padding: 0 28px;
+            gap: 12px;
+            flex-shrink: 0;
         }
 
-        .zp-header__breadcrumbs {
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-family: var(--font-mono);
+        }
+
+        .breadcrumb-sep { color: var(--text-dim); }
+        .breadcrumb-active { color: var(--text-primary); }
+
+        .topbar-status {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: var(--accent-green);
+            font-family: var(--font-mono);
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--accent-green);
+            box-shadow: 0 0 8px var(--accent-green);
+            animation: pulse-dot 2s infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--accent-green); }
+            50% { opacity: 0.5; box-shadow: 0 0 4px var(--accent-green); }
+        }
+
+        /* ─── CONTENT ─── */
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 28px 28px 40px;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(99,102,241,0.3) transparent;
+        }
+
+        .content::-webkit-scrollbar { width: 5px; }
+        .content::-webkit-scrollbar-track { background: transparent; }
+        .content::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.3); border-radius: 10px; }
+
+        /* ─── TAB PANES ─── */
+        .tab-pane { display: none; animation: fadeUp 0.25s ease; }
+        .tab-pane.active { display: block; }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ─── PAGE HEADER ─── */
+        .page-header { margin-bottom: 28px; }
+        .page-title {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title-glow {
+            background: linear-gradient(90deg, var(--text-primary), rgba(99,102,241,0.8));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .page-subtitle {
+            margin-top: 6px;
             font-size: 13px;
             color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        /* ─── STAT CARDS ─── */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 14px;
+            margin-bottom: 28px;
+        }
+
+        .stat-card {
+            background: var(--bg-panel);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 18px 20px;
+            position: relative;
+            overflow: hidden;
+            transition: border-color 0.2s, transform 0.2s;
+            cursor: default;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(99,102,241,0.6), transparent);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .stat-card:hover::before { opacity: 1; }
+
+        .stat-card:hover {
+            border-color: rgba(99,102,241,0.25);
+            transform: translateY(-1px);
+        }
+
+        .stat-card-accent {
+            position: absolute;
+            right: 16px; top: 16px;
+            width: 32px; height: 32px;
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 15px;
+        }
+
+        .stat-label {
+            font-size: 10.5px;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+
+        .stat-value {
+            font-size: 30px;
+            font-weight: 700;
+            font-family: var(--font-mono);
+            letter-spacing: -0.04em;
+            color: var(--text-primary);
+            line-height: 1;
+        }
+
+        .stat-sub {
+            font-size: 10.5px;
+            color: var(--text-secondary);
+            margin-top: 6px;
+        }
+
+        /* ─── PANEL ─── */
+        .panel {
+            background: var(--bg-panel);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            margin-bottom: 20px;
+            overflow: hidden;
+            transition: border-color 0.2s;
+        }
+
+        .panel:hover { border-color: rgba(99,102,241,0.18); }
+
+        .panel-header {
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255,255,255,0.015);
+        }
+
+        .panel-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
             display: flex;
             align-items: center;
             gap: 8px;
         }
-        .zp-header__breadcrumbs span.active {
-            color: var(--text-primary);
-            font-weight: 500;
+
+        .panel-title-dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 8px var(--accent);
         }
 
-        /* --- SIDEBAR COMPONENTS --- */
-        .zp-brand {
-            height: 56px;
+        .panel-body { padding: 18px; }
+
+        /* ─── INPUTS ─── */
+        .form-row {
             display: flex;
-            align-items: center;
-            padding: 0 1.5rem;
-            font-family: var(--font-mono);
-            font-weight: 700;
-            font-size: 14px;
-            letter-spacing: -0.02em;
-            border-bottom: 1px solid var(--border-subtle);
-        }
-        
-        .zp-brand::before {
-            content: '';
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            background: var(--text-primary);
-            border-radius: 2px;
-            margin-right: 10px;
+            gap: 12px;
+            align-items: flex-end;
+            flex-wrap: wrap;
         }
 
-        .zp-nav {
-            padding: 1.5rem 0.75rem;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            flex: 1;
-        }
+        .field { flex: 1; min-width: 140px; }
+        .field-full { width: 100%; }
 
-        .zp-nav__item {
-            display: flex;
-            align-items: center;
-            padding: 8px 12px;
-            color: var(--text-secondary);
-            text-decoration: none;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.15s ease;
-        }
-
-        .zp-nav__item:hover {
-            color: var(--text-primary);
-            background-color: var(--bg-elevated);
-        }
-
-        .zp-nav__item--active {
-            color: var(--text-primary);
-            background-color: var(--border-subtle);
-        }
-
-        .zp-nav__footer {
-            padding: 1rem;
-            border-top: 1px solid var(--border-subtle);
-            font-size: 12px;
-            color: var(--text-secondary);
-        }
-
-        .zp-nav__footer a {
-            color: var(--text-secondary);
-            text-decoration: none;
+        .field-label {
             display: block;
-            margin-top: 8px;
-        }
-        .zp-nav__footer a:hover {
-            color: var(--text-primary);
-        }
-
-        /* --- UI COMPONENTS --- */
-        .zp-page-title {
-            font-size: 24px;
+            font-size: 11px;
             font-weight: 600;
-            letter-spacing: -0.04em;
-            margin: 0 0 8px 0;
-            color: var(--text-primary);
-        }
-
-        .zp-page-desc {
+            letter-spacing: 0.06em;
             color: var(--text-secondary);
-            margin: 0 0 2rem 0;
-            font-size: 14px;
+            text-transform: uppercase;
+            margin-bottom: 7px;
         }
 
-        .zp-grid-stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 16px;
-            margin-bottom: 3rem;
+        .input, .select {
+            width: 100%;
+            background: rgba(10,10,20,0.8);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 9px 12px;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-sans);
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.18s, box-shadow 0.18s;
+            appearance: none;
+            -webkit-appearance: none;
         }
 
-        .zp-stat-card {
-            background: var(--bg-panel);
-            border: 1px solid var(--border-subtle);
-            border-radius: 8px;
-            padding: 20px;
+        .input::placeholder { color: var(--text-dim); }
+
+        .input:focus, .select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+        }
+
+        .select {
+            cursor: pointer;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237878a0' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 36px;
+        }
+
+        .select option { background: #0e0e18; }
+
+        /* ─── BUTTONS ─── */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 9px 18px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.18s ease;
+            white-space: nowrap;
             position: relative;
             overflow: hidden;
         }
 
-        .zp-stat-card__label {
-            font-size: 12px;
-            color: var(--text-secondary);
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 8px;
+        .btn::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(255,255,255,0);
+            transition: background 0.18s;
         }
 
-        .zp-stat-card__value {
-            font-size: 32px;
-            font-weight: 600;
-            font-family: var(--font-mono);
-            letter-spacing: -0.05em;
+        .btn:hover::after { background: rgba(255,255,255,0.05); }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(99,102,241,0.3);
         }
 
-        .zp-panel {
-            background: var(--bg-panel);
-            border: 1px solid var(--border-subtle);
-            border-radius: 8px;
-            margin-bottom: 2rem;
-            overflow: hidden;
-        }
-        
-        .zp-panel__header {
-            padding: 16px 20px;
-            border-bottom: 1px solid var(--border-subtle);
-            background: rgba(255,255,255,0.02);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .zp-panel__title {
-            font-size: 14px;
-            font-weight: 600;
-            margin: 0;
+        .btn-primary:hover {
+            box-shadow: 0 6px 20px rgba(99,102,241,0.5);
+            transform: translateY(-1px);
         }
 
-        .zp-panel__body {
-            padding: 20px;
-        }
-
-        /* Forms & Inputs */
-        .zp-input-group {
-            margin-bottom: 16px;
-        }
-        
-        .zp-input-label {
-            display: block;
-            font-size: 12px;
-            color: var(--text-secondary);
-            margin-bottom: 8px;
-            font-weight: 500;
-        }
-
-        .zp-input {
-            width: 100%;
+        .btn-secondary {
             background: var(--bg-elevated);
-            border: 1px solid var(--border-subtle);
             color: var(--text-primary);
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-family: var(--font-sans);
-            font-size: 13px;
-            outline: none;
-            transition: border-color 0.15s;
+            border: 1px solid var(--border);
         }
-        .zp-input:focus { border-color: var(--text-secondary); }
 
-        .zp-button {
-            background: var(--text-primary);
-            color: var(--bg-base);
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
+        .btn-secondary:hover {
+            border-color: rgba(99,102,241,0.3);
+        }
+
+        .btn-danger {
+            background: rgba(244,63,94,0.15);
+            color: #fb7185;
+            border: 1px solid rgba(244,63,94,0.25);
+            padding: 5px 11px;
+            font-size: 11.5px;
+        }
+
+        .btn-danger:hover {
+            background: rgba(244,63,94,0.25);
+            border-color: rgba(244,63,94,0.5);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        /* ─── BADGE ─── */
+        .badge {
             display: inline-flex;
             align-items: center;
-            justify-content: center;
-            transition: opacity 0.15s;
+            gap: 4px;
+            padding: 3px 9px;
+            border-radius: 20px;
+            font-size: 10.5px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
         }
-        .zp-button:hover { opacity: 0.9; }
-        .zp-button--secondary {
-            background: var(--bg-elevated);
-            color: var(--text-primary);
-            border: 1px solid var(--border-subtle);
-        }
-        .zp-button--secondary:hover { background: var(--border-focus); }
 
-        /* Tables */
-        .zp-table-wrapper {
-            overflow-x: auto;
+        .badge-purple {
+            background: rgba(99,102,241,0.15);
+            color: #a5b4fc;
+            border: 1px solid rgba(99,102,241,0.3);
         }
-        .zp-table {
+
+        .badge-green {
+            background: rgba(16,185,129,0.15);
+            color: #34d399;
+            border: 1px solid rgba(16,185,129,0.3);
+        }
+
+        .badge-red {
+            background: rgba(244,63,94,0.12);
+            color: #fb7185;
+            border: 1px solid rgba(244,63,94,0.25);
+        }
+
+        .badge-cyan {
+            background: rgba(6,182,212,0.12);
+            color: #22d3ee;
+            border: 1px solid rgba(6,182,212,0.25);
+        }
+
+        .badge-gray {
+            background: rgba(255,255,255,0.06);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+
+        .badge-yellow {
+            background: rgba(245,158,11,0.12);
+            color: #fbbf24;
+            border: 1px solid rgba(245,158,11,0.25);
+        }
+
+        /* ─── TABLE ─── */
+        .table-wrap { overflow-x: auto; }
+
+        .table {
             width: 100%;
             border-collapse: collapse;
             font-size: 13px;
         }
-        .zp-table th {
+
+        .table th {
             text-align: left;
-            padding: 12px 20px;
+            padding: 11px 16px;
+            font-size: 10.5px;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
             color: var(--text-secondary);
-            font-weight: 500;
-            border-bottom: 1px solid var(--border-subtle);
+            border-bottom: 1px solid var(--border);
             background: rgba(255,255,255,0.01);
         }
-        .zp-table td {
-            padding: 12px 20px;
-            border-bottom: 1px solid var(--border-subtle);
-        }
-        .zp-table tr:last-child td { border-bottom: none; }
-        
-        .zp-mono { font-family: var(--font-mono); font-size: 12px; }
-        
-        .zp-badge {
-            display: inline-block;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-        .zp-badge--neutral { background: var(--border-focus); color: var(--text-secondary); }
-        .zp-badge--success { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
-        .zp-badge--danger { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
-        .zp-badge--blue { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
 
-        .zp-tab-pane { display: none; }
-        .zp-tab-pane.is-active { display: block; }
-        
-        .zp-terminal {
-            background: #000;
-            border: 1px solid var(--border-subtle);
-            border-radius: 6px;
+        .table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+
+        .table tr:last-child td { border-bottom: none; }
+
+        .table tbody tr {
+            transition: background 0.15s;
+        }
+
+        .table tbody tr:hover {
+            background: rgba(99,102,241,0.04);
+        }
+
+        .mono { font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); }
+
+        /* ─── PROJECT CARDS ─── */
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 14px;
+            margin-top: 14px;
+        }
+
+        .project-card {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            transition: border-color 0.2s, transform 0.2s;
+        }
+
+        .project-card:hover {
+            border-color: rgba(99,102,241,0.3);
+            transform: translateY(-2px);
+        }
+
+        .project-card-head {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 8px;
+            background: rgba(255,255,255,0.015);
+        }
+
+        .project-card-name {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.01em;
+        }
+
+        .project-card-id {
+            font-family: var(--font-mono);
+            font-size: 10.5px;
+            color: var(--text-secondary);
+            margin-top: 3px;
+        }
+
+        .project-card-body { padding: 14px 16px; }
+
+        .project-card-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        /* ─── FILE UPLOAD ─── */
+        .file-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            background: rgba(10,10,20,0.8);
+            border: 1px dashed rgba(99,102,241,0.3);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 12.5px;
+            transition: all 0.18s;
+            margin-bottom: 10px;
+        }
+
+        .file-label:hover {
+            border-color: var(--accent);
+            color: var(--text-primary);
+            background: rgba(99,102,241,0.05);
+        }
+
+        .file-label svg { flex-shrink: 0; }
+
+        /* ─── TOGGLE ─── */
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 10px 0;
+        }
+
+        .toggle-input { display: none; }
+
+        .toggle-track {
+            width: 34px; height: 18px;
+            border-radius: 10px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .toggle-input:checked + .toggle-track {
+            background: var(--accent);
+            border-color: var(--accent);
+            box-shadow: 0 0 10px rgba(99,102,241,0.4);
+        }
+
+        .toggle-track::after {
+            content: '';
+            position: absolute;
+            width: 12px; height: 12px;
+            border-radius: 50%;
+            background: var(--text-secondary);
+            top: 2px; left: 2px;
+            transition: all 0.2s;
+        }
+
+        .toggle-input:checked + .toggle-track::after {
+            left: 18px;
+            background: #fff;
+        }
+
+        .toggle-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        /* ─── SPINNER ─── */
+        .spinner {
+            width: 13px; height: 13px;
+            border: 2px solid rgba(255,255,255,0.2);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ─── NOTIFICATION TOAST ─── */
+        .toast {
+            position: fixed;
+            bottom: 24px; right: 24px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 13px;
+            color: var(--text-primary);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            backdrop-filter: blur(20px);
+            z-index: 1000;
+            transform: translateX(120%);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            max-width: 340px;
+        }
+
+        .toast.show { transform: translateX(0); }
+        .toast-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .toast-msg { flex: 1; line-height: 1.4; }
+
+        /* ─── TERMINAL ─── */
+        .terminal {
+            background: rgba(0,0,0,0.6);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
             padding: 16px;
             font-family: var(--font-mono);
             font-size: 12px;
-            color: #a1a1aa;
+            color: var(--text-secondary);
             white-space: pre-wrap;
-            margin-top: 16px;
-        }
-        .zp-terminal .prompt { color: #3b82f6; }
-        .zp-terminal .code { color: #e4e4e7; }
-        
-        .zp-avatar {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            background: var(--border-focus);
-            display: inline-block;
-            vertical-align: middle;
-            margin-right: 8px;
+            word-break: break-all;
+            margin-top: 14px;
+            display: none;
+            line-height: 1.8;
         }
 
-        .zp-spinner {
-            border: 2px solid rgba(255,255,255,0.1);
-            border-left-color: var(--accent-brand);
-            border-radius: 50%;
-            width: 14px;
-            height: 14px;
-            animation: spin 1s linear infinite;
-            display: inline-block;
-            margin-right: 8px;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .terminal.show { display: block; }
+        .terminal .prompt { color: var(--accent); }
+        .terminal .ok { color: var(--accent-green); }
+        .terminal .err { color: var(--accent-red); }
 
-        .zp-file-upload-btn {
+        /* ─── CHART SECTION ─── */
+        .chart-wrap {
+            height: 220px;
+            position: relative;
+        }
+
+        /* ─── SECTION HEADING ─── */
+        .section-head {
             display: flex;
             align-items: center;
-            justify-content: center;
-            width: 100%;
-            padding: 10px;
-            background: var(--bg-elevated);
-            border: 1px dashed var(--text-secondary);
-            border-radius: 6px;
-            color: var(--text-secondary);
-            cursor: pointer;
-            font-size: 13px;
-            transition: all 0.2s ease;
-        }
-        .zp-file-upload-btn:hover {
-            border-color: var(--text-primary);
-            color: var(--text-primary);
-            background: rgba(255,255,255,0.05);
+            gap: 10px;
+            margin: 24px 0 12px;
         }
 
+        .section-head-line {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+        }
+
+        .section-head-border {
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, var(--border), transparent);
+        }
+
+        /* ─── ALERT BANNER ─── */
+        .alert {
+            padding: 12px 16px;
+            border-radius: var(--radius-sm);
+            font-size: 12.5px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert-success {
+            background: rgba(16,185,129,0.08);
+            border: 1px solid rgba(16,185,129,0.2);
+            color: #34d399;
+        }
+
+        .alert-error {
+            background: rgba(244,63,94,0.08);
+            border: 1px solid rgba(244,63,94,0.2);
+            color: #fb7185;
+        }
+
+        /* ─── MOBILE ─── */
         @media (max-width: 768px) {
-            body { flex-direction: column; }
-            .zp-layout__sidebar { width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border-subtle); position: sticky; top: 0; }
-            .zp-brand { justify-content: center; }
-            .zp-nav { flex-direction: row; padding: 0.5rem; overflow-x: auto; white-space: nowrap; gap: 8px; }
-            .zp-nav__footer { display: none; }
-            .zp-layout__content { padding: 1.5rem; }
-            .zp-header { display: none; }
-            .zp-grid-stats { grid-template-columns: 1fr; }
-            .zp-panel__body form { flex-direction: column; align-items: stretch !important; }
+            body { flex-direction: column; height: auto; overflow: auto; }
+            .sidebar { width: 100%; min-height: auto; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+            .sidebar-nav { flex-direction: row; padding: 8px; overflow-x: auto; gap: 4px; }
+            .nav-section-label { display: none; }
+            .sidebar-footer { display: none; }
+            .main { min-height: 100vh; overflow: auto; }
+            .content { padding: 18px; }
+            .form-row { flex-direction: column; }
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+            .projects-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
-    <div class="zp-layout__sidebar">
-        <div class="zp-brand">ZUPERMING</div>
-        <div class="zp-nav">
-            <a class="zp-nav__item zp-nav__item--active" onclick="switchTab('overview', this)">Overview</a>
-            <a class="zp-nav__item" onclick="switchTab('projects', this)">Projects</a>
-            <a class="zp-nav__item" onclick="switchTab('keys', this)">Access Keys</a>
-            <a class="zp-nav__item" onclick="switchTab('logs', this)">Audit Logs</a>
-            <a class="zp-nav__item" onclick="switchTab('bans', this)">Banned IPs</a>
-            <a class="zp-nav__item" onclick="switchTab('dev', this)">Dev Environment</a>
-        </div>
-        <div class="zp-nav__footer">
-            System Auth: <%- username %><br>
-            <a href="/admin/logout">Terminate Session</a>
-        </div>
+    <!-- TOAST -->
+    <div id="toast" class="toast">
+        <div id="toast-dot" class="toast-dot"></div>
+        <div id="toast-msg" class="toast-msg"></div>
     </div>
 
-    <div class="zp-layout__main">
-        <div class="zp-header">
-            <div class="zp-header__breadcrumbs">
-                <span>zuperming</span> / <span id="breadcrumb-current" class="active">Overview</span>
+    <!-- ─── SIDEBAR ─── -->
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <div class="brand-icon">Z</div>
+            <div class="brand-text">
+                ZUPERMING
+                <span>CONTROL PANEL</span>
             </div>
         </div>
 
-        <div class="zp-layout__content">
-            
-            <% if (message) { %>
-                <div style="background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.2); color:#4ade80; padding:12px 16px; border-radius:6px; margin-bottom:24px; font-size:13px;">
-                    <%- message %>
+        <nav class="sidebar-nav">
+            <span class="nav-section-label">Navigation</span>
+            <a class="nav-item active" onclick="switchTab('overview', this)">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                Overview
+            </a>
+            <a class="nav-item" onclick="switchTab('projects', this)">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+                Projects
+            </a>
+            <a class="nav-item" onclick="switchTab('keys', this)">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+                Access Keys
+            </a>
+            <a class="nav-item" onclick="switchTab('logs', this)">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+                Audit Logs
+            </a>
+            <a class="nav-item" onclick="switchTab('bans', this)">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                IP Blacklist
+            </a>
+            <span class="nav-section-label" style="margin-top:8px;">Developer</span>
+            <a class="nav-item" onclick="switchTab('dev', this)">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                Dev Console
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-chip">
+                <div class="user-avatar"><%- username.charAt(0).toUpperCase() %></div>
+                <div class="user-info">
+                    <div class="user-name"><%- username %></div>
+                    <div class="user-role">Administrator</div>
                 </div>
+                <a href="/admin/logout" class="logout-btn" title="Logout">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                </a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ─── MAIN ─── -->
+    <main class="main">
+        <div class="topbar">
+            <div class="breadcrumb">
+                <span>zuperming</span>
+                <span class="breadcrumb-sep">/</span>
+                <span id="breadcrumb-current" class="breadcrumb-active">overview</span>
+            </div>
+            <div class="topbar-status">
+                <div class="status-dot"></div>
+                SYSTEMS NOMINAL
+            </div>
+        </div>
+
+        <div class="content">
+
+            <% if (message) { %>
+            <div class="alert alert-success">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                <%- message %>
+            </div>
             <% } %>
             <% if (error) { %>
-                <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.2); color:#fca5a5; padding:12px 16px; border-radius:6px; margin-bottom:24px; font-size:13px;">
-                    <%- error %>
-                </div>
+            <div class="alert alert-error">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <%- error %>
+            </div>
             <% } %>
 
-            <!-- OVERVIEW TAB -->
-            <div id="tab-overview" class="zp-tab-pane is-active">
-                <h1 class="zp-page-title">System Overview</h1>
-                <p class="zp-page-desc">High-level telemetry and usage statistics across all instances.</p>
-                
-                <div class="zp-grid-stats">
-                    <div class="zp-stat-card">
-                        <div class="zp-stat-card__label">Total Projects</div>
-                        <div class="zp-stat-card__value"><%- totalGames %></div>
+            <!-- ═══ OVERVIEW ═══ -->
+            <div id="tab-overview" class="tab-pane active">
+                <div class="page-header">
+                    <h1 class="page-title">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="url(#grad1)" stroke-width="2">
+                            <defs><linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient></defs>
+                            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                        </svg>
+                        <span class="page-title-glow">System Overview</span>
+                    </h1>
+                    <p class="page-subtitle">High-level telemetry and usage statistics across all active instances.</p>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-card-accent" style="background:rgba(99,102,241,0.12);">📁</div>
+                        <div class="stat-label">Total Projects</div>
+                        <div class="stat-value"><%- totalGames %></div>
+                        <div class="stat-sub">Registered game instances</div>
                     </div>
-                    <div class="zp-stat-card">
-                        <div class="zp-stat-card__label">Active Keys</div>
-                        <div class="zp-stat-card__value"><%- totalKeys %></div>
+                    <div class="stat-card">
+                        <div class="stat-card-accent" style="background:rgba(16,185,129,0.12);">🔑</div>
+                        <div class="stat-label">Active Keys</div>
+                        <div class="stat-value"><%- totalKeys %></div>
+                        <div class="stat-sub">Provisioned auth tokens</div>
                     </div>
-                    <div class="zp-stat-card">
-                        <div class="zp-stat-card__label">Users Tracked</div>
-                        <div class="zp-stat-card__value"><%- totalUsers %></div>
+                    <div class="stat-card">
+                        <div class="stat-card-accent" style="background:rgba(6,182,212,0.12);">👥</div>
+                        <div class="stat-label">Users Tracked</div>
+                        <div class="stat-value"><%- totalUsers %></div>
+                        <div class="stat-sub">Authenticated identities</div>
                     </div>
-                    <div class="zp-stat-card">
-                        <div class="zp-stat-card__label">Total Executions</div>
-                        <div class="zp-stat-card__value"><%- totalExecutions %></div>
+                    <div class="stat-card">
+                        <div class="stat-card-accent" style="background:rgba(245,158,11,0.12);">⚡</div>
+                        <div class="stat-label">Total Executions</div>
+                        <div class="stat-value"><%- totalExecutions %></div>
+                        <div class="stat-sub">Script runs logged</div>
                     </div>
                 </div>
 
-                <div class="zp-panel">
-                    <div class="zp-panel__header">
-                        <h2 class="zp-panel__title">Execution Telemetry (7 Days)</h2>
+                <div class="panel">
+                    <div class="panel-header">
+                        <span class="panel-title">
+                            <span class="panel-title-dot"></span>
+                            Execution Telemetry (7 Days)
+                        </span>
+                        <span class="badge badge-cyan">LIVE</span>
                     </div>
-                    <div class="zp-panel__body" style="height: 300px;">
-                        <canvas id="executionChart"></canvas>
+                    <div class="panel-body">
+                        <div class="chart-wrap">
+                            <canvas id="executionChart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- PROJECTS TAB -->
-            <div id="tab-projects" class="zp-tab-pane">
-                <h1 class="zp-page-title">Project Directory</h1>
-                <p class="zp-page-desc">Manage Lua environments and configurations for registered games.</p>
-                
-                <div class="zp-panel">
-                    <div class="zp-panel__header">
-                        <h2 class="zp-panel__title">Initialize New Project</h2>
+            <!-- ═══ PROJECTS ═══ -->
+            <div id="tab-projects" class="tab-pane">
+                <div class="page-header">
+                    <h1 class="page-title">
+                        <span class="page-title-glow">Project Directory</span>
+                    </h1>
+                    <p class="page-subtitle">Manage Lua environments and configurations for registered games.</p>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <span class="panel-title">
+                            <span class="panel-title-dot" style="background:var(--accent-green); box-shadow: 0 0 8px var(--accent-green);"></span>
+                            Initialize New Project
+                        </span>
                     </div>
-                    <div class="zp-panel__body">
-                        <form action="/admin/add-game" method="POST" style="display:flex; gap:16px; align-items:flex-end;">
-                            <div class="zp-input-group" style="margin:0; flex:1;">
-                                <label class="zp-input-label">Project Name</label>
-                                <input type="text" name="name" class="zp-input" placeholder="e.g. Blox Fruits" required>
+                    <div class="panel-body">
+                        <form action="/admin/add-game" method="POST">
+                            <div class="form-row">
+                                <div class="field">
+                                    <label class="field-label">Project Name</label>
+                                    <input type="text" name="name" class="input" placeholder="e.g. Blox Fruits" required>
+                                </div>
+                                <div class="field">
+                                    <label class="field-label">Roblox Game ID</label>
+                                    <input type="number" name="game_id" class="input" placeholder="e.g. 2753915549" required>
+                                </div>
+                                <div class="field">
+                                    <label class="field-label">Product Tier</label>
+                                    <select name="product" class="select" required>
+                                        <option value="" disabled selected>Select tier...</option>
+                                        <% Object.values(products).forEach(function(p) { %>
+                                            <option value="<%- p.id %>"><%- p.name %></option>
+                                        <% }); %>
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-primary">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                    Deploy
+                                </button>
                             </div>
-                            <div class="zp-input-group" style="margin:0; flex:1;">
-                                <label class="zp-input-label">Roblox Game ID</label>
-                                <input type="number" name="game_id" class="zp-input" placeholder="e.g. 2753915549" required>
-                            </div>
-                            <div class="zp-input-group" style="margin:0; flex:1;">
-                                <label class="zp-input-label">Product Tier</label>
-                                <select name="product" class="zp-input" required>
-                                    <option value="" disabled selected>Select Tier...</option>
-                                    <% Object.values(products).forEach(function(p) { %>
-                                        <option value="<%- p.id %>"><%- p.name %></option>
-                                    <% }); %>
-                                </select>
-                            </div>
-                            <button type="submit" class="zp-button">Deploy Project</button>
                         </form>
                     </div>
                 </div>
 
-                <% 
+                <%
                     const projectTypes = [
-                        { id: 'premium', label: 'Premium', typeClass: 'zp-badge--blue' },
-                        { id: 'service_provider', label: 'Service Provider', typeClass: 'zp-badge--success' },
-                        { id: 'freemium', label: 'Freemium', typeClass: 'zp-badge--neutral' },
-                        { id: 'testing_dev', label: 'Testing Dev', typeClass: 'zp-badge--danger' }
+                        { id: 'premium', label: 'Premium', badgeClass: 'badge-purple' },
+                        { id: 'service_provider', label: 'Service Provider', badgeClass: 'badge-cyan' },
+                        { id: 'freemium', label: 'Freemium', badgeClass: 'badge-gray' },
+                        { id: 'testing_dev', label: 'Testing Dev', badgeClass: 'badge-yellow' }
                     ];
                 %>
-                
+
                 <% projectTypes.forEach(function(ptype) { %>
-                    <h3 style="margin-top: 2rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px; font-size:14px; color:var(--text-secondary);"><%- ptype.label %> Tier</h3>
-                    <div class="zp-grid-stats" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); margin-top: 16px; margin-bottom: 16px;">
-                        <% let typeGames = games.filter(g => g.product === ptype.id); %>
+                    <%
+                        const typeGames = games.filter(g => g.product === ptype.id);
+                    %>
+                    <div class="section-head">
+                        <span class="section-head-line"><%- ptype.label %></span>
+                        <div class="section-head-border"></div>
+                        <span class="badge badge-gray"><%- typeGames.length %></span>
+                    </div>
+
+                    <% if (typeGames.length === 0) { %>
+                        <div style="color:var(--text-dim); font-size:12.5px; font-style:italic; padding:8px 4px; margin-bottom:16px;">No projects in this tier.</div>
+                    <% } else { %>
+                    <div class="projects-grid" style="margin-bottom: 8px;">
                         <% typeGames.forEach(function(g) { %>
-                            <div class="zp-panel" style="margin-bottom:0;">
-                                <div class="zp-panel__header">
-                                    <div>
-                                        <h2 class="zp-panel__title" style="display:inline-block; margin-right:8px;"><%- g.name %></h2>
-                                        <% if (g.last_script_update) { %>
-                                            <span id="upload-status-<%- g.roblox_game_id || g.roblox_game_id %>" class="zp-badge zp-badge--success">Uploaded</span>
-                                        <% } else { %>
-                                            <span id="upload-status-<%- g.roblox_game_id || g.roblox_game_id %>" class="zp-badge zp-badge--danger">Not Uploaded</span>
-                                        <% } %>
-                                    </div>
-                                    <div style="display:flex; gap:8px; align-items:center;">
-                                        <span class="zp-badge <%- ptype.typeClass %>"><%- ptype.label %></span>
-                                        <form action="/admin/delete-game" method="POST" style="margin:0; padding:0; display:inline-block;" onsubmit="return confirm('Are you sure you want to delete this project? This cannot be undone.');">
-                                            <input type="hidden" name="game_id" value="<%- g.roblox_game_id %>">
-                                            <input type="hidden" name="product" value="<%- g.product %>">
-                                            <button type="submit" class="zp-badge zp-badge--danger" style="border:none; cursor:pointer; background:rgba(239, 68, 68, 0.2); padding: 3px 8px;">Delete</button>
-                                        </form>
-                                    </div>
+                        <div class="project-card">
+                            <div class="project-card-head">
+                                <div>
+                                    <div class="project-card-name"><%- g.name %></div>
+                                    <div class="project-card-id">Game ID: <%- g.roblox_game_id %></div>
                                 </div>
-                                <div class="zp-panel__body">
-                                    <div class="zp-input-group">
-                                        <label class="zp-input-label">Game ID</label>
-                                        <div class="zp-mono"><%- g.roblox_game_id %></div>
-                                    </div>
-                                    <form onsubmit="handleUpload(event, '<%- g.roblox_game_id %>', '<%- g.product %>'); return false;" style="margin-top:16px; padding-top:16px; border-top:1px solid var(--border-subtle);">
-                                        <input type="hidden" name="game_id" value="<%- g.roblox_game_id %>">
-                                        <input type="hidden" name="product" value="<%- g.product %>">
-                                        <div class="zp-input-group">
-                                            <label class="zp-input-label">Upload Source (.lua)</label>
-                                            <label class="zp-file-upload-btn">
-                                                <span id="file-name-<%- g.roblox_game_id %>">Choose .lua File</span>
-                                                <input type="file" name="script_file" accept=".lua,.txt" required style="display: none;" onchange="document.getElementById('file-name-<%- g.roblox_game_id %>').innerText = this.files[0].name">
-                                            </label>
-                                        </div>
-                                        <div class="zp-input-group" style="display:flex; align-items:center; gap:8px;">
-                                            <input type="checkbox" name="auto_obfuscate" id="obf_<%- g.product %>_<%- g.roblox_game_id %>" value="true" checked>
-                                            <label for="obf_<%- g.product %>_<%- g.roblox_game_id %>" style="font-size:12px; color:var(--text-secondary); cursor:pointer;">Auto-Obfuscate (BETA)</label>
-                                        </div>
-                                        <button type="submit" class="zp-button zp-button--secondary" style="width:100%;">Upload Script</button>
-                                    </form>
+                                <div style="display:flex; gap:6px; align-items:center; flex-shrink:0;">
+                                    <% if (g.last_script_update) { %>
+                                        <span id="upload-status-<%- g.roblox_game_id %>" class="badge badge-green">
+                                            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                                            Uploaded
+                                        </span>
+                                    <% } else { %>
+                                        <span id="upload-status-<%- g.roblox_game_id %>" class="badge badge-red">
+                                            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                            Not Uploaded
+                                        </span>
+                                    <% } %>
+                                    <span class="badge <%- ptype.badgeClass %>"><%- ptype.label %></span>
                                 </div>
                             </div>
+                            <div class="project-card-body">
+                                <form onsubmit="handleUpload(event, '<%- g.roblox_game_id %>', '<%- g.product %>'); return false;">
+                                    <input type="hidden" name="game_id" value="<%- g.roblox_game_id %>">
+                                    <input type="hidden" name="product" value="<%- g.product %>">
+                                    <label class="file-label" for="file-<%- g.roblox_game_id %>">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                        <span id="file-name-<%- g.roblox_game_id %>">Choose .lua file to upload</span>
+                                        <input type="file" id="file-<%- g.roblox_game_id %>" name="script_file" accept=".lua,.txt" required style="display:none;"
+                                            onchange="document.getElementById('file-name-<%- g.roblox_game_id %>').innerText = this.files[0].name">
+                                    </label>
+                                    <div class="toggle-row">
+                                        <input type="checkbox" class="toggle-input" name="auto_obfuscate" id="obf-<%- g.roblox_game_id %>" value="true" checked>
+                                        <label class="toggle-track" for="obf-<%- g.roblox_game_id %>"></label>
+                                        <label class="toggle-label" for="obf-<%- g.roblox_game_id %>">Auto-Obfuscate via WeAreDevs</label>
+                                    </div>
+                                    <div class="project-card-actions">
+                                        <button type="submit" class="btn btn-secondary" style="flex:1;" id="upload-btn-<%- g.roblox_game_id %>">
+                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                            Upload Script
+                                        </button>
+                                        <form action="/admin/delete-game" method="POST" style="margin:0;" onsubmit="return confirm('Delete \'<%- g.name %>\'? This removes all scripts for this game and cannot be undone.');">
+                                            <input type="hidden" name="game_id" value="<%- g.roblox_game_id %>">
+                                            <input type="hidden" name="product" value="<%- g.product %>">
+                                            <button type="submit" class="btn btn-danger">
+                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                                                Delete
+                                            </button>
+                                        </form>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
                         <% }); %>
-                        <% if (typeGames.length === 0) { %>
-                            <div style="color:var(--text-secondary); font-size:13px; font-style:italic;">No projects in this tier.</div>
-                        <% } %>
                     </div>
+                    <% } %>
                 <% }); %>
             </div>
 
-            <!-- KEYS TAB -->
-            <div id="tab-keys" class="zp-tab-pane">
-                <h1 class="zp-page-title">Access Keys</h1>
-                <p class="zp-page-desc">Provision and monitor authentication tokens.</p>
-                
-                <div class="zp-panel" style="max-width:600px;">
-                    <div class="zp-panel__header">
-                        <h2 class="zp-panel__title">Provision Token</h2>
+            <!-- ═══ KEYS ═══ -->
+            <div id="tab-keys" class="tab-pane">
+                <div class="page-header">
+                    <h1 class="page-title"><span class="page-title-glow">Access Keys</span></h1>
+                    <p class="page-subtitle">Provision and monitor authentication tokens.</p>
+                </div>
+
+                <div class="panel" style="max-width:620px;">
+                    <div class="panel-header">
+                        <span class="panel-title"><span class="panel-title-dot"></span> Provision Token</span>
                     </div>
-                    <div class="zp-panel__body">
-                        <form action="/admin/generate-key" method="POST" style="display:flex; gap:16px; align-items:flex-end;">
-                            <div class="zp-input-group" style="margin:0; flex:2;">
-                                <label class="zp-input-label">Product Tier</label>
-                                <select name="product" class="zp-input" required>
-                                    <% Object.values(products).forEach(function(p) { %>
-                                        <option value="<%- p.id %>"><%- p.name %></option>
-                                    <% }); %>
-                                </select>
+                    <div class="panel-body">
+                        <form action="/admin/generate-key" method="POST">
+                            <div class="form-row">
+                                <div class="field" style="flex:2;">
+                                    <label class="field-label">Product Tier</label>
+                                    <select name="product" class="select" required>
+                                        <% Object.values(products).forEach(function(p) { %>
+                                            <option value="<%- p.id %>"><%- p.name %></option>
+                                        <% }); %>
+                                    </select>
+                                </div>
+                                <div class="field" style="flex:1.5;">
+                                    <label class="field-label">Duration</label>
+                                    <input type="text" name="duration" class="input" placeholder="1d, 30d, lifetime" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Generate</button>
                             </div>
-                            <div class="zp-input-group" style="margin:0; flex:1.5;">
-                                <label class="zp-input-label">Duration</label>
-                                <input type="text" name="duration" class="zp-input" placeholder="1d, 30d, lifetime" required>
-                            </div>
-                            <button type="submit" class="zp-button">Generate</button>
                         </form>
                     </div>
                 </div>
 
-                <div class="zp-panel">
-                    <div class="zp-table-wrapper">
-                        <table class="zp-table">
+                <div class="panel">
+                    <div class="panel-header">
+                        <span class="panel-title"><span class="panel-title-dot"></span> All Tokens</span>
+                        <span class="badge badge-gray"><%- keys.length %> total</span>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="table">
                             <thead>
                                 <tr>
-                                    <th>Token / Key</th>
+                                    <th>Token</th>
                                     <th>Tier</th>
                                     <th>Duration</th>
                                     <th>State</th>
-                                    <th>Bound User (ID)</th>
-                                    <th>Provisioned At</th>
+                                    <th>Bound User</th>
+                                    <th>Issued At</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <% keys.forEach(function(k) { %>
-                                    <tr>
-                                        <td class="zp-mono"><%- k.key_string %></td>
-                                        <td><span class="zp-badge zp-badge--neutral"><%- k.product %></span></td>
-                                        <td><%- k.duration_label %></td>
-                                        <td>
-                                            <% if (k.status === 'used') { %>
-                                                <span class="zp-badge zp-badge--danger">Used</span>
-                                            <% } else { %>
-                                                <span class="zp-badge zp-badge--success">Available</span>
-                                            <% } %>
-                                        </td>
-                                        <td class="zp-mono"><%- k.discord_id ? k.discord_id : '-' %></td>
-                                        <td style="color:var(--text-secondary)"><%- k.created_at %></td>
-                                    </tr>
+                                <tr>
+                                    <td class="mono"><%- k.key_string %></td>
+                                    <td><span class="badge badge-gray"><%- k.product %></span></td>
+                                    <td style="color:var(--text-secondary)"><%- k.duration_label %></td>
+                                    <td>
+                                        <% if (k.status === 'used') { %>
+                                            <span class="badge badge-purple">Used</span>
+                                        <% } else { %>
+                                            <span class="badge badge-green">Available</span>
+                                        <% } %>
+                                    </td>
+                                    <td class="mono"><%- k.discord_id ? k.discord_id : '—' %></td>
+                                    <td style="color:var(--text-secondary)"><%- k.created_at %></td>
+                                </tr>
                                 <% }); %>
                                 <% if(keys.length === 0) { %>
-                                    <tr><td colspan="6" style="text-align:center; color:var(--text-secondary)">No tokens provisioned.</td></tr>
+                                <tr><td colspan="6" style="text-align:center; color:var(--text-dim); padding:28px;">No tokens provisioned.</td></tr>
                                 <% } %>
                             </tbody>
                         </table>
@@ -631,43 +1276,51 @@
                 </div>
             </div>
 
-            <!-- LOGS TAB -->
-            <div id="tab-logs" class="zp-tab-pane">
-                <h1 class="zp-page-title">Audit Logs</h1>
-                <p class="zp-page-desc">System access records and authentication events.</p>
-                
-                <div class="zp-panel">
-                    <div class="zp-table-wrapper">
-                        <table class="zp-table">
+            <!-- ═══ LOGS ═══ -->
+            <div id="tab-logs" class="tab-pane">
+                <div class="page-header">
+                    <h1 class="page-title"><span class="page-title-glow">Audit Logs</span></h1>
+                    <p class="page-subtitle">System access records and authentication events.</p>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <span class="panel-title"><span class="panel-title-dot" style="background:var(--accent-cyan); box-shadow:0 0 8px var(--accent-cyan);"></span> Login Events</span>
+                        <span class="badge badge-gray"><%- loginLogs.length %> records</span>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="table">
                             <thead>
                                 <tr>
                                     <th>Identity</th>
                                     <th>Discord ID</th>
-                                    <th>Clearance Level</th>
+                                    <th>Clearance</th>
                                     <th>Timestamp</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <% loginLogs.forEach(function(l) { %>
-                                    <tr>
-                                        <td>
+                                <tr>
+                                    <td>
+                                        <div style="display:flex; align-items:center; gap:8px;">
                                             <% if (l.avatar_url) { %>
-                                                <img src="<%- l.avatar_url %>" class="zp-avatar" alt="">
+                                                <img src="<%- l.avatar_url %>" style="width:26px;height:26px;border-radius:6px;object-fit:cover;" alt="">
                                             <% } else { %>
-                                                <div class="zp-avatar"></div>
+                                                <div style="width:26px;height:26px;border-radius:6px;background:var(--bg-elevated);"></div>
                                             <% } %>
-                                            <strong><%- l.username %></strong>
-                                        </td>
-                                        <td class="zp-mono"><%- l.discord_id %></td>
-                                        <td>
-                                            <% let roleClass = (l.role === 'Developer' || l.role === 'Owner') ? 'zp-badge--blue' : 'zp-badge--neutral'; %>
-                                            <span class="zp-badge <%- roleClass %>"><%- l.role %></span>
-                                        </td>
-                                        <td style="color:var(--text-secondary)"><%- l.login_time %></td>
-                                    </tr>
+                                            <span style="font-weight:600;"><%- l.username %></span>
+                                        </div>
+                                    </td>
+                                    <td class="mono"><%- l.discord_id %></td>
+                                    <td>
+                                        <% let roleClass = (l.role === 'Developer' || l.role === 'Owner') ? 'badge-purple' : 'badge-gray'; %>
+                                        <span class="badge <%- roleClass %>"><%- l.role %></span>
+                                    </td>
+                                    <td style="color:var(--text-secondary)"><%- l.login_time %></td>
+                                </tr>
                                 <% }); %>
                                 <% if(loginLogs.length === 0) { %>
-                                    <tr><td colspan="4" style="text-align:center; color:var(--text-secondary)">No events recorded.</td></tr>
+                                <tr><td colspan="4" style="text-align:center; color:var(--text-dim); padding:28px;">No events recorded.</td></tr>
                                 <% } %>
                             </tbody>
                         </table>
@@ -675,33 +1328,44 @@
                 </div>
             </div>
 
-            <!-- BANNED IPS TAB -->
-            <div id="tab-bans" class="zp-tab-pane">
-                <h1 class="zp-page-title">IP Blacklist</h1>
-                <p class="zp-page-desc">Manage blocked IP addresses that are denied access to scripts.</p>
-                
-                <div class="zp-panel" style="max-width:600px; margin-bottom: 2rem;">
-                    <div class="zp-panel__header">
-                        <h2 class="zp-panel__title">Ban New IP</h2>
+            <!-- ═══ BANS ═══ -->
+            <div id="tab-bans" class="tab-pane">
+                <div class="page-header">
+                    <h1 class="page-title"><span class="page-title-glow">IP Blacklist</span></h1>
+                    <p class="page-subtitle">Manage blocked IP addresses that are denied script access.</p>
+                </div>
+
+                <div class="panel" style="max-width:640px; margin-bottom:20px;">
+                    <div class="panel-header">
+                        <span class="panel-title"><span class="panel-title-dot" style="background:var(--accent-red); box-shadow:0 0 8px var(--accent-red);"></span> Blacklist IP</span>
                     </div>
-                    <div class="zp-panel__body">
-                        <form action="/admin/ban-ip" method="POST" style="display:flex; gap:16px; align-items:flex-end;">
-                            <div class="zp-input-group" style="margin:0; flex:1;">
-                                <label class="zp-input-label">IP Address</label>
-                                <input type="text" name="ip" class="zp-input" placeholder="e.g. 192.168.1.1" required>
+                    <div class="panel-body">
+                        <form action="/admin/ban-ip" method="POST">
+                            <div class="form-row">
+                                <div class="field">
+                                    <label class="field-label">IP Address</label>
+                                    <input type="text" name="ip" class="input" placeholder="e.g. 192.168.1.1" required>
+                                </div>
+                                <div class="field" style="flex:2;">
+                                    <label class="field-label">Reason</label>
+                                    <input type="text" name="reason" class="input" placeholder="e.g. HWID bypass attempt" required>
+                                </div>
+                                <button type="submit" class="btn" style="background:rgba(244,63,94,0.2); color:#fb7185; border:1px solid rgba(244,63,94,0.3);">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                                    Ban IP
+                                </button>
                             </div>
-                            <div class="zp-input-group" style="margin:0; flex:2;">
-                                <label class="zp-input-label">Reason</label>
-                                <input type="text" name="reason" class="zp-input" placeholder="Bypassing / Exploit" required>
-                            </div>
-                            <button type="submit" class="zp-button zp-button--danger">Ban IP</button>
                         </form>
                     </div>
                 </div>
 
-                <div class="zp-panel">
-                    <div class="zp-table-wrapper">
-                        <table class="zp-table">
+                <div class="panel">
+                    <div class="panel-header">
+                        <span class="panel-title"><span class="panel-title-dot"></span> Banned IPs</span>
+                        <span class="badge badge-red"><%- bannedIps.length %> blocked</span>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="table">
                             <thead>
                                 <tr>
                                     <th>IP Address</th>
@@ -712,20 +1376,20 @@
                             </thead>
                             <tbody>
                                 <% bannedIps.forEach(function(b) { %>
-                                    <tr>
-                                        <td class="zp-mono"><%- b.ip %></td>
-                                        <td><%- b.reason %></td>
-                                        <td style="color:var(--text-secondary)"><%- b.banned_at %></td>
-                                        <td>
-                                            <form action="/admin/unban-ip" method="POST" style="margin:0; display:inline-block;">
-                                                <input type="hidden" name="ip" value="<%- b.ip %>">
-                                                <button type="submit" class="zp-button" style="padding:4px 8px; font-size:11px;">Unban</button>
-                                            </form>
-                                        </td>
-                                    </tr>
+                                <tr>
+                                    <td class="mono"><%- b.ip %></td>
+                                    <td style="color:var(--text-secondary)"><%- b.reason %></td>
+                                    <td style="color:var(--text-secondary)"><%- b.banned_at %></td>
+                                    <td>
+                                        <form action="/admin/unban-ip" method="POST" style="margin:0;">
+                                            <input type="hidden" name="ip" value="<%- b.ip %>">
+                                            <button type="submit" class="btn btn-secondary" style="padding:5px 12px; font-size:12px;">Unban</button>
+                                        </form>
+                                    </td>
+                                </tr>
                                 <% }); %>
                                 <% if(bannedIps.length === 0) { %>
-                                    <tr><td colspan="4" style="text-align:center; color:var(--text-secondary)">No IP addresses are currently banned.</td></tr>
+                                <tr><td colspan="4" style="text-align:center; color:var(--text-dim); padding:28px;">No IPs currently blacklisted.</td></tr>
                                 <% } %>
                             </tbody>
                         </table>
@@ -733,156 +1397,180 @@
                 </div>
             </div>
 
-            <!-- DEV ENVIRONMENT TAB -->
-            <div id="tab-dev" class="zp-tab-pane">
-                <h1 class="zp-page-title">Developer Environment</h1>
-                <p class="zp-page-desc">Internal tooling for testing builds locally bypassing normal validation layers.</p>
-                
-                <div class="zp-panel" style="max-width:700px;">
-                    <div class="zp-panel__header">
-                        <h2 class="zp-panel__title">Testing Loader</h2>
+            <!-- ═══ DEV CONSOLE ═══ -->
+            <div id="tab-dev" class="tab-pane">
+                <div class="page-header">
+                    <h1 class="page-title"><span class="page-title-glow">Dev Console</span></h1>
+                    <p class="page-subtitle">Internal tooling for testing builds locally, bypassing normal validation layers.</p>
+                </div>
+
+                <div class="panel" style="max-width:720px;">
+                    <div class="panel-header">
+                        <span class="panel-title">
+                            <span class="panel-title-dot" style="background:var(--accent-cyan); box-shadow:0 0 8px var(--accent-cyan);"></span>
+                            Testing Loader
+                        </span>
+                        <span class="badge badge-yellow">DEV MODE</span>
                     </div>
-                    <div class="zp-panel__body">
-                        <div style="display:flex; gap:12px; margin-bottom: 16px;">
-                            <button class="zp-button" onclick="getDevScript()">Fetch Dev Script</button>
-                            <button class="zp-button zp-button--secondary" onclick="resetDevHwid()">Purge HWID Binding</button>
+                    <div class="panel-body">
+                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                            <button class="btn btn-primary" onclick="getDevScript()">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                                Fetch Dev Script
+                            </button>
+                            <button class="btn btn-secondary" onclick="resetDevHwid()">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.98"/></svg>
+                                Purge HWID Binding
+                            </button>
                         </div>
-                        <div id="dev-response" class="zp-terminal" style="display:none;">
-                            <span class="prompt">system@zuperming:~$</span> <span id="dev-output" class="code"></span>
+                        <div id="dev-terminal" class="terminal">
+                            <span id="dev-output"></span>
                         </div>
                     </div>
                 </div>
             </div>
-            
-        </div>
-    </div>
+
+        </div><!-- /content -->
+    </main>
 
     <script>
+        /* ─── TAB SWITCHING ─── */
         window.addEventListener('DOMContentLoaded', () => {
             const hash = window.location.hash.substring(1);
             if (hash && document.getElementById('tab-' + hash)) {
-                const navItem = document.querySelector(`.zp-nav__item[onclick*="switchTab('${hash}'"]`);
-                if(navItem) switchTab(hash, navItem);
+                const navItem = document.querySelector(`.nav-item[onclick*="'${hash}'"]`);
+                if (navItem) switchTab(hash, navItem);
             }
         });
 
         function switchTab(tabId, element) {
             window.location.hash = tabId;
-            document.querySelectorAll('.zp-tab-pane').forEach(el => el.classList.remove('is-active'));
-            document.querySelectorAll('.zp-nav__item').forEach(el => el.classList.remove('zp-nav__item--active'));
-            
-            document.getElementById('tab-' + tabId).classList.add('is-active');
-            element.classList.add('zp-nav__item--active');
-            document.getElementById('breadcrumb-current').textContent = element.textContent;
+            document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-' + tabId).classList.add('active');
+            element.classList.add('active');
+            document.getElementById('breadcrumb-current').textContent = tabId;
         }
 
+        /* ─── TOAST ─── */
+        function showToast(msg, type = 'success') {
+            const toast = document.getElementById('toast');
+            const dot = document.getElementById('toast-dot');
+            const msgEl = document.getElementById('toast-msg');
+            const colors = { success: '#10b981', error: '#f43f5e', info: '#6366f1' };
+            dot.style.background = colors[type] || colors.info;
+            dot.style.boxShadow = `0 0 8px ${colors[type] || colors.info}`;
+            msgEl.textContent = msg;
+            toast.className = 'toast show';
+            setTimeout(() => toast.className = 'toast', 3500);
+        }
+
+        /* ─── UPLOAD HANDLER ─── */
         async function handleUpload(event, gameId, product) {
             event.preventDefault();
             const form = event.target;
-            const btn = form.querySelector('button[type="submit"]');
-            const originalText = btn.innerHTML;
-            
+            const btn = document.getElementById('upload-btn-' + gameId);
+            const origHTML = btn.innerHTML;
+
             const formData = new FormData(form);
-            
+            const isObf = form.querySelector('input[name="auto_obfuscate"]')?.checked;
+
             btn.disabled = true;
-            btn.innerHTML = '<span class="zp-spinner"></span> Uploading & Obfuscating...';
-            
+            btn.innerHTML = `<span class="spinner"></span> ${isObf ? 'Obfuscating...' : 'Uploading...'}`;
+
             try {
-                const res = await fetch('/admin/upload-script', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                if (res.redirected) {
-                    window.location.href = res.url;
-                    return;
-                }
-                
+                const res = await fetch('/admin/upload-script', { method: 'POST', body: formData });
+
+                if (res.redirected) { window.location.href = res.url; return; }
+
                 const data = await res.json();
+
                 if (data.success) {
-                    btn.innerHTML = 'Success!';
-                    btn.style.background = 'var(--accent-green)';
-                    btn.style.color = 'var(--bg-base)';
-                    btn.style.borderColor = 'var(--accent-green)';
-                    
-                    // Trigger download
-                    const blob = new Blob([data.obfuscated], { type: 'text/plain' });
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `obfuscated_${gameId}.txt`;
-                    document.body.appendChild(a);
-                    a.click();
-                    window.URL.revokeObjectURL(url);
-                    a.remove();
-                    
+                    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Done!`;
+                    btn.style.cssText = 'background:rgba(16,185,129,0.2); color:#34d399; border:1px solid rgba(16,185,129,0.3); flex:1;';
+                    showToast('Script uploaded successfully!', 'success');
+
+                    // Download obfuscated result as .txt
+                    if (data.obfuscated) {
+                        const blob = new Blob([data.obfuscated], { type: 'text/plain' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `obfuscated_${gameId}.txt`;
+                        document.body.appendChild(a);
+                        a.click();
+                        URL.revokeObjectURL(url);
+                        a.remove();
+                    }
+
+                    // Update badge
+                    const badge = document.getElementById('upload-status-' + gameId);
+                    if (badge) {
+                        badge.className = 'badge badge-green';
+                        badge.innerHTML = `<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Uploaded`;
+                    }
+
+                    // Reset form label
+                    document.getElementById('file-name-' + gameId).innerText = 'Choose .lua file to upload';
+                    form.reset();
+
                     setTimeout(() => {
                         btn.disabled = false;
-                        btn.innerHTML = originalText;
-                        btn.style.background = '';
-                        btn.style.color = '';
-                        btn.style.borderColor = '';
-                        form.reset();
-                        document.getElementById('file-name-' + gameId).innerText = 'Choose .lua File';
-                        
-                        // Update badge
-                        const statusBadge = document.getElementById('upload-status-' + gameId);
-                        if(statusBadge) {
-                            statusBadge.className = 'zp-badge zp-badge--success';
-                            statusBadge.innerText = 'Uploaded';
-                        }
-                    }, 3000);
+                        btn.innerHTML = origHTML;
+                        btn.style.cssText = '';
+                    }, 4000);
                 } else {
-                    alert('Upload failed: ' + (data.error || 'Unknown error'));
+                    showToast('Upload failed: ' + (data.error || 'Unknown error'), 'error');
                     btn.disabled = false;
-                    btn.innerHTML = originalText;
+                    btn.innerHTML = origHTML;
                 }
             } catch (err) {
-                alert('Request failed');
+                showToast('Network error. Try again.', 'error');
                 btn.disabled = false;
-                btn.innerHTML = originalText;
+                btn.innerHTML = origHTML;
             }
         }
 
+        /* ─── DEV CONSOLE ─── */
         async function getDevScript() {
-            const respEl = document.getElementById('dev-response');
-            const outEl = document.getElementById('dev-output');
-            respEl.style.display = 'block';
-            outEl.textContent = 'Requesting dev auth token...';
+            const terminal = document.getElementById('dev-terminal');
+            const out = document.getElementById('dev-output');
+            terminal.className = 'terminal show';
+            out.innerHTML = `<span class="prompt">$</span> Requesting dev auth token...`;
             try {
                 const res = await fetch('/admin/dev-panel/script', { method: 'POST' });
                 const data = await res.json();
                 if (data.success) {
                     const code = `_G.Key = "${data.key}"\nloadstring(game:HttpGet("${data.baseUrl}/api/dev/execute?key=" .. _G.Key))()`;
-                    outEl.textContent = code;
+                    out.innerHTML = `<span class="prompt">$</span> <span class="ok">AUTH OK</span>\n\n${code}`;
                 } else {
-                    outEl.textContent = "ERR: " + data.message;
+                    out.innerHTML = `<span class="prompt">$</span> <span class="err">ERR: ${data.message}</span>`;
                 }
             } catch (err) {
-                outEl.textContent = "ERR: Network request failed.";
+                out.innerHTML = `<span class="prompt">$</span> <span class="err">ERR: Network request failed</span>`;
             }
         }
 
         async function resetDevHwid() {
-            const respEl = document.getElementById('dev-response');
-            const outEl = document.getElementById('dev-output');
-            respEl.style.display = 'block';
-            outEl.textContent = 'Purging hardware lock...';
+            const terminal = document.getElementById('dev-terminal');
+            const out = document.getElementById('dev-output');
+            terminal.className = 'terminal show';
+            out.innerHTML = `<span class="prompt">$</span> Purging hardware lock...`;
             try {
                 const res = await fetch('/admin/dev-panel/reset-hwid', { method: 'POST' });
                 const data = await res.json();
-                outEl.textContent = data.message || "Operation completed.";
+                out.innerHTML = `<span class="prompt">$</span> <span class="ok">${data.message || 'HWID cleared.'}</span>`;
             } catch (err) {
-                outEl.textContent = "ERR: Network request failed.";
+                out.innerHTML = `<span class="prompt">$</span> <span class="err">ERR: Network request failed</span>`;
             }
         }
 
-        // Render dummy chart
+        /* ─── CHART ─── */
         const ctx = document.getElementById('executionChart').getContext('2d');
-        const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-        gradient.addColorStop(0, 'rgba(255, 255, 255, 0.15)');
-        gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-        
+        const grad = ctx.createLinearGradient(0, 0, 0, 220);
+        grad.addColorStop(0, 'rgba(99,102,241,0.25)');
+        grad.addColorStop(1, 'rgba(99,102,241,0)');
+
         new Chart(ctx, {
             type: 'line',
             data: {
@@ -890,22 +1578,48 @@
                 datasets: [{
                     label: 'Executions',
                     data: [12, 19, 15, 25, 22, 30, 28],
-                    borderColor: '#ffffff',
-                    backgroundColor: gradient,
+                    borderColor: '#6366f1',
+                    backgroundColor: grad,
                     borderWidth: 2,
                     fill: true,
-                    tension: 0.4,
-                    pointBackgroundColor: '#000',
-                    pointBorderColor: '#fff'
+                    tension: 0.45,
+                    pointBackgroundColor: '#0e0e18',
+                    pointBorderColor: '#6366f1',
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    pointHoverBackgroundColor: '#6366f1'
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
+                interaction: { intersect: false, mode: 'index' },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(14,14,24,0.95)',
+                        borderColor: 'rgba(99,102,241,0.3)',
+                        borderWidth: 1,
+                        padding: 10,
+                        titleColor: '#f0f0ff',
+                        bodyColor: '#7878a0',
+                        callbacks: {
+                            label: ctx => ` ${ctx.parsed.y} executions`
+                        }
+                    }
+                },
                 scales: {
-                    x: { grid: { color: '#222222' }, ticks: { color: '#a1a1aa' } },
-                    y: { grid: { color: '#222222' }, ticks: { color: '#a1a1aa' } }
+                    x: {
+                        grid: { color: 'rgba(255,255,255,0.04)', borderDash: [3,3] },
+                        ticks: { color: '#7878a0', font: { size: 11 } },
+                        border: { display: false }
+                    },
+                    y: {
+                        grid: { color: 'rgba(255,255,255,0.04)', borderDash: [3,3] },
+                        ticks: { color: '#7878a0', font: { size: 11 } },
+                        border: { display: false }
+                    }
                 }
             }
         });
