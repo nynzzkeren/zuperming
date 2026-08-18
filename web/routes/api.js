@@ -418,6 +418,40 @@ router.get('/sp/execute', executeServiceProvider);
 router.get('/free/execute', executeFreemium);
 router.get('/dev/execute', executeTestingDev);
 
+// ─── CRASH / ERROR REPORTER ───────────────────────────────────────────────
+router.post('/report-error', express.json(), async (req, res) => {
+    const { error, executor, hwid, game_id, product } = req.body;
+    
+    if (!error) return res.status(400).json({ success: false });
+
+    try {
+        const bot = require('../../bot/bot');
+        const channelId = '1537804443146526740';
+        const channel = await bot.client.channels.fetch(channelId);
+        if (channel) {
+            const { EmbedBuilder } = require('discord.js');
+            const embed = new EmbedBuilder()
+                .setTitle('⚠️ Script Execution Error')
+                .setColor('#ef4444')
+                .addFields(
+                    { name: 'Game ID', value: String(game_id || 'Unknown'), inline: true },
+                    { name: 'Executor', value: String(executor || 'Unknown'), inline: true },
+                    { name: 'Product', value: String(product || 'Unknown'), inline: true },
+                    { name: 'HWID', value: String(hwid || 'Unknown'), inline: false },
+                    { name: 'Error Trace', value: '```lua\n' + String(error).substring(0, 1000) + '\n```', inline: false }
+                )
+                .setTimestamp();
+                
+            await channel.send({ embeds: [embed] });
+        }
+    } catch (e) {
+        console.error('Failed to send error report to Discord:', e.message);
+    }
+    
+    res.json({ success: true });
+});
+// ─────────────────────────────────────────────────────────────────────────────
+
 module.exports = router;
 module.exports.serveLoader = serveLoader;
 module.exports.handleExecute = handleExecute;

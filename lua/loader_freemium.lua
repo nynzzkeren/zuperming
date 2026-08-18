@@ -87,7 +87,28 @@ if success then
     local func, err = loadstring(result)
     if func then
         n("Key Validated! Loading Script...")
-        func()
+        local ok, runtimeErr = pcall(func)
+        if not ok then
+            pcall(function()
+                local HttpService = game:GetService("HttpService")
+                local req = request or http_request or (syn and syn.request) or (http and http.request)
+                if req then
+                    req({
+                        Url = base .. "/api/report-error",
+                        Method = "POST",
+                        Headers = { ["Content-Type"] = "application/json" },
+                        Body = HttpService:JSONEncode({
+                            error = tostring(runtimeErr),
+                            executor = tostring(execName),
+                            hwid = tostring(hwid),
+                            game_id = tostring(universeId),
+                            product = "freemium"
+                        })
+                    })
+                end
+            end)
+            warn("Zuperming Freemium Runtime Error: " .. tostring(runtimeErr))
+        end
     else
         n("Failed to load protected script.", 4)
         warn("Zuperming Freemium: " .. tostring(err))
