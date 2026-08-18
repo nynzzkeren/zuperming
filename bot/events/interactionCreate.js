@@ -234,35 +234,27 @@ module.exports = {
                             return interaction.reply({ content: `\`${loaderScript}\``, ephemeral: true });
                         }
 
-                        const container = new ContainerBuilder()
-                            .addTextDisplayComponents(
-                                (text) => text.setContent('# Freemium Loader'),
-                                (text) => text.setContent(
-                                    row
-                                        ? `Key Discord-bound · Duration: **${formatDurationLabel(row.duration)}**`
-                                        : `Ambil key di **Get Key** (web), paste ke \`_G.key_script\`, lalu execute.`
-                                ),
-                                (text) => text.setContent('Copy and paste into your executor:')
+                        const components = [
+                            new ActionRowBuilder().addComponents(
+                                new ButtonBuilder()
+                                    .setCustomId('btn_free_copy_script')
+                                    .setLabel('Mobile Copy')
+                                    .setStyle(ButtonStyle.Secondary),
+                                ...(isUsableHttpUrl(getFreemiumGetKeyUrl())
+                                    ? [new ButtonBuilder().setLabel('Get Key').setStyle(ButtonStyle.Link).setURL(getFreemiumGetKeyUrl())]
+                                    : [])
                             )
-                            .addTextDisplayComponents(
-                                (text) => text.setContent(`\`\`\`lua\n${loaderScript}\n\`\`\``)
-                            )
-                            .addActionRowComponents((rowComp) =>
-                                rowComp.addComponents(
-                                    new ButtonBuilder()
-                                        .setCustomId('btn_free_copy_script')
-                                        .setLabel('Mobile Copy')
-                                        .setStyle(ButtonStyle.Secondary),
-                                    ...(isUsableHttpUrl(getFreemiumGetKeyUrl())
-                                        ? [new ButtonBuilder().setLabel('Get Key').setStyle(ButtonStyle.Link).setURL(getFreemiumGetKeyUrl())]
-                                        : [])
-                                )
-                            );
+                        ];
+
+                        const textContent = `**Freemium Loader**\n` +
+                            (row ? `Key Discord-bound · Duration: **${formatDurationLabel(row.duration)}**` : `Ambil key di **Get Key** (web), paste ke \`_G.key_script\`, lalu execute.`) +
+                            `\n\nCopy and paste into your executor:\n\`\`\`lua\n${loaderScript}\n\`\`\``;
 
                         return interaction.reply({
-                            components: [container],
-                            flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral
-                        });
+                            content: textContent,
+                            components: components,
+                            ephemeral: true
+                        }).catch(console.error);
                     });
                 }
 
@@ -286,31 +278,25 @@ module.exports = {
                         });
                     }
 
-                    const container = new ContainerBuilder()
-                        .addTextDisplayComponents(
-                            (text) => text.setContent(`# Your ${product.name} Loader`),
-                            (text) => text.setContent(
-                                `Duration: **${formatDurationLabel(row.duration)}**` +
-                                (row.expires_at ? `\nExpires: ${row.expires_at}` : '\nExpires: Permanent')
-                            ),
-                            (text) => text.setContent('Copy and paste this script into your executor:')
+                    const components = [
+                        new ActionRowBuilder().addComponents(
+                            new ButtonBuilder()
+                                .setCustomId(copyButtonId(product))
+                                .setLabel('Mobile Copy')
+                                .setStyle(ButtonStyle.Secondary)
                         )
-                        .addTextDisplayComponents(
-                            (text) => text.setContent(`\`\`\`lua\n${loaderScript}\n\`\`\``)
-                        )
-                        .addActionRowComponents((rowComp) =>
-                            rowComp.addComponents(
-                                new ButtonBuilder()
-                                    .setCustomId(copyButtonId(product))
-                                    .setLabel('Mobile Copy')
-                                    .setStyle(ButtonStyle.Secondary)
-                            )
-                        );
+                    ];
+
+                    const textContent = `**Your ${product.name} Loader**\n` +
+                        `Duration: **${formatDurationLabel(row.duration)}**\n` +
+                        (row.expires_at ? `Expires: ${row.expires_at}` : 'Expires: Permanent') +
+                        `\n\nCopy and paste this script into your executor:\n\`\`\`lua\n${loaderScript}\n\`\`\``;
 
                     return interaction.reply({
-                        components: [container],
-                        flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral
-                    });
+                        content: textContent,
+                        components: components,
+                        ephemeral: true
+                    }).catch(console.error);
                 });
             }
 
