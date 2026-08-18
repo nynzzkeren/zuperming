@@ -1,32 +1,21 @@
-async function searchRobloxGame(gameName) {
+async function searchGame(keyword) {
   try {
-    const searchUrl = `https://apis.roblox.com/search-api/omni-search?searchQuery=${encodeURIComponent(gameName)}&sessionId=1`;
-    const res = await fetch(searchUrl);
+    const url = `https://games.roblox.com/v1/games/list?model.keyword=${encodeURIComponent(keyword)}&model.maxRows=5`;
+    const res = await fetch(url);
     const data = await res.json();
-    
-    // Let's flatten all contents
-    let allContents = [];
-    if (data.searchResults) {
-        for (const group of data.searchResults) {
-            if (group.contents) {
-                allContents = allContents.concat(group.contents);
-            }
-        }
+
+    if (!data.games || data.games.length === 0) {
+      return "Game tidak ditemukan!";
     }
 
-    return allContents.filter(c => c.rootPlaceId).slice(0, 10).map(topGame => ({
-      name: topGame.name,
-      universeId: topGame.targetId,
-      placeId: topGame.rootPlaceId
-    }));
-  } catch (error) {
-    console.error("Error fetching game:", error);
-    return null;
+    return data.games;
+  } catch (err) {
+    console.error("Error fetching Roblox API:", err);
   }
 }
 
+// Uji coba langsung:
 (async () => {
-  console.log('Testing general terms...');
-  const g = await searchRobloxGame("Simulator");
-  console.log('Simulator:', g);
+  console.log('Blox Fruits:', await searchGame("Blox Fruits"));
+  console.log('Fisch:', await searchGame("Fisch"));
 })();

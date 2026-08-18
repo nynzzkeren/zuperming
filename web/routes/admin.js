@@ -596,32 +596,50 @@ router.get('/search-game', requireAuth, async (req, res) => {
     if (!q || q.length < 2) return res.json({ games: [] });
 
     try {
+        let games = [];
         const searchUrl = `https://apis.roblox.com/search-api/omni-search?searchQuery=${encodeURIComponent(q)}&sessionId=1`;
         const resp = await fetch(searchUrl, {
             headers: { 'Accept': 'application/json', 'User-Agent': 'ZupermingAdmin/1.0' },
             signal: AbortSignal.timeout(5000)
         });
         
-        if (!resp.ok) return res.json({ games: [] });
-        const data = await resp.json();
+        if (resp.ok) {
+            const data = await resp.json();
+            let allContents = [];
+            if (data.searchResults) {
+                for (const group of data.searchResults) {
+                    if (group.contents) {
+                        allContents = allContents.concat(group.contents);
+                    }
+                }
+            }
+            games = allContents
+                .filter(c => c.rootPlaceId || c.targetId)
+                .slice(0, 10)
+                .map(topGame => ({
+                    name: topGame.name || 'Unknown',
+                    gameId: String(topGame.rootPlaceId || topGame.targetId || '')
+                }))
+                .filter(g => g.gameId);
+        }
 
-        let allContents = [];
-        if (data.searchResults) {
-            for (const group of data.searchResults) {
-                if (group.contents) {
-                    allContents = allContents.concat(group.contents);
+        // FALLBACK to the user's API if omni-search is empty
+        if (games.length === 0) {
+            const fallbackUrl = `https://games.roblox.com/v1/games/list?model.keyword=${encodeURIComponent(q)}&model.maxRows=10`;
+            const fbResp = await fetch(fallbackUrl, {
+                headers: { 'Accept': 'application/json', 'User-Agent': 'ZupermingAdmin/1.0' },
+                signal: AbortSignal.timeout(5000)
+            });
+            if (fbResp.ok) {
+                const fbData = await fbResp.json();
+                if (fbData.games && fbData.games.length > 0) {
+                    games = fbData.games.map(g => ({
+                        name: g.name || 'Unknown',
+                        gameId: String(g.placeId || g.universeId || '')
+                    })).filter(g => g.gameId);
                 }
             }
         }
-
-        const games = allContents
-            .filter(c => c.rootPlaceId || c.targetId)
-            .slice(0, 10)
-            .map(topGame => ({
-                name: topGame.name || 'Unknown',
-                gameId: String(topGame.rootPlaceId || topGame.targetId || '')
-            }))
-            .filter(g => g.gameId);
 
         return res.json({ games });
     } catch {
