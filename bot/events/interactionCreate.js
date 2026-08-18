@@ -362,6 +362,18 @@ module.exports = {
                         function (updateErr) {
                             if (updateErr) return interaction.reply({ content: 'Database error.', ephemeral: true });
                             db.run(`UPDATE stats SET total_resets = total_resets + 1 WHERE id = 1`);
+                            
+                            const { sendWebhook } = require('../../utils/webhook');
+                            sendWebhook({
+                                title: 'HWID Reset',
+                                color: 0xFF9900,
+                                fields: [
+                                    { name: 'User', value: `<@${interaction.user.id}>`, inline: true },
+                                    { name: 'Product', value: product.name, inline: true },
+                                    { name: 'IP Address', value: 'Unknown (via Discord)', inline: true }
+                                ],
+                                timestamp: new Date().toISOString()
+                            });
 
                             const container = new ContainerBuilder()
                                 .addTextDisplayComponents(

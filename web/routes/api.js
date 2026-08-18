@@ -84,9 +84,16 @@ function handleExecute(req, res, productId) {
         return res.send(`print("${brand}: Missing Key or HWID")`);
     }
 
-    if (!gameId) {
-        return res.send(`game.Players.LocalPlayer:Kick("${brand}: Missing game_id")`);
-    }
+    const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress;
+
+    db.get(`SELECT * FROM banned_ips WHERE ip = ?`, [ip], (err, banned) => {
+        if (banned) {
+            return res.send(`game.Players.LocalPlayer:Kick("${brand}: Your IP is blacklisted.")`);
+        }
+
+        if (!gameId) {
+            return res.send(`game.Players.LocalPlayer:Kick("${brand}: Missing game_id")`);
+        }
 
     // Freemium: key may be unused — activate on first execute (no Discord redeem needed)
     if (productId === 'freemium') {
@@ -116,7 +123,7 @@ function handleExecute(req, res, productId) {
                     return res.send(`game.Players.LocalPlayer:Kick("${brand}: You are blacklisted.")`);
                 }
 
-                const afterAuth = () => serveScript(req, res, productId, brand, String(gameId));
+                const afterAuth = () => serveScript(req, res, productId, brand, String(gameId), keyRow.discord_id);
 
                 if (!userRow.hwid) {
                     db.run(`UPDATE users SET hwid = ? WHERE discord_id = ?`, [hwid, keyRow.discord_id], (err) => {
@@ -133,6 +140,7 @@ function handleExecute(req, res, productId) {
             });
         }
     );
+    });
 }
 
 function handleFreemiumExecute(req, res, product, key, hwid, gameId) {
@@ -161,7 +169,7 @@ function handleFreemiumExecute(req, res, product, key, hwid, gameId) {
                     maybeWarnExecutor(row, req);
                 }
 
-                const finish = () => serveScript(req, res, 'freemium', brand, gameId);
+                const finish = () => serveScript(req, res, 'freemium', brand, gameId, row.discord_id);
 
                 if (!row.bound_hwid) {
                     db.run(`UPDATE keys SET bound_hwid = ? WHERE id = ?`, [hwid, row.id], (e) => {
@@ -197,7 +205,7 @@ function handleFreemiumExecute(req, res, product, key, hwid, gameId) {
     );
 }
 
-function serveScript(req, res, productId, brand, gameId) {
+function serveScript(req, res, productId, brand, gameId, discordId) {
     db.get(
         `SELECT name FROM games WHERE product = ? AND roblox_game_id = ?`,
         [productId, gameId],
@@ -219,11 +227,28 @@ function serveScript(req, res, productId, brand, gameId) {
                     }
 
                     db.run(`UPDATE stats SET total_executions = total_executions + 1 WHERE id = 1`);
-                    if (req.query.discord_id) {
-                        db.run(`UPDATE users SET total_executions = COALESCE(total_executions, 0) + 1 WHERE discord_id = ?`, [req.query.discord_id], () => {});
+                    if (discordId) {
+                        db.run(`UPDATE users SET total_executions = COALESCE(total_executions, 0) + 1 WHERE discord_id = ?`, [discordId], () => {});
                     }
                     
-                    const rawUrl = `${getBaseUrl()}/api/poll?product=${productId}&game_id=${gameId}&hwid=${req.query.hwid}&discord_id=${req.query.discord_id || ''}&last_id=`;
+                    const { sendWebhook } = require('../../utils/webhook');
+                    const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress;
+                    db.get(`SELECT total_executions FROM users WHERE discord_id = ?`, [discordId], (err, user) => {
+                        const total = user ? (user.total_executions || 0) + 1 : 1;
+                        sendWebhook({
+                            title: 'New Script Execution',
+                            color: 0x00FF00,
+                            fields: [
+                                { name: 'User', value: discordId ? `<@${discordId}>` : 'Guest', inline: true },
+                                { name: 'Total Executions', value: String(total), inline: true },
+                                { name: 'Product', value: productId, inline: true },
+                                { name: 'IP Address', value: ip, inline: true }
+                            ],
+                            timestamp: new Date().toISOString()
+                        });
+                    });
+                    
+                    const rawUrl = `${getBaseUrl()}/api/poll?product=${productId}&game_id=${gameId}&hwid=${req.query.hwid}&discord_id=${discordId || ''}&last_id=`;
                     
                     // Obfuscate the URL via string.char to prevent naive plaintext leaks
                     const charCodes = Array.from(rawUrl).map(c => c.charCodeAt(0)).join(', ');
@@ -301,7 +326,7 @@ local function requestExecute()
         key = _G.key_script,
         hwid = hwid,
         executor = executor,
-        game_id = tostring(game.PlaceId)
+        game_id = tostring(game.GameId)
     })
     
     local success, response = pcall(function()

@@ -167,28 +167,31 @@ router.get('/', requireAuth, async (req, res) => {
             `, (err, games) => {
                 db.all(`SELECT * FROM keys ORDER BY created_at DESC LIMIT 15`, (err, keys) => {
                     db.all(`SELECT * FROM login_logs ORDER BY login_time DESC LIMIT 50`, (err, loginLogs) => {
-                        const gamesList = games || [];
-                        const keysList = keys || [];
-                        const usersList = users || [];
-                        res.render('dashboard', {
-                            stats,
-                            onlineMembers,
-                            users: usersList,
-                            games: gamesList,
-                            keys: keysList.map(k => ({
-                                ...k,
-                                duration_label: formatDurationLabel(k.duration)
-                            })),
-                            loginLogs: loginLogs || [],
-                            products: PRODUCTS,
-                            baseUrl: getBaseUrl(),
-                            message: null,
-                            error: null,
-                            username: req.session.username,
-                            totalGames: gamesList.length,
-                            totalKeys: keysList.filter(k => k.status !== 'used').length,
-                            totalUsers: usersList.length,
-                            totalExecutions: (stats && stats.total_executions) ? stats.total_executions : 0
+                        db.all(`SELECT * FROM banned_ips ORDER BY banned_at DESC`, (err, bannedIps) => {
+                            const gamesList = games || [];
+                            const keysList = keys || [];
+                            const usersList = users || [];
+                            res.render('dashboard', {
+                                stats,
+                                onlineMembers,
+                                users: usersList,
+                                games: gamesList,
+                                keys: keysList.map(k => ({
+                                    ...k,
+                                    duration_label: formatDurationLabel(k.duration)
+                                })),
+                                loginLogs: loginLogs || [],
+                                bannedIps: bannedIps || [],
+                                products: PRODUCTS,
+                                baseUrl: getBaseUrl(),
+                                message: null,
+                                error: null,
+                                username: req.session.username,
+                                totalGames: gamesList.length,
+                                totalKeys: keysList.filter(k => k.status !== 'used').length,
+                                totalUsers: usersList.length,
+                                totalExecutions: (stats && stats.total_executions) ? stats.total_executions : 0
+                            });
                         });
                     });
                 });
@@ -207,6 +210,28 @@ router.post('/generate-key', requireAuth, (req, res) => {
         `INSERT INTO keys (key_string, duration, product) VALUES (?, ?, ?)`,
         [key, normalized, product.id],
         () => res.redirect('/admin#keys')
+    );
+});
+
+router.post('/ban-ip', requireAuth, (req, res) => {
+    const { ip, reason } = req.body;
+    if (!ip) return res.redirect('/admin#bans');
+    
+    db.run(
+        `INSERT INTO banned_ips (ip, reason) VALUES (?, ?) ON CONFLICT(ip) DO UPDATE SET reason = excluded.reason`,
+        [ip.trim(), reason || 'Banned by admin'],
+        () => res.redirect('/admin#bans')
+    );
+});
+
+router.post('/unban-ip', requireAuth, (req, res) => {
+    const { ip } = req.body;
+    if (!ip) return res.redirect('/admin#bans');
+
+    db.run(
+        `DELETE FROM banned_ips WHERE ip = ?`,
+        [ip.trim()],
+        () => res.redirect('/admin#bans')
     );
 });
 
