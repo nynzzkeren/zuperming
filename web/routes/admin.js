@@ -596,7 +596,7 @@ router.get('/ai-search', requireAuth, async (req, res) => {
     if (!q) return res.json({ result: '' });
 
     try {
-        const searchUrl = `https://api.nexray.eu.cc/ai/deepsearch?text=${encodeURIComponent(q)}`;
+        const searchUrl = `https://api.nexray.eu.cc/ai/claude?text=${encodeURIComponent(q)}`;
         const resp = await fetch(searchUrl, {
             headers: { 'Accept': 'application/json', 'User-Agent': 'ZupermingAdmin/1.0' }
         });

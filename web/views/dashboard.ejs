@@ -862,6 +862,13 @@
             <span id="crumb-active" class="crumb-active">overview</span>
         </div>
         <div class="topbar-right">
+            <!-- BGM Toggle -->
+            <button id="bgm-btn" class="btn btn-ghost" onclick="toggleBgm()" style="padding: 4px 10px; font-size: 11px; margin-right: 8px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+                <span id="bgm-lbl">Play BGM</span>
+            </button>
+            <audio id="bgm-audio" loop src="https://files.catbox.moe/6xphq8.mp3"></audio>
+
             <div class="status-pill">
                 <div class="status-dot"></div>
                 ONLINE
@@ -1424,6 +1431,19 @@
         } finally {
             btn.disabled = false;
             btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Search';
+        }
+    }
+
+    /* ─── AUDIO ─── */
+    function toggleBgm() {
+        const audio = document.getElementById('bgm-audio');
+        const lbl = document.getElementById('bgm-lbl');
+        if (audio.paused) {
+            audio.play();
+            lbl.textContent = 'Pause BGM';
+        } else {
+            audio.pause();
+            lbl.textContent = 'Play BGM';
         }
     }
 
