@@ -106,7 +106,7 @@ function handleExecute(req, res, productId) {
         return res.send('print("Unknown product")');
     }
 
-    const { key, hwid, game_id: gameId } = req.query;
+    const { key, hwid, game_id: universeId, place_id: placeId } = req.query;
     const brand = product.brand;
 
     if (!key || !hwid) {
@@ -120,13 +120,13 @@ function handleExecute(req, res, productId) {
             return res.send(`game.Players.LocalPlayer:Kick("${brand}: Access denied.")`);
         }
 
-        if (!gameId) {
-            return res.send(`game.Players.LocalPlayer:Kick("${brand}: Missing game_id")`);
+        if (!universeId && !placeId) {
+            return res.send(`game.Players.LocalPlayer:Kick("${brand}: Missing game_id or place_id")`);
         }
 
     // Freemium: key may be unused — activate on first execute (no Discord redeem needed)
     if (productId === 'freemium') {
-        return handleFreemiumExecute(req, res, product, key, hwid, String(gameId));
+        return handleFreemiumExecute(req, res, product, key, hwid, universeId, placeId);
     }
 
     db.get(
@@ -158,7 +158,7 @@ function handleExecute(req, res, productId) {
                     return res.send(`game.Players.LocalPlayer:Kick("${brand}: You are blacklisted.")`);
                 }
 
-                const afterAuth = () => serveScript(req, res, productId, brand, String(gameId), keyRow.discord_id);
+                const afterAuth = () => serveScript(req, res, productId, brand, universeId, placeId, keyRow.discord_id);
 
                 if (!userRow.hwid) {
                     db.run(`UPDATE users SET hwid = ? WHERE discord_id = ?`, [hwid, keyRow.discord_id], (err) => {
@@ -178,7 +178,7 @@ function handleExecute(req, res, productId) {
     });
 }
 
-function handleFreemiumExecute(req, res, product, key, hwid, gameId) {
+function handleFreemiumExecute(req, res, product, key, hwid, universeId, placeId) {
     const brand = product.brand;
 
     db.get(
@@ -204,7 +204,7 @@ function handleFreemiumExecute(req, res, product, key, hwid, gameId) {
                     maybeWarnExecutor(row, req);
                 }
 
-                const finish = () => serveScript(req, res, 'freemium', brand, gameId, row.discord_id);
+                const finish = () => serveScript(req, res, 'freemium', brand, universeId, placeId, row.discord_id);
 
                 if (!row.bound_hwid) {
                     db.run(`UPDATE keys SET bound_hwid = ? WHERE id = ?`, [hwid, row.id], (e) => {
@@ -240,20 +240,20 @@ function handleFreemiumExecute(req, res, product, key, hwid, gameId) {
     );
 }
 
-function serveScript(req, res, productId, brand, gameId, discordId) {
+function serveScript(req, res, productId, brand, universeId, placeId, discordId) {
     db.get(
-        `SELECT name FROM games WHERE product = ? AND roblox_game_id = ?`,
-        [productId, gameId],
+        `SELECT name, roblox_game_id FROM games WHERE product = ? AND (roblox_game_id = ? OR roblox_game_id = ?)`,
+        [productId, String(universeId), String(placeId)],
         (err, gameRow) => {
             if (err || !gameRow) {
                 return res.send(
-                    `game.Players.LocalPlayer:Kick("${brand}: Game not supported (GameId ${gameId})")`
+                    `game.Players.LocalPlayer:Kick("${brand}: Game not supported (Target ID: ${universeId} / Place ID: ${placeId})")`
                 );
             }
 
             db.get(
                 `SELECT obfuscated_script FROM scripts WHERE product = ? AND game_id = ? ORDER BY id DESC LIMIT 1`,
-                [productId, gameId],
+                [productId, gameRow.roblox_game_id],
                 (err, scriptRow) => {
                     if (err || !scriptRow || !scriptRow.obfuscated_script) {
                         return res.send(
