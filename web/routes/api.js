@@ -233,7 +233,6 @@ function serveScript(req, res, productId, brand, gameId, discordId) {
                     }
                     
                     const { sendWebhook } = require('../../utils/webhook');
-                    const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress;
                     db.get(`SELECT total_executions, total_resets FROM users WHERE discord_id = ?`, [discordId], (err, user) => {
                         const totalExecutions = user ? (user.total_executions || 0) : 1;
                         const totalResets = user ? (user.total_resets || 0) : 0;
