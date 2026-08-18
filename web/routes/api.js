@@ -7,6 +7,35 @@ const { getProduct, getBaseUrl } = require('../../config/products');
 const { isKeyExpired, computeExpiresAt } = require('../../utils/keys');
 const { buildExecutorWarnDm } = require('../../utils/changelog');
 
+// ─── IN-MEMORY RATE LIMITER ───────────────────────────────────────────────────
+// Tracks bad key attempts per IP: { ip -> { count, firstAttempt } }
+const _badAttempts = new Map();
+const RATE_LIMIT_MAX = 5;       // max failed attempts before auto-ban
+const RATE_LIMIT_WINDOW = 60000; // 1 minute window (ms)
+
+function checkRateLimit(ip) {
+    const now = Date.now();
+    let entry = _badAttempts.get(ip);
+    if (!entry || (now - entry.firstAttempt) > RATE_LIMIT_WINDOW) {
+        entry = { count: 0, firstAttempt: now };
+        _badAttempts.set(ip, entry);
+    }
+    entry.count++;
+    if (entry.count >= RATE_LIMIT_MAX) {
+        // Auto-ban this IP in the database
+        db.run(`INSERT OR IGNORE INTO banned_ips (ip, reason, banned_at) VALUES (?, 'Auto-ban: brute-force key attempt', CURRENT_TIMESTAMP)`, [ip]);
+        _badAttempts.delete(ip);
+        return false; // blocked
+    }
+    return true; // still allowed
+}
+
+function clearRateLimit(ip) {
+    _badAttempts.delete(ip);
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
+
 function serveLoader(req, res, productId) {
     const ua = req.headers['user-agent'] || '';
 
@@ -84,11 +113,11 @@ function handleExecute(req, res, productId) {
         return res.send(`print("${brand}: Missing Key or HWID")`);
     }
 
-    const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress;
+    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress;
 
     db.get(`SELECT * FROM banned_ips WHERE ip = ?`, [ip], (err, banned) => {
         if (banned) {
-            return res.send(`game.Players.LocalPlayer:Kick("${brand}: Your IP is blacklisted.")`);
+            return res.send(`game.Players.LocalPlayer:Kick("${brand}: Access denied.")`);
         }
 
         if (!gameId) {
@@ -105,13 +134,19 @@ function handleExecute(req, res, productId) {
         [key, productId],
         (err, keyRow) => {
             if (err || !keyRow) {
-                return res.send(`game.Players.LocalPlayer:Kick("${brand}: Invalid or Unused Key")`);
+                // Rate-limit bad key attempts
+                if (!checkRateLimit(ip)) {
+                    return res.send(`game.Players.LocalPlayer:Kick("${brand}: Too many failed attempts. IP banned.")`);
+                }
+                return res.send(`game.Players.LocalPlayer:Kick("${brand}: Invalid Key")`);
             }
 
             if (isKeyExpired(keyRow)) {
-                return res.send(`game.Players.LocalPlayer:Kick("${brand}: Key expired. Buy/renew your key.")`);
+                return res.send(`game.Players.LocalPlayer:Kick("${brand}: Key expired.")`);
             }
 
+            // Successful auth - clear any failed attempts for this IP
+            clearRateLimit(ip);
             maybeWarnExecutor(keyRow, req);
 
             db.get(`SELECT * FROM users WHERE discord_id = ?`, [keyRow.discord_id], (err, userRow) => {
@@ -275,7 +310,9 @@ end)
 `;
 
                     res.type('text/plain');
-                    res.send(pollingCode + '\n' + scriptRow.obfuscated_script);
+                    // Anti-dump Lua header: verify Roblox environment before executing
+                    const antiDump = `-- Protected by Zuperming Shield\ndo\n    local _e=getfenv;if type(_e)~="function" then game.Players.LocalPlayer:Kick("${brand}: Invalid environment") return end\n    local _g=game;if not _g or not _g:IsA("DataModel") then game.Players.LocalPlayer:Kick("${brand}: Not in Roblox") return end\nend\n`;
+                    res.send(pollingCode + '\n' + antiDump + scriptRow.obfuscated_script);
                 }
             );
         }

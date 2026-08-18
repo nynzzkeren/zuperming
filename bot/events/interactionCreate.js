@@ -224,6 +224,7 @@ module.exports = {
 
             if (action === 'script' || action === 'copy_script') {
                 await interaction.deferReply({ ephemeral: true }).catch(console.error);
+
                 // Freemium: always give loader template (key from web). If Discord-bound key exists, fill it.
                 if (product.id === 'freemium') {
                     return getValidKey(interaction.user.id, product.id, (err, row) => {
@@ -235,64 +236,76 @@ module.exports = {
                             return interaction.editReply({ content: `\`${loaderScript}\`` }).catch(console.error);
                         }
 
-                        const components = [
-                            new ActionRowBuilder().addComponents(
-                                new ButtonBuilder()
-                                    .setCustomId('btn_free_copy_script')
-                                    .setLabel('Mobile Copy')
-                                    .setStyle(ButtonStyle.Secondary),
-                                ...(isUsableHttpUrl(getFreemiumGetKeyUrl())
-                                    ? [new ButtonBuilder().setLabel('Get Key').setStyle(ButtonStyle.Link).setURL(getFreemiumGetKeyUrl())]
-                                    : [])
-                            )
-                        ];
+                        const keyInfo = row
+                            ? `Key Discord-bound — Duration: **${formatDurationLabel(row.duration)}**`
+                            : `Get your key first via **Get Key** (web), paste into \`_G.key_script\`, then execute.`;
 
-                        const textContent = `**Freemium Loader**\n` +
-                            (row ? `Key Discord-bound · Duration: **${formatDurationLabel(row.duration)}**` : `Ambil key di **Get Key** (web), paste ke \`_G.key_script\`, lalu execute.`) +
-                            `\n\nCopy and paste into your executor:\n\`\`\`lua\n${loaderScript}\n\`\`\``;
+                        const container = new ContainerBuilder()
+                            .addTextDisplayComponents(
+                                (t) => t.setContent('## Freemium Loader'),
+                                (t) => t.setContent(keyInfo),
+                                (t) => t.setContent(`**Copy and paste into your executor:**\n\`\`\`lua\n${loaderScript}\n\`\`\``)
+                            );
+
+                        const row2 = new ActionRowBuilder().addComponents(
+                            new ButtonBuilder()
+                                .setCustomId('btn_free_copy_script')
+                                .setLabel('Mobile Copy')
+                                .setStyle(ButtonStyle.Secondary),
+                            ...(isUsableHttpUrl(getFreemiumGetKeyUrl())
+                                ? [new ButtonBuilder().setLabel('Get Key').setStyle(ButtonStyle.Link).setURL(getFreemiumGetKeyUrl())]
+                                : [])
+                        );
 
                         return interaction.editReply({
-                            content: textContent,
-                            components: components
+                            components: [container, row2],
+                            flags: MessageFlags.IsComponentsV2
                         }).catch(console.error);
                     });
                 }
 
                 return getValidKey(interaction.user.id, product.id, (err, row, reason) => {
-                    if (err) return interaction.editReply({ content: 'Database error.' }).catch(console.error);
+                    if (err) {
+                        const c = new ContainerBuilder().addTextDisplayComponents(
+                            (t) => t.setContent('## Error'), (t) => t.setContent('Database error. Please try again later.')
+                        );
+                        return interaction.editReply({ components: [c], flags: MessageFlags.IsComponentsV2 }).catch(console.error);
+                    }
                     if (!row) {
-                        return interaction.editReply({
-                            content: reason === 'expired'
-                                ? `Your **${product.name}** key has expired.`
-                                : `You do not own a valid **${product.name}** key.`
-                        }).catch(console.error);
+                        const msg = reason === 'expired'
+                            ? `Your **${product.name}** key has expired.`
+                            : `You do not own a valid **${product.name}** key.`;
+                        const c = new ContainerBuilder().addTextDisplayComponents(
+                            (t) => t.setContent('## Access Denied'), (t) => t.setContent(msg)
+                        );
+                        return interaction.editReply({ components: [c], flags: MessageFlags.IsComponentsV2 }).catch(console.error);
                     }
 
                     const loaderScript = buildLoaderScript(product, row.key_string);
 
                     if (action === 'copy_script') {
-                        return interaction.editReply({
-                            content: `\`${loaderScript}\``
-                        }).catch(console.error);
+                        return interaction.editReply({ content: `\`${loaderScript}\`` }).catch(console.error);
                     }
 
-                    const components = [
-                        new ActionRowBuilder().addComponents(
-                            new ButtonBuilder()
-                                .setCustomId(copyButtonId(product))
-                                .setLabel('Mobile Copy')
-                                .setStyle(ButtonStyle.Secondary)
-                        )
-                    ];
+                    const expiresText = row.expires_at ? `Expires: ${row.expires_at}` : 'Expires: Permanent';
 
-                    const textContent = `**Your ${product.name} Loader**\n` +
-                        `Duration: **${formatDurationLabel(row.duration)}**\n` +
-                        (row.expires_at ? `Expires: ${row.expires_at}` : 'Expires: Permanent') +
-                        `\n\nCopy and paste this script into your executor:\n\`\`\`lua\n${loaderScript}\n\`\`\``;
+                    const container = new ContainerBuilder()
+                        .addTextDisplayComponents(
+                            (t) => t.setContent(`## ${product.name} Loader`),
+                            (t) => t.setContent(`Duration: **${formatDurationLabel(row.duration)}** — ${expiresText}`),
+                            (t) => t.setContent(`**Copy and paste into your executor:**\n\`\`\`lua\n${loaderScript}\n\`\`\``)
+                        );
+
+                    const actionRow = new ActionRowBuilder().addComponents(
+                        new ButtonBuilder()
+                            .setCustomId(copyButtonId(product))
+                            .setLabel('Mobile Copy')
+                            .setStyle(ButtonStyle.Secondary)
+                    );
 
                     return interaction.editReply({
-                        content: textContent,
-                        components: components
+                        components: [container, actionRow],
+                        flags: MessageFlags.IsComponentsV2
                     }).catch(console.error);
                 });
             }
