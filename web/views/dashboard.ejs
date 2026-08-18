@@ -816,6 +816,10 @@
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
             Projects
         </a>
+        <a class="nav-item" onclick="switchTab('search-ai', this)">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            Search AI
+        </a>
         <a class="nav-item" onclick="switchTab('keys', this)">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
             Access Keys
@@ -932,6 +936,34 @@
             </div>
         </div>
 
+        <!-- SEARCH AI -->
+        <div id="tab-search-ai" class="tab-pane">
+            <div class="pg-head">
+                <div class="pg-title">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    Search AI
+                </div>
+                <div class="pg-sub">Natural language search for Roblox Place ID and Game ID.</div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-hd"><span class="panel-title"><span class="panel-dot"></span> Ask AI</span></div>
+                <div class="panel-bd">
+                    <div class="form-row">
+                        <div class="field">
+                            <input type="text" id="ai-search-inp" class="inp" placeholder="e.g. carikan game id atau place id nya fisch" autocomplete="off" onkeypress="if(event.key === 'Enter') performAiSearch()">
+                        </div>
+                        <button type="button" class="btn btn-white" onclick="performAiSearch()" id="btn-ai-search">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            Search
+                        </button>
+                    </div>
+                    
+                    <div id="ai-search-result" class="terminal" style="margin-top: 14px; display: none;"></div>
+                </div>
+            </div>
+        </div>
+
         <!-- PROJECTS -->
         <div id="tab-projects" class="tab-pane">
             <div class="pg-head">
@@ -945,19 +977,6 @@
             <div class="panel">
                 <div class="panel-hd"><span class="panel-title"><span class="panel-dot"></span> New Project</span></div>
                 <div class="panel-bd">
-                    <!-- Game Search -->
-                    <div style="margin-bottom:14px;">
-                        <label class="lbl">Search Roblox Game (Optional)</label>
-                        <div style="position:relative;">
-                            <input type="text" id="game-search-inp" class="inp" placeholder="e.g. Blox Fruits, Grow a Garden..." autocomplete="off"
-                                oninput="onGameSearch(this.value)" style="padding-right:36px;">
-                            <div id="game-search-spinner" style="position:absolute;right:11px;top:50%;transform:translateY(-50%);display:none;">
-                                <span class="spin spin-white" style="width:10px;height:10px;border-width:1.5px;"></span>
-                            </div>
-                        </div>
-                        <div id="game-search-results" style="display:none;margin-top:4px;background:var(--gray-800);border:1px solid var(--border-md);border-radius:var(--r);overflow:hidden;"></div>
-                    </div>
-
                     <form action="/admin/add-game" method="POST">
                         <div class="form-row">
                             <div class="field">
@@ -1379,60 +1398,33 @@
         }
     }
 
-    /* ─── GAME SEARCH ─── */
-    let searchTimer;
-    async function onGameSearch(query) {
-        clearTimeout(searchTimer);
-        const resultsDiv = document.getElementById('game-search-results');
-        const spinner = document.getElementById('game-search-spinner');
-        
-        if (!query || query.length < 2) {
-            resultsDiv.style.display = 'none';
-            spinner.style.display = 'none';
-            return;
+    /* ─── AI SEARCH ─── */
+    async function performAiSearch() {
+        const inp = document.getElementById('ai-search-inp');
+        const btn = document.getElementById('btn-ai-search');
+        const resultDiv = document.getElementById('ai-search-result');
+        const query = inp.value.trim();
+
+        if (!query) return;
+
+        // Reset
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spin spin-white"></span> Searching...';
+        resultDiv.style.display = 'none';
+
+        try {
+            const res = await fetch('/admin/ai-search?q=' + encodeURIComponent(query));
+            const data = await res.json();
+            
+            resultDiv.innerHTML = data.result ? data.result : 'No response from AI.';
+            resultDiv.style.display = 'block';
+        } catch (e) {
+            resultDiv.innerHTML = '<span class="er">Error contacting AI server.</span>';
+            resultDiv.style.display = 'block';
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Search';
         }
-
-        spinner.style.display = 'block';
-        
-        searchTimer = setTimeout(async () => {
-            try {
-                const res = await fetch('/admin/search-game?q=' + encodeURIComponent(query));
-                const data = await res.json();
-                
-                spinner.style.display = 'none';
-                
-                if (!data.games || data.games.length === 0) {
-                    resultsDiv.innerHTML = '<div style="padding:8px 12px;color:var(--gray-500);font-size:12px;">No results found.</div>';
-                    resultsDiv.style.display = 'block';
-                    return;
-                }
-                
-                let html = '';
-                data.games.forEach(g => {
-                    html += `
-                        <div class="nav-item" style="border-radius:0;border-bottom:1px solid var(--border);padding:10px 12px;display:flex;justify-content:space-between;align-items:center;"
-                             onclick="selectGame('${g.name.replace(/'/g, "\\'")}', '${g.gameId}')">
-                            <span style="font-weight:600;color:var(--white);">${g.name}</span>
-                            <span style="font-family:var(--mono);font-size:11px;color:var(--gray-400);">ID: ${g.gameId}</span>
-                        </div>
-                    `;
-                });
-                
-                resultsDiv.innerHTML = html;
-                resultsDiv.style.display = 'block';
-            } catch {
-                spinner.style.display = 'none';
-                resultsDiv.style.display = 'none';
-            }
-        }, 500);
-    }
-
-    function selectGame(name, id) {
-        document.getElementById('proj-name').value = name;
-        document.getElementById('proj-game-id').value = id;
-        document.getElementById('game-search-inp').value = '';
-        document.getElementById('game-search-results').style.display = 'none';
-        toast('Game details autofilled!');
     }
 
     /* ─── CHART ─── */

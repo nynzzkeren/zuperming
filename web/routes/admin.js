@@ -590,60 +590,35 @@ router.post('/dev-panel/reset-hwid', requireAuth, (req, res) => {
     });
 });
 
-// ─── ROBLOX GAME SEARCH PROXY ───────────────────────────────────────────────
-router.get('/search-game', requireAuth, async (req, res) => {
-    const q = String(req.query.q || '').trim().slice(0, 100);
-    if (!q || q.length < 2) return res.json({ games: [] });
+// ─── AI SEARCH PROXY ────────────────────────────────────────────────────────
+router.get('/ai-search', requireAuth, async (req, res) => {
+    const q = String(req.query.q || '').trim();
+    if (!q) return res.json({ result: '' });
 
     try {
-        let games = [];
-        const searchUrl = `https://apis.roblox.com/search-api/omni-search?searchQuery=${encodeURIComponent(q)}&sessionId=1`;
+        const searchUrl = `https://api.nexray.eu.cc/ai/deepsearch?text=${encodeURIComponent(q)}`;
         const resp = await fetch(searchUrl, {
-            headers: { 'Accept': 'application/json', 'User-Agent': 'ZupermingAdmin/1.0' },
-            signal: AbortSignal.timeout(5000)
+            headers: { 'Accept': 'application/json', 'User-Agent': 'ZupermingAdmin/1.0' }
         });
         
         if (resp.ok) {
-            const data = await resp.json();
-            let allContents = [];
-            if (data.searchResults) {
-                for (const group of data.searchResults) {
-                    if (group.contents) {
-                        allContents = allContents.concat(group.contents);
-                    }
-                }
+            const data = await resp.text(); // The API might return plain text or JSON
+            
+            // Assuming Nexray returns raw text or a text field
+            let resultText = '';
+            try {
+                const parsed = JSON.parse(data);
+                resultText = parsed.result || parsed.text || parsed.message || parsed.data || data;
+            } catch (e) {
+                resultText = data; // fallback to raw string
             }
-            games = allContents
-                .filter(c => c.rootPlaceId || c.targetId)
-                .slice(0, 10)
-                .map(topGame => ({
-                    name: topGame.name || 'Unknown',
-                    gameId: String(topGame.rootPlaceId || topGame.targetId || '')
-                }))
-                .filter(g => g.gameId);
+            
+            return res.json({ result: resultText });
         }
-
-        // FALLBACK to the user's API if omni-search is empty
-        if (games.length === 0) {
-            const fallbackUrl = `https://games.roblox.com/v1/games/list?model.keyword=${encodeURIComponent(q)}&model.maxRows=10`;
-            const fbResp = await fetch(fallbackUrl, {
-                headers: { 'Accept': 'application/json', 'User-Agent': 'ZupermingAdmin/1.0' },
-                signal: AbortSignal.timeout(5000)
-            });
-            if (fbResp.ok) {
-                const fbData = await fbResp.json();
-                if (fbData.games && fbData.games.length > 0) {
-                    games = fbData.games.map(g => ({
-                        name: g.name || 'Unknown',
-                        gameId: String(g.placeId || g.universeId || '')
-                    })).filter(g => g.gameId);
-                }
-            }
-        }
-
-        return res.json({ games });
-    } catch {
-        return res.json({ games: [] });
+        
+        return res.json({ result: 'AI API returned an error status.' });
+    } catch (e) {
+        return res.json({ result: 'Failed to contact AI API: ' + e.message });
     }
 });
 // ────────────────────────────────────────────────────────────────────────────

@@ -1,21 +1,12 @@
-async function searchGame(keyword) {
+const axios = require('axios');
+
+const ApiData = async () => {
   try {
-    const url = `https://games.roblox.com/v1/games/list?model.keyword=${encodeURIComponent(keyword)}&model.maxRows=5`;
-    const res = await fetch(url);
-    const data = await res.json();
-
-    if (!data.games || data.games.length === 0) {
-      return "Game tidak ditemukan!";
-    }
-
-    return data.games;
-  } catch (err) {
-    console.error("Error fetching Roblox API:", err);
+    const response = await axios.get('https://api.nexray.eu.cc/ai/deepsearch?text=carikan+game+id+atau+place+id+nya+throw+a+coin+atau+fisch');
+    return response.data;
+  } catch (error) {
+    return error.message;
   }
 }
 
-// Uji coba langsung:
-(async () => {
-  console.log('Blox Fruits:', await searchGame("Blox Fruits"));
-  console.log('Fisch:', await searchGame("Fisch"));
-})();
+ApiData().then(console.log);
