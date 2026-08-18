@@ -605,15 +605,23 @@ router.get('/search-game', requireAuth, async (req, res) => {
         if (!resp.ok) return res.json({ games: [] });
         const data = await resp.json();
 
-        const searchGroup = data.searchResults?.find(group => group.contents && group.contents.length > 0);
-        if (!searchGroup || searchGroup.contents.length === 0) {
-            return res.json({ games: [] });
+        let allContents = [];
+        if (data.searchResults) {
+            for (const group of data.searchResults) {
+                if (group.contents) {
+                    allContents = allContents.concat(group.contents);
+                }
+            }
         }
 
-        const games = searchGroup.contents.slice(0, 5).map(topGame => ({
-            name: topGame.name || 'Unknown',
-            gameId: String(topGame.rootPlaceId || topGame.targetId || '')
-        })).filter(g => g.gameId);
+        const games = allContents
+            .filter(c => c.rootPlaceId || c.targetId)
+            .slice(0, 10)
+            .map(topGame => ({
+                name: topGame.name || 'Unknown',
+                gameId: String(topGame.rootPlaceId || topGame.targetId || '')
+            }))
+            .filter(g => g.gameId);
 
         return res.json({ games });
     } catch {
