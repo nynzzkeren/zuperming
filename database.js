@@ -42,8 +42,16 @@ const db = new sqlite3.Database(dbPath, (err) => {
                 role_claimed BOOLEAN DEFAULT 0,
                 is_blacklisted BOOLEAN DEFAULT 0,
                 last_executor_warn DATETIME,
-                last_executor_name TEXT
+                last_executor_name TEXT,
+                total_executions INTEGER DEFAULT 0,
+                total_resets INTEGER DEFAULT 0,
+                last_ip TEXT
             )`);
+
+            // Migrations (ignore errors if columns already exist)
+            db.run(`ALTER TABLE users ADD COLUMN total_executions INTEGER DEFAULT 0`, () => {});
+            db.run(`ALTER TABLE users ADD COLUMN total_resets INTEGER DEFAULT 0`, () => {});
+            db.run(`ALTER TABLE users ADD COLUMN last_ip TEXT`, () => {});
 
             db.run(`CREATE TABLE IF NOT EXISTS games (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,

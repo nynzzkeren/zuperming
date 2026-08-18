@@ -227,22 +227,25 @@ function serveScript(req, res, productId, brand, gameId, discordId) {
                     }
 
                     db.run(`UPDATE stats SET total_executions = total_executions + 1 WHERE id = 1`);
+                    const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress;
                     if (discordId) {
-                        db.run(`UPDATE users SET total_executions = COALESCE(total_executions, 0) + 1 WHERE discord_id = ?`, [discordId], () => {});
+                        db.run(`UPDATE users SET total_executions = COALESCE(total_executions, 0) + 1, last_ip = ? WHERE discord_id = ?`, [ip, discordId], () => {});
                     }
                     
                     const { sendWebhook } = require('../../utils/webhook');
                     const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress;
-                    db.get(`SELECT total_executions FROM users WHERE discord_id = ?`, [discordId], (err, user) => {
-                        const total = user ? (user.total_executions || 0) + 1 : 1;
+                    db.get(`SELECT total_executions, total_resets FROM users WHERE discord_id = ?`, [discordId], (err, user) => {
+                        const totalExecutions = user ? (user.total_executions || 0) : 1;
+                        const totalResets = user ? (user.total_resets || 0) : 0;
                         sendWebhook({
-                            title: 'New Script Execution',
+                            title: 'Script Execution',
                             color: 0x00FF00,
                             fields: [
                                 { name: 'User', value: discordId ? `<@${discordId}>` : 'Guest', inline: true },
-                                { name: 'Total Executions', value: String(total), inline: true },
                                 { name: 'Product', value: productId, inline: true },
-                                { name: 'IP Address', value: ip, inline: true }
+                                { name: 'IP Address', value: ip, inline: true },
+                                { name: 'Total Executions', value: String(totalExecutions), inline: true },
+                                { name: 'Total HWID Resets', value: String(totalResets), inline: true }
                             ],
                             timestamp: new Date().toISOString()
                         });

@@ -362,17 +362,26 @@ module.exports = {
                         function (updateErr) {
                             if (updateErr) return interaction.reply({ content: 'Database error.', ephemeral: true });
                             db.run(`UPDATE stats SET total_resets = total_resets + 1 WHERE id = 1`);
+                            db.run(`UPDATE users SET total_resets = COALESCE(total_resets, 0) + 1 WHERE discord_id = ?`, [interaction.user.id], () => {});
                             
-                            const { sendWebhook } = require('../../utils/webhook');
-                            sendWebhook({
-                                title: 'HWID Reset',
-                                color: 0xFF9900,
-                                fields: [
-                                    { name: 'User', value: `<@${interaction.user.id}>`, inline: true },
-                                    { name: 'Product', value: product.name, inline: true },
-                                    { name: 'IP Address', value: 'Unknown (via Discord)', inline: true }
-                                ],
-                                timestamp: new Date().toISOString()
+                            db.get(`SELECT total_executions, total_resets, last_ip FROM users WHERE discord_id = ?`, [interaction.user.id], (err, user) => {
+                                const totalExec = user ? (user.total_executions || 0) : 0;
+                                const totalReset = user ? (user.total_resets || 0) + 1 : 1;
+                                const ip = user && user.last_ip ? user.last_ip : 'Unknown (No prior execution)';
+                                
+                                const { sendWebhook } = require('../../utils/webhook');
+                                sendWebhook({
+                                    title: 'HWID Reset',
+                                    color: 0xFF9900,
+                                    fields: [
+                                        { name: 'User', value: `<@${interaction.user.id}>`, inline: true },
+                                        { name: 'Product', value: product.name, inline: true },
+                                        { name: 'IP Address', value: ip, inline: true },
+                                        { name: 'Total Executions', value: String(totalExec), inline: true },
+                                        { name: 'Total HWID Resets', value: String(totalReset), inline: true }
+                                    ],
+                                    timestamp: new Date().toISOString()
+                                });
                             });
 
                             const container = new ContainerBuilder()
