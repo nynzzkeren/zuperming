@@ -495,6 +495,20 @@ router.post('/add-game', requireAuth, (req, res) => {
     );
 });
 
+router.post('/delete-game', requireAuth, (req, res) => {
+    const { product, game_id } = req.body;
+    if (!product || !game_id) return res.redirect('/admin');
+    
+    // Delete game and its associated scripts/notifications
+    db.run(`DELETE FROM games WHERE product = ? AND roblox_game_id = ?`, [product, game_id], (err) => {
+        if (!err) {
+            db.run(`DELETE FROM scripts WHERE product = ? AND game_id = ?`, [product, game_id]);
+            db.run(`DELETE FROM notifications WHERE product = ? AND game_id = ?`, [product, game_id]);
+        }
+        res.redirect('/admin#projects');
+    });
+});
+
 const axios = require('axios');
 
 router.post('/upload-script', requireAuth, upload.single('script_file'), async (req, res) => {

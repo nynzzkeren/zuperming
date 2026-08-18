@@ -483,7 +483,7 @@
                                 <input type="text" name="name" class="zp-input" placeholder="e.g. Blox Fruits" required>
                             </div>
                             <div class="zp-input-group" style="margin:0; flex:1;">
-                                <label class="zp-input-label">Roblox Place ID</label>
+                                <label class="zp-input-label">Roblox Game ID</label>
                                 <input type="number" name="game_id" class="zp-input" placeholder="e.g. 2753915549" required>
                             </div>
                             <div class="zp-input-group" style="margin:0; flex:1;">
@@ -524,14 +524,21 @@
                                             <span id="upload-status-<%- g.roblox_game_id || g.roblox_game_id %>" class="zp-badge zp-badge--danger">Not Uploaded</span>
                                         <% } %>
                                     </div>
-                                    <span class="zp-badge <%- ptype.typeClass %>"><%- ptype.label %></span>
+                                    <div style="display:flex; gap:8px; align-items:center;">
+                                        <span class="zp-badge <%- ptype.typeClass %>"><%- ptype.label %></span>
+                                        <form action="/admin/delete-game" method="POST" style="margin:0; padding:0; display:inline-block;" onsubmit="return confirm('Are you sure you want to delete this project? This cannot be undone.');">
+                                            <input type="hidden" name="game_id" value="<%- g.roblox_game_id %>">
+                                            <input type="hidden" name="product" value="<%- g.product %>">
+                                            <button type="submit" class="zp-badge zp-badge--danger" style="border:none; cursor:pointer; background:rgba(239, 68, 68, 0.2); padding: 3px 8px;">Delete</button>
+                                        </form>
+                                    </div>
                                 </div>
                                 <div class="zp-panel__body">
                                     <div class="zp-input-group">
                                         <label class="zp-input-label">Game ID</label>
                                         <div class="zp-mono"><%- g.roblox_game_id %></div>
                                     </div>
-                                    <form onsubmit="handleUpload(event, '<%- g.roblox_game_id %>', '<%- g.product %>')" style="margin-top:16px; padding-top:16px; border-top:1px solid var(--border-subtle);">
+                                    <form onsubmit="handleUpload(event, '<%- g.roblox_game_id %>', '<%- g.product %>'); return false;" style="margin-top:16px; padding-top:16px; border-top:1px solid var(--border-subtle);">
                                         <input type="hidden" name="game_id" value="<%- g.roblox_game_id %>">
                                         <input type="hidden" name="product" value="<%- g.product %>">
                                         <div class="zp-input-group">
