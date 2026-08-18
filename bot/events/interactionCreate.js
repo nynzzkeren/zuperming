@@ -223,6 +223,7 @@ module.exports = {
             }
 
             if (action === 'script' || action === 'copy_script') {
+                await interaction.deferReply({ ephemeral: true }).catch(console.error);
                 // Freemium: always give loader template (key from web). If Discord-bound key exists, fill it.
                 if (product.id === 'freemium') {
                     return getValidKey(interaction.user.id, product.id, (err, row) => {
@@ -231,7 +232,7 @@ module.exports = {
                             : freemiumLoaderTemplate();
 
                         if (action === 'copy_script') {
-                            return interaction.reply({ content: `\`${loaderScript}\``, ephemeral: true });
+                            return interaction.editReply({ content: `\`${loaderScript}\`` }).catch(console.error);
                         }
 
                         const components = [
@@ -250,32 +251,29 @@ module.exports = {
                             (row ? `Key Discord-bound · Duration: **${formatDurationLabel(row.duration)}**` : `Ambil key di **Get Key** (web), paste ke \`_G.key_script\`, lalu execute.`) +
                             `\n\nCopy and paste into your executor:\n\`\`\`lua\n${loaderScript}\n\`\`\``;
 
-                        return interaction.reply({
+                        return interaction.editReply({
                             content: textContent,
-                            components: components,
-                            ephemeral: true
+                            components: components
                         }).catch(console.error);
                     });
                 }
 
                 return getValidKey(interaction.user.id, product.id, (err, row, reason) => {
-                    if (err) return interaction.reply({ content: 'Database error.', ephemeral: true });
+                    if (err) return interaction.editReply({ content: 'Database error.' }).catch(console.error);
                     if (!row) {
-                        return interaction.reply({
+                        return interaction.editReply({
                             content: reason === 'expired'
                                 ? `Your **${product.name}** key has expired.`
-                                : `You do not own a valid **${product.name}** key.`,
-                            ephemeral: true
-                        });
+                                : `You do not own a valid **${product.name}** key.`
+                        }).catch(console.error);
                     }
 
                     const loaderScript = buildLoaderScript(product, row.key_string);
 
                     if (action === 'copy_script') {
-                        return interaction.reply({
-                            content: `\`${loaderScript}\``,
-                            ephemeral: true
-                        });
+                        return interaction.editReply({
+                            content: `\`${loaderScript}\``
+                        }).catch(console.error);
                     }
 
                     const components = [
@@ -292,10 +290,9 @@ module.exports = {
                         (row.expires_at ? `Expires: ${row.expires_at}` : 'Expires: Permanent') +
                         `\n\nCopy and paste this script into your executor:\n\`\`\`lua\n${loaderScript}\n\`\`\``;
 
-                    return interaction.reply({
+                    return interaction.editReply({
                         content: textContent,
-                        components: components,
-                        ephemeral: true
+                        components: components
                     }).catch(console.error);
                 });
             }
