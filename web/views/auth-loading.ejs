@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zuperming · Authenticating</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000000;
+            color: #f1f5f9;
+            font-family: 'JetBrains Mono', monospace;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Ambient grid overlay */
+        body::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: 
+                linear-gradient(to right, #1e293b 1px, transparent 1px),
+                linear-gradient(to bottom, #1e293b 1px, transparent 1px);
+            background-size: 40px 40px;
+            opacity: 0.15;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* Z Logo Background */
+        .z-bg {
+            position: absolute;
+            inset: 0;
+            background-image: url('/z-logo.png');
+            background-size: cover;
+            background-position: center;
+            opacity: 0.05;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .zp-loading-wrapper {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            max-width: 500px;
+            padding: 2rem;
+            background: rgba(9, 9, 11, 0.65);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            backdrop-filter: blur(24px) saturate(150%);
+            box-shadow: 0 0 0 1px rgba(0,0,0,0.5), 0 30px 60px rgba(0, 0, 0, 0.6);
+        }
+
+        .terminal-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.875rem;
+            color: #94a3b8;
+        }
+
+        .terminal-dots {
+            display: flex;
+            gap: 6px;
+        }
+        .terminal-dots span {
+            width: 10px; height: 10px; border-radius: 50%;
+        }
+        .dot-r { background: #ef4444; }
+        .dot-y { background: #eab308; }
+        .dot-g { background: #22c55e; }
+
+        .line {
+            margin: 8px 0;
+            font-size: 0.875rem;
+            line-height: 1.6;
+            opacity: 0;
+        }
+        .line.show {
+            opacity: 1;
+        }
+        
+        .p { color: #8b5cf6; margin-right: 8px; }
+        .ok { color: #22c55e; font-weight: bold; }
+        .spin {
+            display: inline-block;
+            width: 12px; height: 12px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            vertical-align: middle;
+            margin-left: 8px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Fake typing animation */
+        .type-joke::after {
+            content: '|';
+            animation: blink 1s step-end infinite;
+        }
+        @keyframes blink { 50% { opacity: 0; } }
+    </style>
+</head>
+<body>
+    <div class="z-bg"></div>
+
+    <div class="zp-loading-wrapper">
+        <div class="terminal-header">
+            <div class="terminal-dots">
+                <span class="dot-r"></span>
+                <span class="dot-y"></span>
+                <span class="dot-g"></span>
+            </div>
+            <div>Auth sequence initiated...</div>
+        </div>
+
+        <div id="term-content">
+            <div class="line" id="line-1"><span class="p">$</span> <span class="text">Validating access role...</span> <span class="status"></span></div>
+            <div class="line" id="line-2"><span class="p">$</span> <span class="text">Establishing API connection...</span> <span class="status"></span></div>
+            <div class="line" id="line-3"><span class="p">$</span> <span class="text">Verifying User ID <%= discordId %>...</span> <span class="status"></span></div>
+            <div class="line" id="line-4"><span class="p">$</span> <span class="text type-joke">udah punya pacar belum? ... loading ...</span> <span class="status"></span></div>
+        </div>
+    </div>
+
+    <script>
+        const sequence = [
+            { id: 'line-1', delay: 800, text: '[OK]' },
+            { id: 'line-2', delay: 1500, text: '[OK]' },
+            { id: 'line-3', delay: 1000, text: '[OK]' },
+            { id: 'line-4', delay: 2500, text: 'canda [OK]' }
+        ];
+
+        async function runSequence() {
+            for (let step of sequence) {
+                const el = document.getElementById(step.id);
+                el.classList.add('show');
+                const statusEl = el.querySelector('.status');
+                statusEl.innerHTML = '<span class="spin"></span>';
+                
+                await new Promise(r => setTimeout(r, step.delay));
+                
+                statusEl.innerHTML = '<span class="ok">' + step.text + '</span>';
+                
+                if (step.id === 'line-4') {
+                    const textEl = el.querySelector('.text');
+                    textEl.classList.remove('type-joke');
+                    textEl.textContent = 'udah punya pacar belum? ... ';
+                }
+            }
+
+            // Redirect
+            setTimeout(() => {
+                window.location.href = '/admin';
+            }, 800);
+        }
+
+        window.onload = runSequence;
+    </script>
+</body>
+</html>

@@ -124,7 +124,10 @@ router.get('/auth/discord/callback', async (req, res) => {
             if (err) console.error('Failed to insert login log:', err);
             
             if (roleCheck.allowed) {
-                return res.redirect('/admin');
+                return res.render('auth-loading', { 
+                    discordId: user.id, 
+                    username: req.session.username 
+                });
             }
             
             return res.render('access-denied', {
