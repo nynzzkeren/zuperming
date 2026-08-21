@@ -55,9 +55,7 @@ app.use('/api/freemium', freemiumRoutes);
 
 // Public loadstring endpoints (clean URLs for executors)
 // https://zuperming.store/loader
-// https://zuperming.store/loader/sp
 app.get('/loader', (req, res) => apiRoutes.serveLoader(req, res, 'premium'));
-app.get('/loader/sp', (req, res) => apiRoutes.serveLoader(req, res, 'service_provider'));
 app.get('/loader/free', (req, res) => apiRoutes.serveLoader(req, res, 'freemium'));
 
 // Freemium get-key page

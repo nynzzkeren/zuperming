@@ -12,19 +12,7 @@ const PRODUCTS = {
         modalRedeem: 'modal_redeem',
         roleEnv: 'BUYER_ROLE_ID'
     },
-    service_provider: {
-        id: 'service_provider',
-        name: 'Service Provider',
-        keyPrefix: 'ZSP',
-        brand: 'Service Provider',
-        loaderFile: 'loader_service_provider.lua',
-        loaderRoute: '/loader/sp',
-        executeRoute: '/api/sp/execute',
-        adminScriptPath: '/admin/script/sp',
-        btnPrefix: 'btn_sp_',
-        modalRedeem: 'modal_sp_redeem',
-        roleEnv: 'SP_BUYER_ROLE_ID'
-    },
+
     freemium: {
         id: 'freemium',
         name: 'Zuperming Freemium',

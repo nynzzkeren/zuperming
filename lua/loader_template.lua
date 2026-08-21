@@ -6,10 +6,10 @@ local g = game
 local s = g:GetService("StarterGui")
 local n = function(t,d) pcall(function() s:SetCore("SendNotification",{Title="Zuperming",Text=t,Duration=d or 3}) end) end
 
-local ZUPER_KEY = _G.key_script
+local ZUPER_KEY = script_key or (getgenv and getgenv().script_key) or _G.script_key
 if not ZUPER_KEY then
     n("Key not found!", 4)
-    g.Players.LocalPlayer:Kick("Zuperming: Please set _G.key_script before loading.")
+    g.Players.LocalPlayer:Kick("Zuperming: Please set script_key before loading.")
     return
 end
 

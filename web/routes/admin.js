@@ -361,7 +361,6 @@ router.post('/update', requireAuth, async (req, res) => {
 });
 
 router.get('/script', requireAuth, (req, res) => renderScriptPage(res, 'premium'));
-router.get('/script/sp', requireAuth, (req, res) => renderScriptPage(res, 'service_provider'));
 router.get('/script/free', requireAuth, (req, res) => renderScriptPage(res, 'freemium'));
 
 router.post('/script', requireAuth, (req, res, next) => {
@@ -371,13 +370,6 @@ router.post('/script', requireAuth, (req, res, next) => {
     });
 }, (req, res) => saveScript(req, res, 'premium'));
 
-router.post('/script/sp', requireAuth, (req, res, next) => {
-    upload.single('script_file')(req, res, (err) => {
-        if (err) return renderScriptPage(res, 'service_provider', null, err.message);
-        next();
-    });
-}, (req, res) => saveScript(req, res, 'service_provider'));
-
 router.post('/script/free', requireAuth, (req, res, next) => {
     upload.single('script_file')(req, res, (err) => {
         if (err) return renderScriptPage(res, 'freemium', null, err.message);
@@ -386,7 +378,6 @@ router.post('/script/free', requireAuth, (req, res, next) => {
 }, (req, res) => saveScript(req, res, 'freemium'));
 
 router.post('/script/add-game', requireAuth, (req, res) => addGame(req, res, 'premium'));
-router.post('/script/sp/add-game', requireAuth, (req, res) => addGame(req, res, 'service_provider'));
 router.post('/script/free/add-game', requireAuth, (req, res) => addGame(req, res, 'freemium'));
 
 function addGame(req, res, productId) {

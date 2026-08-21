@@ -362,7 +362,7 @@ local function requestExecute()
     }
     
     local body = HttpService:JSONEncode({
-        key = _G.key_script,
+        key = script_key or (getgenv and getgenv().script_key) or _G.script_key or _G.key_script,
         hwid = hwid,
         executor = executor,
         game_id = tostring(game.GameId)
@@ -402,19 +402,16 @@ requestExecute()
 };
 
 createLoaderRoute(router, '/loader', 'premium');
-createLoaderRoute(router, '/loader/sp', 'service_provider');
 createLoaderRoute(router, '/loader/free', 'freemium');
 createLoaderRoute(router, '/loader/dev', 'testing_dev');
 
 router.get('/poll', handlePoll);
 
 const executePremium = (req, res) => handleExecute(req, res, 'premium');
-const executeServiceProvider = (req, res) => handleExecute(req, res, 'service_provider');
 const executeFreemium = (req, res) => handleExecute(req, res, 'freemium');
 const executeTestingDev = (req, res) => handleExecute(req, res, 'testing_dev');
 
 router.get('/execute', executePremium);
-router.get('/sp/execute', executeServiceProvider);
 router.get('/free/execute', executeFreemium);
 router.get('/dev/execute', executeTestingDev);
 

@@ -18,14 +18,11 @@ function resolveProductFromCustomId(customId) {
     if (customId.startsWith('btn_free_') || customId === 'modal_free_redeem' || customId === 'btn_free_copy_script') {
         return getProduct('freemium');
     }
-    if (customId.startsWith('btn_sp_') || customId === 'modal_sp_redeem' || customId === 'btn_sp_copy_script') {
-        return getProduct('service_provider');
-    }
     return getProduct('premium');
 }
 
 function buildLoaderScript(product, keyString) {
-    return `_G.key_script = "${keyString}"\nloadstring(game:HttpGet("${getBaseUrl()}${product.loaderRoute}"))()`;
+    return `script_key = "${keyString}"\nloadstring(game:HttpGet("${getBaseUrl()}${product.loaderRoute}"))()`;
 }
 
 function freemiumLoaderTemplate() {
@@ -33,7 +30,7 @@ function freemiumLoaderTemplate() {
     return (
         `-- 1) Ambil key di: ${url}\n` +
         `-- 2) Paste key di bawah, lalu execute\n` +
-        `_G.key_script = "PASTE_YOUR_KEY_HERE"\n` +
+        `script_key = "PASTE_YOUR_KEY_HERE"\n` +
         `loadstring(game:HttpGet("${getBaseUrl()}/loader/free"))()`
     );
 }
@@ -53,7 +50,6 @@ function getValidKey(discordId, productId, cb) {
 
 function copyButtonId(product) {
     if (product.id === 'freemium') return 'btn_free_copy_script';
-    if (product.id === 'service_provider') return 'btn_sp_copy_script';
     return 'btn_copy_script';
 }
 
@@ -185,7 +181,6 @@ module.exports = {
 
             const action = customId
                 .replace(/^btn_free_/, '')
-                .replace(/^btn_sp_/, '')
                 .replace(/^btn_/, '');
 
             // Freemium-only buttons
@@ -255,7 +250,7 @@ module.exports = {
 
                         const keyInfo = row
                             ? `Key Discord-bound — Duration: **${formatDurationLabel(row.duration)}**`
-                            : `Get your key first via **Get Key** (web), paste into \`_G.key_script\`, then execute.`;
+                            : `Get your key first via **Get Key** (web), paste into \`script_key\`, then execute.`;
 
                         const container = new ContainerBuilder()
                             .addTextDisplayComponents(

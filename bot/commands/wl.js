@@ -79,7 +79,6 @@ module.exports = {
                 .setRequired(true)
                 .addChoices(
                     { name: 'Premium', value: 'premium' },
-                    { name: 'Service Provider', value: 'service_provider' },
                     { name: 'Freemium', value: 'freemium' }
                 ))
         .addStringOption(o =>
