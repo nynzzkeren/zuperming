@@ -867,7 +867,7 @@
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
                 <span id="bgm-lbl">Play BGM</span>
             </button>
-            <audio id="bgm-audio" loop src="https://files.catbox.moe/6xphq8.mp3"></audio>
+            <audio id="bgm-audio" loop autoplay src="https://files.catbox.moe/6xphq8.mp3"></audio>
 
             <div class="status-pill">
                 <div class="status-dot"></div>
@@ -1436,15 +1436,20 @@
     /* ─── AUDIO ─── */
     function toggleBgm() {
         const audio = document.getElementById('bgm-audio');
-        const lbl = document.getElementById('bgm-lbl');
         if (audio.paused) {
             audio.play();
-            lbl.textContent = 'Pause BGM';
         } else {
             audio.pause();
-            lbl.textContent = 'Play BGM';
         }
     }
+
+    document.getElementById('bgm-audio').addEventListener('play', () => {
+        document.getElementById('bgm-lbl').textContent = 'Pause BGM';
+    });
+    
+    document.getElementById('bgm-audio').addEventListener('pause', () => {
+        document.getElementById('bgm-lbl').textContent = 'Play BGM';
+    });
 
     /* ─── CHART ─── */
     const ctx = document.getElementById('exec-chart').getContext('2d');
