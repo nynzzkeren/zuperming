@@ -20,7 +20,7 @@ const upload = multer({
     limits: { fileSize: 5 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
         const name = (file.originalname || '').toLowerCase();
-        if (name.endsWith('.lua') || name.endsWith('.txt') || file.mimetype.startsWith('text/')) {
+        if (name.endsWith('.lua') || name.endsWith('.txt') || file.mimetype.startsWith('text/') || file.mimetype === 'application/octet-stream') {
             cb(null, true);
         } else {
             cb(new Error('Only .lua or .txt files are allowed'));
