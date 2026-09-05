@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Builder</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: #000; color: #f5f5f5; font-family: 'Space Grotesk', sans-serif;
+            font-size: 14px; padding: 40px; display: flex; justify-content: center;
+        }
+        .container { width: 100%; max-width: 900px; background: #060606; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 30px; }
+        h1, h2 { font-weight: 600; margin-bottom: 20px; }
+        .card { background: #0d0d0d; border: 1px solid #1f1f1f; padding: 20px; border-radius: 6px; margin-bottom: 20px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; color: #8f8f8f; font-size: 13px; }
+        input[type="text"] { width: 100%; background: #141414; border: 1px solid #2a2a2a; color: #fff; padding: 10px; border-radius: 4px; }
+        button { background: #fff; color: #000; border: none; padding: 10px 20px; border-radius: 4px; font-weight: 600; cursor: pointer; }
+        .btn-danger { background: #ff4444; color: white; }
+        .alert { padding: 10px; border-radius: 4px; margin-bottom: 15px; }
+        .alert-success { background: rgba(50,255,50,0.1); color: #55ff55; border: 1px solid rgba(50,255,50,0.2); }
+        .alert-error { background: rgba(255,50,50,0.1); color: #ff5555; border: 1px solid rgba(255,50,50,0.2); }
+        .row { display: flex; gap: 15px; }
+        .col { flex: 1; }
+        .dynamic-btn { display: flex; gap: 10px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Panel Builder & Settings</h1>
+
+    <% if (error) { %> <div class="alert alert-error"><%= error %></div> <% } %>
+    <% if (message) { %> <div class="alert alert-success"><%= message %></div> <% } %>
+
+    <div class="card">
+        <form method="GET" action="/admin/panel-builder">
+            <div class="form-group">
+                <label>Select Project</label>
+                <div style="display: flex; gap: 10px;">
+                    <select name="project_id" style="flex:1; background: #141414; color: white; border: 1px solid #2a2a2a; padding: 10px; border-radius: 4px;">
+                        <% projects.forEach(p => { %>
+                            <option value="<%= p.id %>" <%= selectedProject && selectedProject.id == p.id ? 'selected' : '' %>><%= p.name %></option>
+                        <% }) %>
+                    </select>
+                    <button type="submit">Load</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <% if (selectedProject) { %>
+        <h2>Discord Settings for "<%= selectedProject.name %>"</h2>
+        <div class="card">
+            <form method="POST" action="/admin/project/settings">
+                <input type="hidden" name="project_id" value="<%= selectedProject.id %>">
+                <div class="row">
+                    <div class="col form-group">
+                        <label>Guild ID (Server ID)</label>
+                        <input type="text" name="guild_id" value="<%= selectedProject.guild_id || '' %>">
+                    </div>
+                    <div class="col form-group">
+                        <label>Buyer Role ID</label>
+                        <input type="text" name="buyer_role_id" value="<%= selectedProject.buyer_role_id || '' %>">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col form-group">
+                        <label>Update Channel ID</label>
+                        <input type="text" name="update_channel_id" value="<%= selectedProject.update_channel_id || '' %>">
+                    </div>
+                    <div class="col form-group">
+                        <label>Brand Logo URL</label>
+                        <input type="text" name="brand_logo_url" value="<%= selectedProject.brand_logo_url || '' %>">
+                    </div>
+                </div>
+                <button type="submit">Save Discord Settings</button>
+            </form>
+        </div>
+
+        <h2>Panels</h2>
+        <% if (panels.length === 0) { %>
+            <p style="color: #8f8f8f; margin-bottom: 20px;">No panels found for this project. Create one below.</p>
+        <% } %>
+
+        <% panels.forEach((panel) => { %>
+            <div class="card" style="border-left: 4px solid #fff;">
+                <form method="POST" action="/admin/panel-builder/save">
+                    <input type="hidden" name="project_id" value="<%= selectedProject.id %>">
+                    <input type="hidden" name="panel_id" value="<%= panel.id %>">
+                    
+                    <div class="form-group">
+                        <label>Panel Title</label>
+                        <input type="text" name="title" value="<%= panel.title %>" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <input type="text" name="description" value="<%= panel.description %>" required>
+                    </div>
+
+                    <label style="margin-top: 15px;">Required Buttons (Cannot be deleted)</label>
+                    <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 4px; margin-bottom: 15px; font-family: monospace;">
+                        [Redeem Key] [Get Script] [Get Role] [Reset HWID]
+                    </div>
+
+                    <label>Custom Link Buttons</label>
+                    <div id="btn-container-<%= panel.id %>">
+                        <% panel.buttons.filter(b => b.style == 5).forEach(b => { %>
+                            <div class="dynamic-btn">
+                                <input type="text" name="btn_labels" value="<%= b.label %>" placeholder="Button Text (e.g. Join Discord)" required>
+                                <input type="text" name="btn_urls" value="<%= b.url %>" placeholder="URL (e.g. https://discord.gg/...)" required>
+                                <button type="button" class="btn-danger" onclick="this.parentElement.remove()">X</button>
+                            </div>
+                        <% }) %>
+                    </div>
+                    <button type="button" style="background: #2a2a2a; color: white; margin-bottom: 15px; font-size: 12px; padding: 6px 12px;" onclick="addBtn('<%= panel.id %>')">+ Add Custom Link Button</button>
+
+                    <div style="display: flex; gap: 10px; margin-top: 20px;">
+                        <button type="submit">Update Panel</button>
+                    </div>
+                </form>
+                <form method="POST" action="/admin/panel-builder/delete" style="margin-top: 10px;" onsubmit="return confirm('Delete this panel?');">
+                    <input type="hidden" name="project_id" value="<%= selectedProject.id %>">
+                    <input type="hidden" name="panel_id" value="<%= panel.id %>">
+                    <button type="submit" class="btn-danger">Delete Panel</button>
+                </form>
+            </div>
+        <% }) %>
+
+        <div class="card" style="border: 1px dashed #666; background: transparent;">
+            <h3 style="margin-bottom: 15px;">Create New Panel</h3>
+            <form method="POST" action="/admin/panel-builder/save">
+                <input type="hidden" name="project_id" value="<%= selectedProject.id %>">
+                <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" name="title" value="Zuperming Premium Panel" required>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <input type="text" name="description" value="Redeem key, get script, role, reset HWID, or view stats." required>
+                </div>
+                
+                <label>Custom Link Buttons</label>
+                <div id="btn-container-new"></div>
+                <button type="button" style="background: #2a2a2a; color: white; margin-bottom: 15px; font-size: 12px; padding: 6px 12px;" onclick="addBtn('new')">+ Add Custom Link Button</button>
+
+                <div>
+                    <button type="submit">Create Panel</button>
+                </div>
+            </form>
+        </div>
+    <% } %>
+
+    <div style="margin-top: 30px;">
+        <a href="/admin" style="color: #666; text-decoration: none;">&larr; Back to Dashboard</a>
+    </div>
+</div>
+
+<script>
+function addBtn(id) {
+    const container = document.getElementById('btn-container-' + id);
+    const div = document.createElement('div');
+    div.className = 'dynamic-btn';
+    div.innerHTML = `
+        <input type="text" name="btn_labels" placeholder="Button Text (e.g. Join Discord)" required>
+        <input type="text" name="btn_urls" placeholder="URL (e.g. https://discord.gg/...)" required>
+        <button type="button" class="btn-danger" onclick="this.parentElement.remove()">X</button>
+    `;
+    container.appendChild(div);
+}
+</script>
+</body>
+</html>

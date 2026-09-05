@@ -14,6 +14,25 @@ module.exports = {
         // Ignore bots
         if (message.author.bot) return;
 
+        // Check for custom bot commands (if this bot is a custom bot)
+        if (client.developerId && client.developerId !== 'admin') {
+            const prefix = '!'; // Default prefix for custom commands
+            if (message.content.startsWith(prefix)) {
+                const args = message.content.slice(prefix.length).trim().split(/ +/);
+                const commandName = args.shift().toLowerCase();
+
+                db.get(
+                    `SELECT command_response FROM custom_bot_commands WHERE developer_id = ? AND command_name = ?`,
+                    [client.developerId, commandName],
+                    (err, row) => {
+                        if (err || !row) return;
+                        // Execute the custom command by sending the response
+                        message.reply({ content: row.command_response }).catch(() => {});
+                    }
+                );
+            }
+        }
+
         // Check if this channel is the configured auto-bypass channel
         db.get(`SELECT value FROM settings WHERE key = 'autobypass_channel'`, async (err, row) => {
             if (err || !row) return;

@@ -3,205 +3,286 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zuperming · Access Portal</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <title><%= tab === 'register' ? 'Sign Up' : 'Sign In' %> - Lua Vault</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        *, *::before, *::after { box-sizing: border-box; }
-        
-        body {
+        :root {
+            --bg-dark: #0a0a0a;
+            --bg-card: #121212;
+            --text-main: #f5f5f5;
+            --text-muted: #888888;
+            --border: #222222;
+            --discord: #5865F2;
+            --google: #ffffff;
+        }
+
+        * {
             margin: 0;
             padding: 0;
-            background-color: #000000;
-            background-image: 
-                radial-gradient(circle at 15% 50%, rgba(30, 41, 59, 0.4), transparent 30%),
-                radial-gradient(circle at 85% 30%, rgba(15, 23, 42, 0.6), transparent 30%);
-            color: #f1f5f9;
-            font-family: 'Inter', -apple-system, sans-serif;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
             display: flex;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
-            overflow: hidden;
             position: relative;
         }
 
-        /* Ambient grid overlay */
+        /* Subtle background glow */
         body::before {
             content: '';
             position: absolute;
-            inset: 0;
-            background-image: 
-                linear-gradient(to right, #1e293b 1px, transparent 1px),
-                linear-gradient(to bottom, #1e293b 1px, transparent 1px);
-            background-size: 40px 40px;
-            opacity: 0.15;
-            z-index: 0;
-            pointer-events: none;
+            top: -20%;
+            left: -10%;
+            width: 50%;
+            height: 50%;
+            background: radial-gradient(circle, rgba(255,255,255,0.03) 0%, transparent 70%);
+            z-index: -1;
         }
 
-        .zp-auth-wrapper {
-            position: relative;
-            z-index: 10;
+        .auth-container {
             width: 100%;
-            max-width: 380px;
-            padding: 2rem;
-            background: rgba(9, 9, 11, 0.65);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 12px;
-            backdrop-filter: blur(24px) saturate(150%);
-            box-shadow: 0 0 0 1px rgba(0,0,0,0.5), 0 30px 60px rgba(0, 0, 0, 0.6);
+            max-width: 420px;
+            padding: 2.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            text-align: center;
         }
 
-        .zp-auth-brand {
-            margin-bottom: 2.5rem;
-            text-align: left;
-        }
-
-        .zp-auth-brand-logo {
-            font-family: 'JetBrains Mono', monospace;
-            font-weight: 700;
-            font-size: 1.125rem;
-            letter-spacing: -0.02em;
-            color: #ffffff;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .zp-auth-brand-logo::before {
-            content: '';
-            display: block;
-            width: 16px;
-            height: 16px;
-            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-            border-radius: 4px;
-        }
-
-        .zp-auth-title {
-            font-size: 1.5rem;
-            font-weight: 600;
-            letter-spacing: -0.03em;
-            margin: 0 0 0.5rem;
-            color: #ffffff;
-        }
-
-        .zp-auth-subtitle {
-            font-size: 0.875rem;
-            color: #94a3b8;
-            margin: 0;
-            line-height: 1.5;
-        }
-
-        .zp-auth-btn {
+        .logo {
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 0.75rem;
-            width: 100%;
-            padding: 0.75rem 1rem;
-            background-color: #ffffff;
-            color: #0f172a;
-            border: none;
-            border-radius: 6px;
-            font-family: 'Inter', sans-serif;
-            font-size: 0.875rem;
-            font-weight: 500;
-            cursor: pointer;
+            gap: 0.8rem;
+            font-size: 1.5rem;
+            font-weight: 700;
             text-decoration: none;
-            transition: all 0.2s ease;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            color: var(--text-main);
+            margin-bottom: 2rem;
         }
 
-        .zp-auth-btn:hover {
-            background-color: #f8fafc;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
+        .logo img {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
         }
 
-        .zp-auth-btn:active {
-            transform: translateY(0);
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
         }
 
-        .zp-auth-btn svg {
-            width: 18px;
-            height: 18px;
-            fill: #5865F2; /* Discord brand color for the icon only */
+        p.subtitle {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-bottom: 2rem;
         }
 
-        .zp-auth-divider {
+        .social-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.8rem;
+            width: 100%;
+            padding: 0.8rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+            border: none;
+            text-decoration: none;
+            margin-bottom: 1rem;
+        }
+
+        .social-btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-discord {
+            background-color: var(--discord);
+            color: white;
+        }
+        
+        .btn-discord:hover {
+            opacity: 0.9;
+        }
+
+        .btn-google {
+            background-color: transparent;
+            color: var(--text-main);
+            border: 1px solid var(--border);
+        }
+
+        .btn-google:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .divider {
             display: flex;
             align-items: center;
             text-align: center;
             margin: 1.5rem 0;
-        }
-        
-        .zp-auth-divider::before,
-        .zp-auth-divider::after {
-            content: '';
-            flex: 1;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-muted);
+            font-size: 0.85rem;
         }
 
-        .zp-auth-divider span {
-            padding: 0 0.75rem;
-            color: #64748b;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .divider:not(:empty)::before {
+            margin-right: .5em;
+        }
+
+        .divider:not(:empty)::after {
+            margin-left: .5em;
+        }
+
+        .form-group {
+            text-align: left;
+            margin-bottom: 1.2rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
             font-weight: 500;
         }
 
-        .zp-auth-error {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid rgba(239, 68, 68, 0.2);
-            color: #fca5a5;
-            padding: 0.75rem;
-            border-radius: 6px;
-            font-size: 0.875rem;
-            margin-bottom: 1.5rem;
-            display: flex;
-            align-items: flex-start;
-            gap: 0.5rem;
+        .form-group input {
+            width: 100%;
+            padding: 0.8rem;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-main);
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s;
         }
 
-        .zp-auth-error::before {
-            content: '⚠️';
+        .form-group input:focus {
+            border-color: rgba(255,255,255,0.4);
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 0.9rem;
+            background: var(--text-main);
+            color: var(--bg-dark);
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
             font-size: 1rem;
+            cursor: pointer;
+            margin-top: 0.5rem;
+            transition: box-shadow 0.2s;
         }
 
-        .zp-auth-footer {
-            margin-top: 2rem;
-            font-size: 0.75rem;
-            color: #475569;
-            text-align: center;
+        .btn-submit:hover {
+            box-shadow: 0 0 15px rgba(255,255,255,0.2);
+        }
+
+        .switch-tab {
+            margin-top: 1.5rem;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .switch-tab a {
+            color: var(--text-main);
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .switch-tab a:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
 <body>
-    <div class="zp-auth-wrapper">
-        <div class="zp-auth-brand">
-            <div class="zp-auth-brand-logo">ZUPERMING</div>
-        </div>
-        
-        <h1 class="zp-auth-title">Access Portal</h1>
-        <p class="zp-auth-subtitle">Protected system environment. Developer and Owner credentials required for entry.</p>
-        
-        <div class="zp-auth-divider">
-            <span>Authenticate</span>
-        </div>
 
-        <% if (error) { %>
-            <div class="zp-auth-error"><%= error %></div>
+    <div class="auth-container">
+        <a href="/" class="logo">
+            <img src="/assets/lua-vault.jpg" alt="Lua Vault Logo">
+            Lua Vault
+        </a>
+
+        <% if (tab === 'register') { %>
+            <h1>Create an account</h1>
+            <p class="subtitle">Start managing your Roblox scripts securely.</p>
+        <% } else { %>
+            <h1>Welcome back</h1>
+            <p class="subtitle">Sign in to your Lua Vault dashboard.</p>
         <% } %>
 
-        <a href="/admin/auth/discord" class="zp-auth-btn">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+        <!-- OAuth Buttons -->
+        <a href="/auth/discord" class="social-btn btn-discord">
+            <svg width="20" height="20" viewBox="0 0 127.14 96.36" fill="currentColor">
+                <path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.31,60,73.31,53s5-12.74,11.43-12.74S96.2,46,96.12,53,91.08,65.69,84.69,65.69Z"/>
+            </svg>
             Continue with Discord
         </a>
-        
-        <div class="zp-auth-footer">
-            System Instance v2.4.1
+
+        <a href="/api/auth/google" class="social-btn btn-google">
+            <svg width="20" height="20" viewBox="0 0 48 48">
+                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                <path fill="none" d="M0 0h48v48H0z"/>
+            </svg>
+            Continue with Google
+        </a>
+
+        <div class="divider">or</div>
+
+        <!-- Form -->
+        <form action="<%= tab === 'register' ? '/api/auth/register' : '/api/auth/login' %>" method="POST">
+            <% if (tab === 'register') { %>
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+            <% } %>
+
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+
+            <button type="submit" class="btn-submit">
+                <%= tab === 'register' ? 'Sign Up' : 'Sign In' %>
+            </button>
+        </form>
+
+        <div class="switch-tab">
+            <% if (tab === 'register') { %>
+                Already have an account? <a href="/login">Sign In</a>
+            <% } else { %>
+                Don't have an account? <a href="/register">Sign Up</a>
+            <% } %>
         </div>
+
     </div>
+
 </body>
 </html>

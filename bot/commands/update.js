@@ -8,12 +8,10 @@ module.exports = {
         .addStringOption(o => o.setName('game').setDescription('Game name').setRequired(true))
         .addStringOption(o =>
             o.setName('type')
-                .setDescription('Whitelist type')
+                .setDescription('Project type')
                 .setRequired(true)
                 .addChoices(
                     { name: 'Premium', value: 'Premium' },
-                    { name: 'Service Provider', value: 'Service Provider' },
-                    { name: 'Service Provider & Premium', value: 'Service Provider & Premium' },
                     { name: 'Freemium', value: 'Freemium' }
                 ))
         .addStringOption(o => o.setName('version').setDescription('Version e.g. 1.4').setRequired(true))
@@ -54,8 +52,11 @@ module.exports = {
                 : null) ||
             interaction.channel;
 
+        const { EmbedBuilder } = require('discord.js');
+
         if (!channel || !channel.isTextBased()) {
-            return interaction.editReply({ content: 'Invalid channel.' });
+            const errEmbed = new EmbedBuilder().setColor('#FF0000').setDescription('❌ Invalid channel.');
+            return interaction.editReply({ embeds: [errEmbed] });
         }
 
         try {
@@ -64,10 +65,12 @@ module.exports = {
             try {
                 await channel.send(buildChangelogPayload({ ...base, includeThumbnail: false }));
             } catch (e2) {
-                return interaction.editReply({ content: `Failed: ${e2.message}` });
+                const errEmbed = new EmbedBuilder().setColor('#FF0000').setDescription(`❌ Failed: ${e2.message}`);
+                return interaction.editReply({ embeds: [errEmbed] });
             }
         }
 
-        return interaction.editReply({ content: `Update posted in ${channel}.` });
+        const successEmbed = new EmbedBuilder().setColor('#00FF00').setDescription(`✅ Update successfully posted in ${channel}.`);
+        return interaction.editReply({ embeds: [successEmbed] });
     },
 };

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lua Vault · Custom Bot</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --black:   #000000;
+            --gray-950:#060606;
+            --gray-900:#0d0d0d;
+            --gray-800:#141414;
+            --gray-700:#1f1f1f;
+            --gray-600:#2a2a2a;
+            --gray-500:#3d3d3d;
+            --gray-400:#666666;
+            --gray-300:#8f8f8f;
+            --gray-200:#b8b8b8;
+            --gray-100:#e0e0e0;
+            --white:   #f5f5f5;
+            --pure:    #ffffff;
+
+            --border: rgba(255,255,255,0.06);
+            --border-md: rgba(255,255,255,0.1);
+
+            --font: 'Space Grotesk', system-ui, sans-serif;
+            --mono: 'JetBrains Mono', monospace;
+            --r: 8px;
+        }
+
+        body {
+            background: var(--black);
+            color: var(--white);
+            font-family: var(--font);
+            font-size: 14px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 40px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background: var(--gray-950);
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            padding: 30px;
+        }
+
+        h1 { font-size: 24px; margin-bottom: 20px; font-weight: 600; }
+        h2 { font-size: 18px; margin-bottom: 15px; margin-top: 30px; border-bottom: 1px solid var(--border); padding-bottom: 10px;}
+        
+        .alert { padding: 12px; border-radius: 4px; margin-bottom: 20px; font-weight: 500; }
+        .alert-error { background: rgba(255,50,50,0.1); color: #ff5555; border: 1px solid rgba(255,50,50,0.2); }
+        .alert-success { background: rgba(50,255,50,0.1); color: #55ff55; border: 1px solid rgba(50,255,50,0.2); }
+
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; color: var(--gray-300); font-size: 13px; }
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            background: var(--gray-900);
+            border: 1px solid var(--gray-700);
+            color: var(--white);
+            padding: 10px 12px;
+            border-radius: 4px;
+            font-family: var(--mono);
+            font-size: 13px;
+        }
+        input:focus { outline: none; border-color: var(--gray-500); }
+
+        button {
+            background: var(--pure);
+            color: var(--black);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-family: var(--font);
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        button:hover { opacity: 0.9; }
+
+        .card {
+            background: var(--gray-900);
+            border: 1px solid var(--gray-800);
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            background: var(--gray-800);
+            border-radius: 4px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-left: 10px;
+        }
+        .badge.highest { background: rgba(200,150,0,0.2); color: #ffd700; }
+        .badge.plan2 { background: rgba(150,150,150,0.2); color: #cccccc; }
+
+        .feature-list { list-style: none; }
+        .feature-list li {
+            padding: 10px;
+            border-bottom: 1px solid var(--gray-800);
+            display: flex;
+            justify-content: space-between;
+        }
+        .feature-list li:last-child { border-bottom: none; }
+        .feature-cmd { font-family: var(--mono); color: #aaffaa; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Lua Vault <span style="color:var(--gray-500);">/</span> Custom Bot</h1>
+
+    <% if (error) { %>
+        <div class="alert alert-error"><%= error %></div>
+    <% } %>
+    <% if (message) { %>
+        <div class="alert alert-success"><%= message %></div>
+    <% } %>
+
+    <% if (dev) { %>
+        <div style="display: flex; align-items: center; margin-bottom: 20px;">
+            <strong style="font-size: 16px;">Welcome, <%= username %></strong>
+            <span class="badge <%= dev.plan_tier === 'highest' ? 'highest' : 'plan2' %>">
+                Plan: <%= dev.plan_tier.toUpperCase() %>
+            </span>
+        </div>
+
+        <h2>Bot Configuration</h2>
+        <div class="card">
+            <form action="/admin/vault/bot-config" method="POST">
+                <div class="form-group">
+                    <label>Discord Bot Token</label>
+                    <input type="password" name="bot_token" value="<%= dev.bot_token || '' %>" placeholder="MTIzNDU2..." required>
+                </div>
+                <div class="form-group">
+                    <label>Bot Username (Optional, changes via API)</label>
+                    <input type="text" name="bot_username" placeholder="Leave blank to keep current">
+                </div>
+                <div class="form-group">
+                    <label>Bot Bio / About Me</label>
+                    <input type="text" name="bot_bio" placeholder="My custom bot description" value="<%= dev.bot_bio || '' %>">
+                </div>
+                <div class="form-group">
+                    <label>Bot Banner / Avatar (URL)</label>
+                    <input type="text" name="bot_banner" placeholder="https://imgur.com/...png" value="<%= dev.bot_banner || '' %>">
+                </div>
+                <p style="font-size: 12px; color: var(--gray-400); margin-bottom: 15px;">
+                    Note: For Bio and Banner/Avatar changes, some features require Discord API approval. We'll attempt to set it automatically!
+                </p>
+                <button type="submit">Save & Restart Bot</button>
+            </form>
+        </div>
+
+        <% if (dev.plan_tier === 'highest') { %>
+            <h2>Custom Features (Commands)</h2>
+            <div class="card" style="margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                    <span>Features Created: <strong><%= dev.custom_features_count || 0 %></strong></span>
+                    <% if (dev.features_cooldown_until && new Date(dev.features_cooldown_until) > new Date()) { %>
+                        <span style="color: #ff5555;">Cooldown active until: <%= new Date(dev.features_cooldown_until).toLocaleString() %></span>
+                    <% } else { %>
+                        <span style="color: #55ff55;">You can add features.</span>
+                    <% } %>
+                </div>
+                
+                <form action="/admin/vault/add-feature" method="POST">
+                    <div class="form-group">
+                        <label>Command Name (without prefix)</label>
+                        <input type="text" name="command_name" placeholder="e.g. ping" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Bot Response / Code</label>
+                        <input type="text" name="command_response" placeholder="What the bot should say" required>
+                    </div>
+                    <button type="submit" <%= (dev.features_cooldown_until && new Date(dev.features_cooldown_until) > new Date()) ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : '' %>>
+                        Add Feature (1 Token)
+                    </button>
+                </form>
+            </div>
+
+            <% if (commands && commands.length > 0) { %>
+                <h3>Your Features</h3>
+                <div class="card">
+                    <ul class="feature-list">
+                        <% commands.forEach(function(cmd) { %>
+                            <li>
+                                <div><span class="feature-cmd">!<%= cmd.command_name %></span></div>
+                                <div style="color: var(--gray-400); font-family: var(--mono); font-size: 12px;"><%= cmd.command_response %></div>
+                            </li>
+                        <% }) %>
+                    </ul>
+                </div>
+            <% } %>
+        <% } %>
+
+    <% } %>
+
+    <div style="margin-top: 30px;">
+        <a href="/admin" style="color: var(--gray-300); text-decoration: none; font-size: 13px;">&larr; Back to Dashboard</a>
+    </div>
+</div>
+
+</body>
+</html>

@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, AttachmentBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, AttachmentBuilder } = require('discord.js');
 const db = require('../../database');
 const crypto = require('crypto');
 const { getProduct, PRODUCTS } = require('../../config/products');
@@ -19,11 +19,11 @@ function insertKey(key, duration, productId) {
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('genkey')
-        .setDescription('Generate keys (max 100) → file .txt (Admin)')
+        .setName('generatekey')
+        .setDescription('Generate new keys in bulk (Admin)')
         .addStringOption(option =>
             option.setName('product')
-                .setDescription('Script / panel type')
+                .setDescription('Project/Product type')
                 .setRequired(true)
                 .addChoices(
                     { name: 'Premium', value: 'premium' },
@@ -31,7 +31,7 @@ module.exports = {
                 ))
         .addIntegerOption(option =>
             option.setName('amount')
-                .setDescription('Berapa key (1–100)')
+                .setDescription('Number of keys to generate (1-100)')
                 .setRequired(true)
                 .setMinValue(1)
                 .setMaxValue(100))
@@ -41,11 +41,12 @@ module.exports = {
                 .setRequired(false))
         .addUserOption(option =>
             option.setName('user')
-                .setDescription('DM file keys ke user ini (opsional)')
+                .setDescription('User to DM the keys to (Optional)')
                 .setRequired(false)),
     async execute(interaction) {
         if (!interaction.member.permissions.has('Administrator')) {
-            return interaction.reply({ content: 'Admin only.', ephemeral: true });
+            const errEmbed = new EmbedBuilder().setColor('#FF0000').setDescription('❌ You do not have permission to use this command.');
+            return interaction.reply({ embeds: [errEmbed], ephemeral: true });
         }
 
         await interaction.deferReply({ ephemeral: true });
@@ -65,13 +66,14 @@ module.exports = {
             }
         } catch (e) {
             console.error(e);
-            return interaction.editReply({ content: 'DB error: ' + e.message });
+            const errEmbed = new EmbedBuilder().setColor('#FF0000').setDescription(`❌ Database error: ${e.message}`);
+            return interaction.editReply({ embeds: [errEmbed] });
         }
 
         const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const fileName = `zuperming-${product.id}-${amount}x-${stamp}.txt`;
+        const fileName = `luavault-${product.id}-${amount}x-${stamp}.txt`;
         const header = [
-            `Zuperming Keys`,
+            `Lua Vault Key Generator`,
             `Product: ${product.name}`,
             `Duration: ${label}`,
             `Amount: ${keys.length}`,
@@ -82,28 +84,37 @@ module.exports = {
         const fileBody = header + keys.join('\n') + '\n';
         const makeFile = () => new AttachmentBuilder(Buffer.from(fileBody, 'utf8'), { name: fileName });
 
-        const msg =
-            `✅ Generated **${keys.length}** × **${product.name}**\n` +
-            `Duration: **${label}**\n` +
-            `File .txt terlampir.` +
-            (amount === 1 ? `\nKey: \`${keys[0]}\`` : '');
+        const embed = new EmbedBuilder()
+            .setColor('#0099FF')
+            .setTitle('🔑 Keys Generated Successfully')
+            .addFields(
+                { name: 'Product', value: product.name, inline: true },
+                { name: 'Amount', value: `${keys.length} keys`, inline: true },
+                { name: 'Duration', value: label, inline: true }
+            )
+            .setFooter({ text: 'Lua Vault Script Whitelister' })
+            .setTimestamp();
+            
+        if (amount === 1) {
+            embed.addFields({ name: 'Key', value: `\`${keys[0]}\``, inline: false });
+        } else {
+            embed.setDescription('The keys have been attached as a `.txt` file.');
+        }
 
-        await interaction.editReply({ content: msg, files: [makeFile()] });
+        await interaction.editReply({ embeds: [embed], files: [makeFile()] });
 
         if (targetUser) {
             try {
-                await targetUser.send({
-                    content:
-                        `**${product.name}** keys (${keys.length}x)\n` +
-                        `Duration: **${label}**\n` +
-                        (product.id === 'freemium'
-                            ? `Paste key ke loader freemium (tidak perlu redeem Discord).`
-                            : `Redeem di panel **${product.name}**.`),
-                    files: [makeFile()]
-                });
-                await interaction.followUp({ content: `✅ File juga di-DM ke ${targetUser.tag}`, ephemeral: true });
+                const dmEmbed = new EmbedBuilder()
+                    .setColor('#0099FF')
+                    .setTitle(`🔑 New ${product.name} Keys`)
+                    .setDescription(`You have received **${keys.length}** keys from the admin.\n\nDuration: **${label}**`)
+                    .setFooter({ text: 'Lua Vault Script Whitelister' });
+
+                await targetUser.send({ embeds: [dmEmbed], files: [makeFile()] });
+                await interaction.followUp({ content: `✅ Key file was successfully sent to ${targetUser.tag}`, ephemeral: true });
             } catch {
-                await interaction.followUp({ content: `❌ Gagal DM ${targetUser.tag}`, ephemeral: true });
+                await interaction.followUp({ content: `⚠️ Failed to DM ${targetUser.tag} (their DMs might be closed)`, ephemeral: true });
             }
         }
     },

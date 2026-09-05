@@ -5,7 +5,7 @@ const path = require('path');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const db = require('./database');
-const bot = require('./bot/bot');
+const botManager = require('./bot/botManager');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -48,28 +48,34 @@ app.use(session({
 const adminRoutes = require('./web/routes/admin');
 const apiRoutes = require('./web/routes/api');
 const freemiumRoutes = require('./web/routes/freemium');
+const authRoutes = require('./web/routes/auth');
 
 app.use('/admin', adminRoutes);
 app.use('/api', apiRoutes);
 app.use('/api/freemium', freemiumRoutes);
-
-// Public loadstring endpoints (clean URLs for executors)
-// https://zuperming.store/loader
-app.get('/loader', (req, res) => apiRoutes.serveLoader(req, res, 'premium'));
-app.get('/loader/free', (req, res) => apiRoutes.serveLoader(req, res, 'freemium'));
+app.use('/api/auth', authRoutes);
 
 // Freemium get-key page
 app.get('/get-key', (req, res) => {
     res.render('get-key', { baseUrl: require('./config/products').getBaseUrl() });
 });
 
-// Root = web dashboard
+// Landing Page
 app.get('/', (req, res) => {
-    res.redirect('/admin');
+    res.render('home');
+});
+
+// Login / Register Pages
+app.get('/login', (req, res) => {
+    res.render('login', { tab: 'login' });
+});
+
+app.get('/register', (req, res) => {
+    res.render('login', { tab: 'register' });
 });
 
 // Start Server and Bot
 app.listen(port, () => {
     console.log(`Web server running on port ${port}`);
-    bot.init(); // Initialize Discord bot
+    botManager.initAllBots(); // Initialize all developer Discord bots
 });

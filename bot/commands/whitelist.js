@@ -1,4 +1,4 @@
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const db = require('../../database');
 const crypto = require('crypto');
 const { getProduct, PRODUCTS, getProductRoleId, getBaseUrl } = require('../../config/products');
@@ -21,7 +21,6 @@ function whitelistUser(targetUser, product, duration, expiresAt, interaction) {
                 [key, duration, product.id, targetUser.id, expiresAt],
                 async function (err) {
                     if (err) {
-                        console.error(err);
                         return resolve({ success: false, reason: err.message, user: targetUser });
                     }
 
@@ -38,26 +37,28 @@ function whitelistUser(targetUser, product, duration, expiresAt, interaction) {
                             const member = await interaction.guild.members.fetch(targetUser.id).catch(()=>null);
                             if (member) {
                                 await member.roles.add(roleId);
-                                roleMsg = `\n✅ Role **${product.name}** given`;
+                                roleMsg = `✅ Role **${product.name}** given`;
                             }
                         } catch (e) {
-                            roleMsg = `\n⚠️ Role gagal: ${e.message}`;
+                            roleMsg = `⚠️ Role failed: ${e.message}`;
                         }
-                    } else {
-                        roleMsg = `\n⚠️ Role ID belum di-set di .env (${product.roleEnv})`;
                     }
 
                     try {
-                        await targetUser.send(
-                            `# Whitelisted · ${product.name}\n` +
-                            `Kamu sudah di-whitelist. **Tidak perlu redeem.**\n\n` +
-                            `Duration: **${formatDurationLabel(duration)}**` +
-                            (expiresAt ? `\nExpires: ${expiresAt}` : '\nExpires: Permanent') +
-                            `\n\nLoader:\n\`\`\`lua\n${loaderScript}\n\`\`\`\n` +
-                            `Atau pakai tombol **Get Script** di panel.`
-                        );
+                        const dmEmbed = new EmbedBuilder()
+                            .setColor('#00FF00')
+                            .setTitle('🎉 You have been whitelisted!')
+                            .setDescription(`You were whitelisted for **${product.name}**. No need to redeem a key.`)
+                            .addFields(
+                                { name: 'Duration', value: formatDurationLabel(duration), inline: true },
+                                { name: 'Expires At', value: expiresAt ? expiresAt : 'Permanent', inline: true }
+                            )
+                            .setFooter({ text: 'Lua Vault Script Whitelister' })
+                            .setTimestamp();
+                            
+                        await targetUser.send({ embeds: [dmEmbed], content: `**Loader Script:**\n\`\`\`lua\n${loaderScript}\n\`\`\`` });
                     } catch {
-                        // DMs closed — still ok
+                        // DMs closed
                     }
 
                     resolve({ success: true, key, roleMsg, user: targetUser });
@@ -69,13 +70,13 @@ function whitelistUser(targetUser, product, duration, expiresAt, interaction) {
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('wl')
-        .setDescription('Whitelist user or role — auto key, no redeem, langsung Get Script (Admin)')
+        .setName('whitelist')
+        .setDescription('Whitelist a user or role directly (Admin)')
         .addMentionableOption(o =>
             o.setName('target').setDescription('User or Role to whitelist').setRequired(true))
         .addStringOption(o =>
             o.setName('product')
-                .setDescription('Panel type')
+                .setDescription('Project/Product type')
                 .setRequired(true)
                 .addChoices(
                     { name: 'Premium', value: 'premium' },
@@ -87,7 +88,8 @@ module.exports = {
                 .setRequired(false)),
     async execute(interaction) {
         if (!interaction.member.permissions.has('Administrator')) {
-            return interaction.reply({ content: 'Admin only.', ephemeral: true });
+            const errEmbed = new EmbedBuilder().setColor('#FF0000').setDescription('❌ You do not have permission to use this command.');
+            return interaction.reply({ embeds: [errEmbed], ephemeral: true });
         }
 
         await interaction.deferReply({ ephemeral: true });
@@ -97,18 +99,19 @@ module.exports = {
         const duration = normalizeDuration(interaction.options.getString('duration'));
         const expiresAt = computeExpiresAt(duration);
 
-        // Check if target is a Role
         if (target.members) {
             // It's a role
             const role = target;
-            await interaction.guild.members.fetch(); // Ensure all members are cached
+            await interaction.guild.members.fetch(); 
             const members = role.members;
 
             if (members.size === 0) {
-                return interaction.editReply({ content: `Role **${role.name}** tidak memiliki member.` });
+                const errEmbed = new EmbedBuilder().setColor('#FF0000').setDescription(`❌ Role **${role.name}** has no members.`);
+                return interaction.editReply({ embeds: [errEmbed] });
             }
 
-            await interaction.editReply({ content: `🔄 Memulai mass whitelist untuk **${members.size}** member di role **${role.name}**... (Mungkin butuh waktu agak lama)` });
+            const loadingEmbed = new EmbedBuilder().setColor('#FFFF00').setDescription(`🔄 Starting mass whitelist for **${members.size}** members in role **${role.name}**...`);
+            await interaction.editReply({ embeds: [loadingEmbed] });
 
             let successCount = 0;
             let failCount = 0;
@@ -118,16 +121,21 @@ module.exports = {
                     const result = await whitelistUser(member.user, product, duration, expiresAt, interaction);
                     if (result.success) successCount++;
                     else failCount++;
-                    
-                    // Small delay to prevent Discord API rate limiting
                     await new Promise(r => setTimeout(r, 300));
                 }
             }
 
-            return interaction.followUp({ 
-                content: `✅ Mass whitelist selesai untuk role **${role.name}**.\nBerhasil: **${successCount}**\nGagal: **${failCount}**`,
-                ephemeral: true 
-            });
+            const resultEmbed = new EmbedBuilder()
+                .setColor('#00FF00')
+                .setTitle('✅ Mass Whitelist Complete')
+                .addFields(
+                    { name: 'Target Role', value: `${role.name}`, inline: true },
+                    { name: 'Product', value: `${product.name}`, inline: true },
+                    { name: 'Success', value: `${successCount}`, inline: true },
+                    { name: 'Failed', value: `${failCount}`, inline: true }
+                );
+
+            return interaction.followUp({ embeds: [resultEmbed], ephemeral: true });
 
         } else {
             // It's a single user
@@ -135,17 +143,27 @@ module.exports = {
             const result = await whitelistUser(targetUser, product, duration, expiresAt, interaction);
 
             if (!result.success) {
-                return interaction.editReply({ content: `❌ Gagal whitelist ${targetUser.tag}: ${result.reason}` });
+                const errEmbed = new EmbedBuilder().setColor('#FF0000').setDescription(`❌ Failed to whitelist ${targetUser.tag}: ${result.reason}`);
+                return interaction.editReply({ embeds: [errEmbed] });
             }
 
-            return interaction.editReply({
-                content:
-                    `✅ **${targetUser.tag}** whitelisted ke **${product.name}**\n` +
-                    `Key: \`${result.key}\`\n` +
-                    `Duration: **${formatDurationLabel(duration)}**` +
-                    result.roleMsg +
-                    `\nUser bisa langsung **Get Script** (tanpa redeem).`
-            });
+            const embed = new EmbedBuilder()
+                .setColor('#00FF00')
+                .setTitle('✅ User Whitelisted')
+                .setThumbnail(targetUser.displayAvatarURL())
+                .addFields(
+                    { name: 'User', value: `<@${targetUser.id}>`, inline: true },
+                    { name: 'Product', value: product.name, inline: true },
+                    { name: 'Duration', value: formatDurationLabel(duration), inline: true },
+                    { name: 'Key Generated', value: `\`${result.key}\``, inline: false }
+                )
+                .setFooter({ text: 'Lua Vault Security' });
+
+            if (result.roleMsg) {
+                embed.addFields({ name: 'Role Status', value: result.roleMsg });
+            }
+
+            return interaction.editReply({ embeds: [embed] });
         }
     },
 };

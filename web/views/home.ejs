@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lua Vault - Next Gen Script Whitelister</title>
+    <meta name="description" content="Keep your Roblox scripts protected from crackers, leaks, and unauthorized users.">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg-base: #050505;
+            --bg-surface: rgba(15, 15, 17, 0.7);
+            --bg-surface-hover: rgba(25, 25, 28, 0.8);
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            --border-glow: rgba(255, 255, 255, 0.2);
+            --text-primary: #ffffff;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+            --accent-primary: #ffffff;
+            --accent-glow: rgba(255, 255, 255, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        h1, h2, h3, h4, .brand {
+            font-family: 'Outfit', sans-serif;
+        }
+
+        /* --- BACKGROUND EFFECTS --- */
+        .bg-grid {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: -2;
+            pointer-events: none;
+            mask-image: radial-gradient(circle at center, black, transparent 80%);
+            -webkit-mask-image: radial-gradient(circle at center, black, transparent 80%);
+        }
+
+        .bg-glow {
+            position: fixed;
+            top: -20%; left: 50%;
+            transform: translateX(-50%);
+            width: 80vw; height: 80vw;
+            max-width: 800px; max-height: 800px;
+            background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 60%);
+            z-index: -1;
+            pointer-events: none;
+            filter: blur(60px);
+        }
+
+        /* --- NAVBAR --- */
+        nav {
+            position: fixed;
+            top: 0; width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.2rem 5%;
+            background: rgba(5, 5, 5, 0.6);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border-subtle);
+            z-index: 100;
+            transition: all 0.3s ease;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-weight: 700;
+            font-size: 1.4rem;
+            letter-spacing: -0.5px;
+        }
+
+        .brand img {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%; /* Bulat sesuai logo barumu */
+            box-shadow: 0 0 15px rgba(255,255,255,0.1);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2.5rem;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        .nav-links a:hover {
+            color: var(--text-primary);
+        }
+
+        .auth-buttons {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.7rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 0.95rem;
+            text-decoration: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+
+        .btn-ghost {
+            color: var(--text-primary);
+            background: transparent;
+        }
+
+        .btn-ghost:hover {
+            color: var(--text-primary);
+            background: rgba(255,255,255,0.05);
+        }
+
+        .btn-primary {
+            background: var(--text-primary);
+            color: var(--bg-base);
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(255,255,255,0.15);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255,255,255,0.25);
+            background: #e0e0e0;
+        }
+
+        .btn-outline {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-primary);
+            backdrop-filter: blur(10px);
+        }
+        .btn-outline:hover {
+            border-color: var(--border-glow);
+            background: rgba(255,255,255,0.08);
+        }
+
+        /* --- HERO SECTION --- */
+        .hero {
+            padding: 14rem 5% 8rem;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 1rem;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border-subtle);
+            border-radius: 100px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            backdrop-filter: blur(10px);
+            animation: fadeUp 0.8s ease forwards;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .hero h1 {
+            font-size: clamp(3.5rem, 8vw, 6.5rem);
+            font-weight: 800;
+            line-height: 1.05;
+            letter-spacing: -0.04em;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #ffffff 30%, #71717a 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            max-width: 1000px;
+            animation: fadeUp 1s ease 0.1s forwards;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .hero p {
+            font-size: clamp(1.1rem, 2vw, 1.25rem);
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin-bottom: 3rem;
+            animation: fadeUp 1s ease 0.2s forwards;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .hero-cta {
+            display: flex;
+            gap: 1rem;
+            animation: fadeUp 1s ease 0.3s forwards;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        /* --- FEATURES SECTION --- */
+        .features {
+            padding: 8rem 5%;
+            max-width: 1300px;
+            margin: 0 auto;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 5rem;
+        }
+
+        .section-header h2 {
+            font-size: clamp(2.5rem, 5vw, 3.5rem);
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            margin-bottom: 1rem;
+        }
+
+        .section-header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .feature-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 2.5rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: radial-gradient(800px circle at var(--mouse-x) var(--mouse-y), rgba(255,255,255,0.06), transparent 40%);
+            opacity: 0;
+            transition: opacity 0.5s;
+            pointer-events: none;
+        }
+
+        .feature-card:hover::before {
+            opacity: 1;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--border-glow);
+            background: var(--bg-surface-hover);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+
+        .feature-icon {
+            width: 54px;
+            height: 54px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        .feature-card h3 {
+            font-size: 1.4rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .feature-card p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        /* --- PRICING SECTION --- */
+        .pricing {
+            padding: 8rem 5%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+            margin-top: 4rem;
+            align-items: center;
+        }
+
+        .price-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 20px;
+            padding: 3rem 2.5rem;
+            backdrop-filter: blur(20px);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.4s, border-color 0.4s;
+        }
+
+        .price-card:hover {
+            border-color: rgba(255,255,255,0.3);
+        }
+
+        .price-card.popular {
+            background: linear-gradient(180deg, rgba(20,20,22,0.9) 0%, rgba(10,10,12,0.9) 100%);
+            border: 1px solid rgba(255,255,255,0.3);
+            box-shadow: 0 0 40px rgba(255,255,255,0.08);
+            transform: scale(1.05);
+            position: relative;
+        }
+
+        .price-card.popular:hover {
+            transform: scale(1.05) translateY(-5px);
+        }
+
+        .popular-tag {
+            position: absolute;
+            top: -12px; left: 50%;
+            transform: translateX(-50%);
+            background: var(--text-primary);
+            color: var(--bg-base);
+            padding: 0.3rem 1rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .tier-header {
+            margin-bottom: 2rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .tier-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .tier-price {
+            font-size: 3.5rem;
+            font-weight: 800;
+            font-family: 'Outfit', sans-serif;
+            letter-spacing: -2px;
+            line-height: 1;
+        }
+
+        .tier-price span {
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            letter-spacing: 0;
+        }
+
+        .tier-features {
+            list-style: none;
+            margin-bottom: 3rem;
+            flex-grow: 1;
+        }
+
+        .tier-features li {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.2rem;
+            font-size: 0.95rem;
+            color: var(--text-primary);
+        }
+
+        .tier-features i {
+            color: #ffffff;
+        }
+
+        /* --- FOOTER --- */
+        footer {
+            border-top: 1px solid var(--border-subtle);
+            padding: 4rem 5% 2rem;
+            text-align: center;
+        }
+
+        .footer-logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+        
+        .footer-logo img {
+            width: 24px; border-radius: 50%;
+        }
+
+        .footer-text {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* --- ANIMATIONS --- */
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s cubic-bezier(0.5, 0, 0, 1);
+        }
+        
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        @media (max-width: 992px) {
+            .price-card.popular { transform: scale(1); }
+            .price-card.popular:hover { transform: translateY(-5px); }
+        }
+
+        @media (max-width: 768px) {
+            .nav-links { display: none; }
+            .hero-cta { flex-direction: column; width: 100%; max-width: 300px; margin: 0 auto; }
+            .hero-cta .btn { width: 100%; }
+            .pricing-grid { margin-top: 2rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bg-grid"></div>
+    <div class="bg-glow"></div>
+
+    <nav>
+        <a href="/" class="brand">
+            <img src="/assets/lua-vault.jpg" alt="LV Logo">
+            Lua Vault
+        </a>
+        <div class="nav-links">
+            <a href="#features">Features</a>
+            <a href="#pricing">Pricing</a>
+            <a href="/docs">Docs</a>
+        </div>
+        <div class="auth-buttons">
+            <a href="/login" class="btn btn-ghost">Sign In</a>
+            <a href="/register" class="btn btn-primary">Get Started</a>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="hero-badge">
+            <i data-lucide="shield-check" style="width: 16px; height: 16px;"></i> Lua Vault v2.0 is Live
+        </div>
+        <h1>The Ultimate Script Whitelister</h1>
+        <p>Run your Roblox script like a real product. Protection, custom bots, dashboards, and analytics — everything you need in one powerful vault.</p>
+        <div class="hero-cta">
+            <a href="/register" class="btn btn-primary">Start Building Free</a>
+            <a href="#features" class="btn btn-outline">Explore Features</a>
+        </div>
+    </section>
+
+    <section id="features" class="features">
+        <div class="section-header reveal">
+            <h2>Built for scale.</h2>
+            <p>Everything you need to manage your users and protect your code.</p>
+        </div>
+        
+        <div class="features-grid">
+            <div class="feature-card reveal">
+                <div class="feature-icon"><i data-lucide="lock"></i></div>
+                <h3>Unbreakable Security</h3>
+                <p>Advanced whitelisting system stops unauthorized execution instantly. No key, no script. Period.</p>
+            </div>
+            <div class="feature-card reveal" style="transition-delay: 0.1s;">
+                <div class="feature-icon"><i data-lucide="bot"></i></div>
+                <h3>Custom Discord Bots</h3>
+                <p>Connect your own bot token. Generate keys, whitelist users, and send logs directly from your own Discord server.</p>
+            </div>
+            <div class="feature-card reveal" style="transition-delay: 0.2s;">
+                <div class="feature-icon"><i data-lucide="zap"></i></div>
+                <h3>Lightning Fast Loaders</h3>
+                <p>Execute globally with zero delay. Our minimal loaders are designed to bypass executor restrictions seamlessly.</p>
+            </div>
+            <div class="feature-card reveal">
+                <div class="feature-icon"><i data-lucide="bar-chart-3"></i></div>
+                <h3>Real-time Analytics</h3>
+                <p>Track executions, active users, and key generation. Know exactly who is using your script and when.</p>
+            </div>
+            <div class="feature-card reveal" style="transition-delay: 0.1s;">
+                <div class="feature-icon"><i data-lucide="shopping-cart"></i></div>
+                <h3>Automated Storefront</h3>
+                <p>Sell your scripts directly. Buyers purchase and receive their keys instantly without manual intervention.</p>
+            </div>
+            <div class="feature-card reveal" style="transition-delay: 0.2s;">
+                <div class="feature-icon"><i data-lucide="globe"></i></div>
+                <h3>Global Infrastructure</h3>
+                <p>Your whitelist runs from regions worldwide, so every user connects to the nearest node for maximum stability.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="pricing" class="pricing">
+        <div class="section-header reveal">
+            <h2>Pricing that scales with you.</h2>
+            <p>Start for free, upgrade when you need more power.</p>
+        </div>
+
+        <div class="pricing-grid">
+            <!-- Free -->
+            <div class="price-card reveal">
+                <div class="tier-header">
+                    <div class="tier-name">Hobby</div>
+                    <div class="tier-price">$0<span>/mo</span></div>
+                </div>
+                <ul class="tier-features">
+                    <li><i data-lucide="check"></i> 1 Project Folder</li>
+                    <li><i data-lucide="check"></i> 100 Active Users</li>
+                    <li><i data-lucide="check"></i> Freemium Key System</li>
+                    <li><i data-lucide="check"></i> Standard Security</li>
+                </ul>
+                <a href="/register" class="btn btn-outline" style="width: 100%; text-align: center;">Get Started</a>
+            </div>
+
+            <!-- Pro -->
+            <div class="price-card popular reveal" style="transition-delay: 0.1s;">
+                <div class="popular-tag">Most Popular</div>
+                <div class="tier-header">
+                    <div class="tier-name">Developer</div>
+                    <div class="tier-price">$15<span>/mo</span></div>
+                </div>
+                <ul class="tier-features">
+                    <li><i data-lucide="check"></i> 5 Project Folders</li>
+                    <li><i data-lucide="check"></i> 2,500 Active Users</li>
+                    <li><i data-lucide="check"></i> Custom Discord Bot</li>
+                    <li><i data-lucide="check"></i> Webhook Integrations</li>
+                    <li><i data-lucide="check"></i> Analytics Dashboard</li>
+                </ul>
+                <a href="/register" class="btn btn-primary" style="width: 100%; text-align: center;">Upgrade to Pro</a>
+            </div>
+
+            <!-- Max -->
+            <div class="price-card reveal" style="transition-delay: 0.2s;">
+                <div class="tier-header">
+                    <div class="tier-name">Studio</div>
+                    <div class="tier-price">$35<span>/mo</span></div>
+                </div>
+                <ul class="tier-features">
+                    <li><i data-lucide="check"></i> Unlimited Projects</li>
+                    <li><i data-lucide="check"></i> Unlimited Users</li>
+                    <li><i data-lucide="check"></i> Priority Support</li>
+                    <li><i data-lucide="check"></i> Unrestricted API</li>
+                    <li><i data-lucide="check"></i> Storefront Access</li>
+                </ul>
+                <a href="/register" class="btn btn-outline" style="width: 100%; text-align: center;">Get Max</a>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="footer-logo">
+            <img src="/assets/lua-vault.jpg" alt="LV Logo"> Lua Vault
+        </div>
+        <p class="footer-text">&copy; 2026 Lua Vault. Secure Data Ecosystem.</p>
+    </footer>
+
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        // Mouse glow effect on cards
+        document.querySelectorAll('.feature-card').forEach(card => {
+            card.addEventListener('mousemove', e => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                card.style.setProperty('--mouse-x', `${x}px`);
+                card.style.setProperty('--mouse-y', `${y}px`);
+            });
+        });
+
+        // Scroll reveal animation
+        const revealElements = document.querySelectorAll('.reveal');
+        const revealOptions = {
+            threshold: 0.1,
+            rootMargin: "0px 0px -50px 0px"
+        };
+
+        const revealOnScroll = new IntersectionObserver(function(entries, observer) {
+            entries.forEach(entry => {
+                if (!entry.isIntersecting) return;
+                entry.target.classList.add('active');
+                observer.unobserve(entry.target);
+            });
+        }, revealOptions);
+
+        revealElements.forEach(el => {
+            revealOnScroll.observe(el);
+        });
+    </script>
+</body>
+</html>

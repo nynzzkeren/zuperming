@@ -14,13 +14,31 @@ const db = new sqlite3.Database(dbPath, (err) => {
         console.log('Connected to the SQLite database.');
 
         db.serialize(() => {
+            db.run(`CREATE TABLE IF NOT EXISTS developers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                discord_id TEXT UNIQUE NOT NULL,
+                bot_token TEXT,
+                bot_id TEXT,
+                status TEXT DEFAULT 'active',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )`);
+
+            db.run(`CREATE TABLE IF NOT EXISTS projects (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                developer_id INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                uuid TEXT UNIQUE NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(developer_id) REFERENCES developers(id)
+            )`);
+
             db.run(`CREATE TABLE IF NOT EXISTS keys (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 key_string TEXT UNIQUE NOT NULL,
                 duration TEXT NOT NULL DEFAULT 'lifetime',
                 status TEXT DEFAULT 'unused',
                 discord_id TEXT,
-                product TEXT DEFAULT 'premium',
+                project_id INTEGER,
                 redeemed_at DATETIME,
                 expires_at DATETIME,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -55,16 +73,17 @@ const db = new sqlite3.Database(dbPath, (err) => {
 
             db.run(`CREATE TABLE IF NOT EXISTS games (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                product TEXT NOT NULL,
+                project_id INTEGER,
                 roblox_game_id TEXT NOT NULL,
                 name TEXT NOT NULL,
+                status TEXT DEFAULT 'Working Script',
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE(product, roblox_game_id)
+                UNIQUE(project_id, roblox_game_id)
             )`);
 
             db.run(`CREATE TABLE IF NOT EXISTS scripts (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                product TEXT DEFAULT 'premium',
+                project_id INTEGER,
                 game_id TEXT NOT NULL DEFAULT 'default',
                 raw_script TEXT NOT NULL,
                 obfuscated_script TEXT,
@@ -101,7 +120,35 @@ const db = new sqlite3.Database(dbPath, (err) => {
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )`);
 
+            db.run(`CREATE TABLE IF NOT EXISTS custom_bot_commands (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                developer_id INTEGER NOT NULL,
+                command_name TEXT NOT NULL,
+                command_description TEXT,
+                command_response TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(developer_id) REFERENCES developers(id)
+            )`);
+
             db.run(`INSERT OR IGNORE INTO stats (id, total_executions, total_resets) VALUES (1, 0, 0)`);
+
+            db.run(`CREATE TABLE IF NOT EXISTS panels (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id INTEGER NOT NULL,
+                title TEXT DEFAULT 'Zuperming Premium Panel',
+                description TEXT DEFAULT 'Redeem key, get script, role, reset HWID, or view stats.',
+                FOREIGN KEY(project_id) REFERENCES projects(id)
+            )`);
+
+            db.run(`CREATE TABLE IF NOT EXISTS panel_buttons (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                panel_id INTEGER NOT NULL,
+                label TEXT NOT NULL,
+                custom_id TEXT,
+                url TEXT,
+                style INTEGER DEFAULT 1,
+                FOREIGN KEY(panel_id) REFERENCES panels(id)
+            )`);
 
             // Settings / config table (key-value store)
             db.run(`CREATE TABLE IF NOT EXISTS settings (
@@ -111,37 +158,36 @@ const db = new sqlite3.Database(dbPath, (err) => {
             )`);
 
             const alterIgnore = () => {};
-            db.run(`ALTER TABLE keys ADD COLUMN product TEXT DEFAULT 'premium'`, alterIgnore);
-            db.run(`ALTER TABLE keys ADD COLUMN redeemed_at DATETIME`, alterIgnore);
-            db.run(`ALTER TABLE keys ADD COLUMN expires_at DATETIME`, alterIgnore);
-            db.run(`ALTER TABLE scripts ADD COLUMN product TEXT DEFAULT 'premium'`, alterIgnore);
-            db.run(`ALTER TABLE scripts ADD COLUMN game_id TEXT DEFAULT 'default'`, alterIgnore);
+            db.run(`ALTER TABLE keys ADD COLUMN project_id INTEGER`, alterIgnore);
+            db.run(`ALTER TABLE scripts ADD COLUMN project_id INTEGER`, alterIgnore);
+            db.run(`ALTER TABLE games ADD COLUMN project_id INTEGER`, alterIgnore);
             db.run(`ALTER TABLE keys ADD COLUMN bound_hwid TEXT`, alterIgnore);
             db.run(`ALTER TABLE users ADD COLUMN last_executor_warn DATETIME`, alterIgnore);
             db.run(`ALTER TABLE users ADD COLUMN last_executor_name TEXT`, alterIgnore);
             db.run(`ALTER TABLE users ADD COLUMN total_executions INTEGER DEFAULT 0`, alterIgnore);
             db.run(`ALTER TABLE games ADD COLUMN status TEXT DEFAULT 'Working Script'`, alterIgnore);
             db.run(`ALTER TABLE login_logs ADD COLUMN avatar_url TEXT`, alterIgnore);
+            
+            // New columns for custom bots & vault
+            db.run(`ALTER TABLE developers ADD COLUMN plan_tier TEXT DEFAULT 'none'`, alterIgnore);
+            db.run(`ALTER TABLE developers ADD COLUMN custom_features_count INTEGER DEFAULT 0`, alterIgnore);
+            db.run(`ALTER TABLE developers ADD COLUMN features_cooldown_until DATETIME`, alterIgnore);
+            db.run(`ALTER TABLE developers ADD COLUMN bot_bio TEXT`, alterIgnore);
+            db.run(`ALTER TABLE developers ADD COLUMN bot_banner TEXT`, alterIgnore);
 
-            db.run(`UPDATE keys SET product = 'premium' WHERE product IS NULL`);
-            db.run(`UPDATE keys SET duration = 'lifetime' WHERE duration IS NULL OR TRIM(duration) = ''`);
-            db.run(`UPDATE scripts SET product = 'premium' WHERE product IS NULL`);
-            db.run(`UPDATE scripts SET game_id = 'default' WHERE game_id IS NULL`);
+            // New columns for dynamic panel / discord settings per project
+            db.run(`ALTER TABLE projects ADD COLUMN guild_id TEXT`, alterIgnore);
+            db.run(`ALTER TABLE projects ADD COLUMN buyer_role_id TEXT`, alterIgnore);
+            db.run(`ALTER TABLE projects ADD COLUMN update_channel_id TEXT`, alterIgnore);
+            db.run(`ALTER TABLE projects ADD COLUMN brand_logo_url TEXT`, alterIgnore);
 
-            const seed = [
-                ['premium', '10200395747', 'GAG2'],
-                ['premium', '6739698191', 'VD'],
-                ['service_provider', '10200395747', 'GAG2'],
-                ['service_provider', '6739698191', 'VD'],
-                ['freemium', '10200395747', 'GAG2'],
-                ['freemium', '6739698191', 'VD']
-            ];
-            seed.forEach(([product, roblox_game_id, name]) => {
-                db.run(
-                    `INSERT OR IGNORE INTO games (product, roblox_game_id, name) VALUES (?, ?, ?)`,
-                    [product, roblox_game_id, name]
-                );
-            });
+            // New columns for web authentication
+            db.run(`ALTER TABLE developers ADD COLUMN email TEXT`, alterIgnore);
+            db.run(`CREATE UNIQUE INDEX IF NOT EXISTS idx_developers_email ON developers(email)`, alterIgnore);
+            db.run(`ALTER TABLE developers ADD COLUMN password_hash TEXT`, alterIgnore);
+            db.run(`ALTER TABLE developers ADD COLUMN google_id TEXT`, alterIgnore);
+            db.run(`CREATE UNIQUE INDEX IF NOT EXISTS idx_developers_google_id ON developers(google_id)`, alterIgnore);
+            db.run(`ALTER TABLE developers ADD COLUMN username TEXT`, alterIgnore);
         });
     }
 });

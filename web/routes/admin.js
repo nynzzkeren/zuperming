@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const db = require('../../database');
 const crypto = require('crypto');
-const bot = require('../../bot/bot');
+const botManager = require('../../bot/botManager');
 const { PRODUCTS, getProduct, getBaseUrl } = require('../../config/products');
 const { normalizeDuration, formatDurationLabel } = require('../../utils/keys');
 const { buildChangelogPayload } = require('../../utils/changelog');
@@ -78,7 +78,14 @@ router.get('/login', (req, res) => {
     if (req.session.loggedIn && req.session.hasAdminRole) {
         return res.redirect('/admin');
     }
-    res.render('login', { error: req.query.error || null });
+    res.render('login', { tab: 'login', error: req.query.error || null, message: req.query.message || null });
+});
+
+router.get('/register', (req, res) => {
+    if (req.session.loggedIn && req.session.hasAdminRole) {
+        return res.redirect('/admin');
+    }
+    res.render('login', { tab: 'register', error: req.query.error || null, message: null });
 });
 
 router.get('/auth/discord', (req, res) => {
@@ -614,6 +621,92 @@ router.get('/ai-search', requireAuth, async (req, res) => {
     } catch (e) {
         return res.json({ result: 'Failed to contact AI API: ' + e.message });
     }
+});
+// ────────────────────────────────────────────────────────────────────────────
+
+// ─── VAULT & CUSTOM BOT ───────────────────────────────────────────────────────
+router.get('/vault', requireAuth, (req, res) => {
+    const discordId = req.session.discordId;
+
+    db.get(`SELECT * FROM developers WHERE discord_id = ?`, [discordId], (err, dev) => {
+        if (err || !dev) {
+            return res.render('vault', {
+                dev: null,
+                commands: [],
+                message: null,
+                error: 'You are not registered as a Lua Vault buyer or Developer.',
+                username: req.session.username
+            });
+        }
+
+        db.all(`SELECT * FROM custom_bot_commands WHERE developer_id = ?`, [dev.id], (err, commands) => {
+            res.render('vault', {
+                dev,
+                commands: commands || [],
+                message: req.query.msg || null,
+                error: req.query.err || null,
+                username: req.session.username
+            });
+        });
+    });
+});
+
+router.post('/vault/bot-config', requireAuth, (req, res) => {
+    const discordId = req.session.discordId;
+    const { bot_token, bot_username, bot_bio, bot_banner } = req.body;
+
+    db.get(`SELECT id, plan_tier FROM developers WHERE discord_id = ?`, [discordId], async (err, dev) => {
+        if (err || !dev) return res.redirect('/admin/vault?err=Not+Found');
+        if (dev.plan_tier === 'none') return res.redirect('/admin/vault?err=Access+Denied');
+
+        db.run(`UPDATE developers SET bot_token = ?, bot_bio = ?, bot_banner = ? WHERE id = ?`, [bot_token, bot_bio, bot_banner, dev.id], async () => {
+            const botManager = require('../../bot/botManager');
+            const client = await botManager.startBot(bot_token, dev.id);
+            if (client) {
+                try {
+                    if (bot_username) await client.user.setUsername(bot_username);
+                    if (bot_banner) await client.user.setAvatar(bot_banner);
+                } catch(e) {
+                    console.error("Failed to set bot profile:", e);
+                }
+            }
+            res.redirect('/admin/vault?msg=Bot+Configured');
+        });
+    });
+});
+
+router.post('/vault/add-feature', requireAuth, (req, res) => {
+    const discordId = req.session.discordId;
+    const { command_name, command_response } = req.body;
+
+    db.get(`SELECT * FROM developers WHERE discord_id = ?`, [discordId], (err, dev) => {
+        if (err || !dev) return res.redirect('/admin/vault?err=Not+Found');
+        if (dev.plan_tier !== 'highest') return res.redirect('/admin/vault?err=Requires+Highest+Plan');
+
+        const now = new Date();
+        const cooldownDate = dev.features_cooldown_until ? new Date(dev.features_cooldown_until) : null;
+        if (cooldownDate && now < cooldownDate) {
+            return res.redirect(`/admin/vault?err=Cooldown+active+until+${cooldownDate.toISOString()}`);
+        }
+
+        let newCount = (dev.custom_features_count || 0) + 1;
+        let nextCooldown = null;
+
+        if (newCount % 2 === 0) {
+            const date = new Date();
+            date.setDate(date.getDate() + 3);
+            nextCooldown = date.toISOString();
+        }
+
+        db.run(`INSERT INTO custom_bot_commands (developer_id, command_name, command_description, command_response) VALUES (?, ?, ?, ?)`, 
+            [dev.id, command_name, 'Custom Command', command_response], 
+            () => {
+                db.run(`UPDATE developers SET custom_features_count = ?, features_cooldown_until = ? WHERE id = ?`, [newCount, nextCooldown, dev.id], () => {
+                    res.redirect('/admin/vault?msg=Feature+Added');
+                });
+            }
+        );
+    });
 });
 // ────────────────────────────────────────────────────────────────────────────
 
