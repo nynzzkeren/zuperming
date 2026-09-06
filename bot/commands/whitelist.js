@@ -6,7 +6,8 @@ const { normalizeDuration, computeExpiresAt, formatDurationLabel } = require('..
 
 function whitelistUser(targetUser, product, duration, expiresAt, interaction) {
     return new Promise((resolve) => {
-        const key = `${product.keyPrefix}-` + crypto.randomBytes(8).toString('hex').toUpperCase();
+        const rand = () => crypto.randomBytes(3).toString('hex').toUpperCase();
+        const key = `${product.keyPrefix}-${rand()}-${rand()}-${rand()}`;
         const loaderScript = `_G.key_script = "${key}"\nloadstring(game:HttpGet("${getBaseUrl()}${product.loaderRoute}"))()`;
 
         db.serialize(() => {

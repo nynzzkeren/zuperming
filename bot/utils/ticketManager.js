@@ -8,7 +8,8 @@ const {
     ButtonStyle,
     ContainerBuilder,
     MessageFlags,
-    AttachmentBuilder
+    AttachmentBuilder,
+    EmbedBuilder
 } = require('discord.js');
 const db = require('../../database');
 const { computeExpiresAt } = require('../../utils/keys');
@@ -204,8 +205,13 @@ async function createTicketChannel(guild, user, planKey) {
     const actionRow = new ActionRowBuilder().addComponents(openQrisBtn, closeTicketBtn, checkPaymentBtn);
     container.addActionRowComponents(actionRow);
 
+    // 1. Tag user creator first so they get Discord notification
     await channel.send({
-        content: `Hey <@${user.id}>, your purchase ticket has been initialized!`,
+        content: `👋 <@${user.id}> Welcome to your purchase ticket!`
+    });
+
+    // 2. Send Component V2 container without content field (avoids Discord API conflict)
+    await channel.send({
         components: [container],
         flags: MessageFlags.IsComponentsV2
     });
@@ -237,18 +243,18 @@ async function handleOpenQris(interaction) {
 
     const attachment = new AttachmentBuilder(qrisPath, { name: 'qris.png' });
 
-    const container = new ContainerBuilder().setAccentColor(0x000000);
-    container.addTextDisplayComponents(
-        (t) => t.setContent(`## Official QRIS Payment`),
-        (t) => t.setContent(
+    const embed = new EmbedBuilder()
+        .setColor(0x000000)
+        .setTitle('💳 Official QRIS Payment')
+        .setDescription(
             `**Store Name:** Nynzz. Store\n` +
             `**NMID:** ID1026483288308\n` +
             `**Package:** ${plan.label}\n` +
             `**Total Amount:** Rp${plan.price.toLocaleString('id-ID')}\n` +
             `**Accepted Providers:** DANA, GoPay, OVO, ShopeePay, BCA, Livin Mandiri, and all QRIS apps.\n\n` +
-            `*Scan the QR code below to complete your payment:*`
+            `*Scan the QR code below using your banking or e-wallet application:*`
         )
-    );
+        .setImage('attachment://qris.png');
 
     const donePayBtn = new ButtonBuilder()
         .setCustomId('btn_ticket_done_payment')
@@ -256,12 +262,11 @@ async function handleOpenQris(interaction) {
         .setStyle(ButtonStyle.Success);
 
     const row = new ActionRowBuilder().addComponents(donePayBtn);
-    container.addActionRowComponents(row);
 
     return interaction.reply({
-        components: [container],
+        embeds: [embed],
         files: [attachment],
-        flags: MessageFlags.IsComponentsV2
+        components: [row]
     });
 }
 
@@ -305,7 +310,10 @@ async function handleDonePayment(interaction) {
     const staffPing = staffRoleIds.length > 0 ? staffRoleIds.map(id => `<@&${id}>`).join(' ') : 'Staff';
 
     await interaction.channel.send({
-        content: `🔔 ${staffPing} — <@${interaction.user.id}> has marked payment as completed. Please inspect proof!`,
+        content: `🔔 ${staffPing} — <@${interaction.user.id}> has marked payment as completed. Please inspect proof!`
+    });
+
+    await interaction.channel.send({
         components: [container],
         flags: MessageFlags.IsComponentsV2
     });
@@ -431,8 +439,8 @@ async function handleApprovePayment(interaction, ticketId) {
 
     const plan = PLANS[ticket.plan] || PLANS.monthly;
     const productConfig = PRODUCTS.premium || {};
-    const keyPrefix = productConfig.keyPrefix || 'MIE';
-    const keyString = generateKeyString(`${keyPrefix}_${plan.planSuffix}`);
+    const keyPrefix = productConfig.keyPrefix || 'MIE_PREM';
+    const keyString = generateKeyString(keyPrefix);
     const expiresAt = computeExpiresAt(plan.duration);
 
     // 1. Insert key into DB
@@ -490,8 +498,12 @@ async function handleApprovePayment(interaction, ticketId) {
         )
     );
 
+    // Send notification ping first, then container
     await interaction.channel.send({
-        content: `🎉 <@${ticket.discord_id}> Your purchase is approved!`,
+        content: `🎉 <@${ticket.discord_id}> Your purchase has been approved!`
+    });
+
+    await interaction.channel.send({
         components: [container],
         flags: MessageFlags.IsComponentsV2
     });

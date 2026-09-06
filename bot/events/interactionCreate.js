@@ -208,11 +208,17 @@ module.exports = {
                                 };
 
                                 if (existingKey && existingKey.key_string) {
-                                    return deliverFreeScript(existingKey.key_string);
+                                    let keyString = existingKey.key_string;
+                                    if (keyString.startsWith('ZUPER-') || keyString.startsWith('ZFREE-')) {
+                                        keyString = keyString.replace('ZUPER-', 'MIE_FREE-').replace('ZFREE-', 'MIE_FREE-');
+                                        db.run(`UPDATE keys SET key_string = ? WHERE id = ?`, [keyString, existingKey.id]);
+                                    }
+                                    return deliverFreeScript(keyString);
                                 }
 
                                 // Auto generate free key for this user
-                                const newKey = 'MIE_FREE-' + crypto.randomBytes(4).toString('hex').toUpperCase();
+                                const rand = () => crypto.randomBytes(3).toString('hex').toUpperCase();
+                                const newKey = `MIE_FREE-${rand()}-${rand()}-${rand()}`;
                                 db.run(
                                     `INSERT INTO keys (key_string, duration, status, discord_id, project_id) VALUES (?, 'free', 'used', ?, ?)`,
                                     [newKey, interaction.user.id, projectId],
@@ -243,7 +249,13 @@ module.exports = {
                             return interaction.editReply({ components: [c], flags: MessageFlags.IsComponentsV2 }).catch(console.error);
                         }
 
-                        const loaderScript = buildLoaderScript(project, row.key_string);
+                        let keyString = row.key_string;
+                        if (keyString.startsWith('ZUPER-') || (keyString.startsWith('MIE-') && !keyString.startsWith('MIE_PREM-') && !keyString.startsWith('MIE_FREE-') && !keyString.startsWith('MIE_LTM-'))) {
+                            keyString = keyString.replace('ZUPER-', 'MIE_PREM-').replace('MIE-', 'MIE_PREM-');
+                            db.run(`UPDATE keys SET key_string = ? WHERE id = ?`, [keyString, row.id]);
+                        }
+
+                        const loaderScript = buildLoaderScript(project, keyString);
 
                         if (action === 'copy') {
                             return interaction.editReply({ content: `\`${loaderScript}\`` }).catch(console.error);
@@ -406,6 +418,51 @@ module.exports = {
 
                         return interaction.reply({ components: [container], flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral });
                     });
+                });
+            }
+
+            // ─── GET STATS ────────────────────────────────────────────────────
+            if (action === 'stats') {
+                await interaction.deferReply({ ephemeral: true }).catch(console.error);
+
+                return db.get(`SELECT * FROM users WHERE discord_id = ?`, [interaction.user.id], (uErr, userRow) => {
+                    db.get(
+                        `SELECT * FROM keys WHERE discord_id = ? AND status = 'used' AND (project_id = ? OR project_id IS NULL) ORDER BY id DESC LIMIT 1`,
+                        [interaction.user.id, projectId],
+                        (kErr, keyRow) => {
+                            db.get(`SELECT COUNT(*) as active_count FROM keys WHERE status = 'used'`, [], (cErr, countRow) => {
+                                const totalExecutions = userRow?.total_executions || 0;
+                                const totalResets = userRow?.total_resets || 0;
+                                const isBlacklisted = userRow?.is_blacklisted == 1;
+                                const keyStr = keyRow ? `\`${keyRow.key_string}\`` : 'None (No active key)';
+                                const keyDuration = keyRow ? formatDurationLabel(keyRow.duration) : 'N/A';
+                                const keyExpires = keyRow?.expires_at ? new Date(keyRow.expires_at).toLocaleDateString('en-US') : 'Permanent';
+
+                                const container = new ContainerBuilder()
+                                    .setAccentColor(0x0a0a0a)
+                                    .addTextDisplayComponents(
+                                        (t) => t.setContent(`## Platform & User Statistics`),
+                                        (t) => t.setContent(
+                                            `### User Profile:\n` +
+                                            `• **User:** <@${interaction.user.id}>\n` +
+                                            `• **Status:** ${isBlacklisted ? '⛔ Blacklisted' : '✅ Whitelisted / Active'}\n` +
+                                            `• **Total Executions:** ${totalExecutions.toLocaleString()}\n` +
+                                            `• **Total HWID Resets:** ${totalResets}\n\n` +
+                                            `### Active License:\n` +
+                                            `• **Key:** ${keyStr}\n` +
+                                            `• **Duration:** ${keyDuration} *(Expires: ${keyExpires})*\n\n` +
+                                            `### Platform Global Overview:\n` +
+                                            `• **Total Whitelisted Users:** ${(countRow?.active_count || 0).toLocaleString()}`
+                                        )
+                                    );
+
+                                return interaction.editReply({
+                                    components: [container],
+                                    flags: MessageFlags.IsComponentsV2
+                                }).catch(console.error);
+                            });
+                        }
+                    );
                 });
             }
         }

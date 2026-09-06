@@ -59,8 +59,9 @@ module.exports = {
 
         const keys = [];
         try {
+            const rand = () => crypto.randomBytes(3).toString('hex').toUpperCase();
             for (let i = 0; i < amount; i++) {
-                const key = `${product.keyPrefix}-` + crypto.randomBytes(8).toString('hex').toUpperCase();
+                const key = `${product.keyPrefix}-${rand()}-${rand()}-${rand()}`;
                 await insertKey(key, duration, product.id);
                 keys.push(key);
             }

@@ -226,6 +226,10 @@ const db = new sqlite3.Database(dbPath, (err) => {
 
             db.run(`ALTER TABLE keys ADD COLUMN product TEXT DEFAULT 'premium'`, alterIgnore);
 
+            // Auto-migrate legacy key prefixes to MIE_PREM
+            db.run(`UPDATE keys SET key_string = REPLACE(key_string, 'ZUPER-', 'MIE_PREM-') WHERE key_string LIKE 'ZUPER-%'`, alterIgnore);
+            db.run(`UPDATE keys SET key_string = REPLACE(key_string, 'MIE-', 'MIE_PREM-') WHERE key_string LIKE 'MIE-%' AND key_string NOT LIKE 'MIE_PREM-%' AND key_string NOT LIKE 'MIE_FREE-%' AND key_string NOT LIKE 'MIE_LTM-%'`, alterIgnore);
+
             // Ensure default developer and projects exist
             db.run(`INSERT OR IGNORE INTO developers (id, discord_id, username, plan_tier, status) VALUES (1, 'owner_root', 'Owner', 'highest', 'active')`, alterIgnore);
             db.run(`UPDATE developers SET plan_tier = 'highest' WHERE plan_tier = 'none' OR plan_tier IS NULL`, alterIgnore);
