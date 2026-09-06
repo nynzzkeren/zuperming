@@ -5,7 +5,7 @@ module.exports = {
     name: 'ready',
     once: true,
     async execute(client) {
-        console.log(`Logged in as ${client.user.tag}!`);
+        console.log(`[mie ayam Bot] Logged in as ${client.user.tag}!`);
 
         startPresenceLoop(client, 60000);
 

@@ -986,20 +986,24 @@
             </div>
 
             <div class="panel">
-                <div class="panel-hd"><span class="panel-title"><span class="panel-dot"></span> New Project</span></div>
+                <div class="panel-hd"><span class="panel-title"><span class="panel-dot"></span> New Project / Add Game</span></div>
                 <div class="panel-bd">
                     <form action="/admin/add-game" method="POST">
-                        <div class="form-row">
+                        <div class="form-row" style="display:grid;grid-template-columns:1.2fr 1.2fr 0.8fr 1fr auto;gap:10px;align-items:flex-end;">
                             <div class="field">
-                                <label class="lbl">Project Name</label>
-                                <input type="text" name="name" id="proj-name" class="inp" placeholder="e.g. Blox Fruits" required>
+                                <label class="lbl">Roblox Place ID</label>
+                                <input type="text" name="place_id" id="proj-place-id" class="inp" placeholder="e.g. 2753915549" required onblur="fetchRobloxInfo(this.value)">
                             </div>
                             <div class="field">
-                                <label class="lbl">Roblox Game ID</label>
-                                <input type="number" name="game_id" id="proj-game-id" class="inp" placeholder="e.g. 2753915549" required>
+                                <label class="lbl">Game Name (Auto-fetched)</label>
+                                <input type="text" name="name" id="proj-name" class="inp" placeholder="Auto-fetched or custom">
                             </div>
                             <div class="field">
-                                <label class="lbl">Product Tier</label>
+                                <label class="lbl">Script Version</label>
+                                <input type="text" name="version" id="proj-version" class="inp" value="v0.0.0.1" placeholder="v0.0.0.1">
+                            </div>
+                            <div class="field">
+                                <label class="lbl">Project Tier</label>
                                 <select name="product" class="sel" required>
                                     <option value="" disabled selected>Select tier...</option>
                                     <% Object.values(products).forEach(function(p) { %>
@@ -1007,14 +1011,13 @@
                                     <% }); %>
                                 </select>
                             </div>
-                            <button type="submit" class="btn btn-white">
+                            <button type="submit" class="btn btn-white" style="height:36px;white-space:nowrap;">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                                Deploy
+                                Add Game
                             </button>
                         </div>
                     </form>
                 </div>
-
             </div>
 
             <%
@@ -1040,9 +1043,14 @@
                     <% typeGames.forEach(function(g) { %>
                     <div class="proj-card">
                         <div class="proj-card-hd">
-                            <div>
-                                <div class="proj-name"><%- g.name %></div>
-                                <div class="proj-id">ID: <%- g.roblox_game_id %></div>
+                            <div style="display:flex;gap:10px;align-items:center;min-width:0;">
+                                <% if (g.thumbnail_url) { %>
+                                    <img src="<%- g.thumbnail_url %>" alt="thumb" style="width:36px;height:36px;border-radius:6px;object-fit:cover;border:1px solid var(--border);flex-shrink:0;">
+                                <% } %>
+                                <div style="min-width:0;">
+                                    <div class="proj-name" style="text-overflow:ellipsis;overflow:hidden;white-space:nowrap;"><%- g.name %></div>
+                                    <div class="proj-id">Place ID: <%- g.place_id || g.roblox_game_id %> &bull; <%- g.script_version || 'v0.0.0.1' %></div>
+                                </div>
                             </div>
                             <div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">
                                 <% if (g.last_script_update) { %>
@@ -1409,6 +1417,20 @@
     }
 
     /* ─── AI SEARCH ─── */
+    
+    async function fetchRobloxInfo(placeId) {
+        placeId = String(placeId || '').trim();
+        if (!placeId) return;
+        const nameInp = document.getElementById('proj-name');
+        try {
+            const res = await fetch('/admin/roblox-game-info?place_id=' + encodeURIComponent(placeId));
+            const data = await res.json();
+            if (data.success && data.name && (!nameInp.value || nameInp.value.trim() === '')) {
+                nameInp.value = data.name;
+            }
+        } catch(e) {}
+    }
+
     async function performAiSearch() {
         const inp = document.getElementById('ai-search-inp');
         const btn = document.getElementById('btn-ai-search');

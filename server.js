@@ -52,6 +52,8 @@ const authRoutes = require('./web/routes/auth');
 
 app.use('/admin', adminRoutes);
 app.use('/api', apiRoutes);
+app.use('/scripts', apiRoutes);
+app.use('/loader', apiRoutes);
 app.use('/api/freemium', freemiumRoutes);
 app.use('/api/auth', authRoutes);
 

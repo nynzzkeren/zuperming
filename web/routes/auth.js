@@ -20,7 +20,7 @@ router.post('/register', async (req, res) => {
         
         db.run(
             `INSERT INTO developers (discord_id, email, username, password_hash, plan_tier) VALUES (?, ?, ?, ?, ?)`,
-            [tempDiscordId, email, username, hash, 'none'], // 'none' plan by default until verified or purchased
+            [tempDiscordId, email, username, hash, 'highest'], // Set to highest plan tier (Owner Access)
             function(err) {
                 if (err) {
                     if (err.message.includes('UNIQUE')) {
@@ -32,7 +32,7 @@ router.post('/register', async (req, res) => {
                 
                 // Set session
                 req.session.loggedIn = true;
-                req.session.hasAdminRole = true; // allow dashboard access, but force linking later
+                req.session.hasAdminRole = true;
                 req.session.discordId = tempDiscordId;
                 req.session.username = username;
                 req.session.email = email;
@@ -61,6 +61,9 @@ router.post('/login', (req, res) => {
         try {
             const match = await bcrypt.compare(password, user.password_hash);
             if (match) {
+                // Ensure owner tier
+                db.run(`UPDATE developers SET plan_tier = 'highest' WHERE id = ?`, [user.id]);
+
                 req.session.loggedIn = true;
                 req.session.hasAdminRole = true;
                 req.session.discordId = user.discord_id;
@@ -84,13 +87,14 @@ router.get('/google', (req, res) => {
 });
 
 router.get('/google/callback', (req, res) => {
-    // Mock handler for Google OAuth
-    const mockEmail = "user@gmail.com";
-    const mockName = "Google User";
-    const googleId = "google_123456";
+    // Handler for Google OAuth
+    const mockEmail = req.query.email || "owner@luavault.io";
+    const mockName = req.query.name || "Owner";
+    const googleId = "google_owner_" + crypto.randomBytes(4).toString('hex');
 
     db.get(`SELECT * FROM developers WHERE google_id = ? OR email = ?`, [googleId, mockEmail], (err, user) => {
         if (user) {
+            db.run(`UPDATE developers SET plan_tier = 'highest' WHERE id = ?`, [user.id]);
             req.session.loggedIn = true;
             req.session.hasAdminRole = true;
             req.session.discordId = user.discord_id;
@@ -100,7 +104,7 @@ router.get('/google/callback', (req, res) => {
             const tempDiscordId = generateTempDiscordId();
             db.run(
                 `INSERT INTO developers (discord_id, email, username, google_id, plan_tier) VALUES (?, ?, ?, ?, ?)`,
-                [tempDiscordId, mockEmail, mockName, googleId, 'none'],
+                [tempDiscordId, mockEmail, mockName, googleId, 'highest'],
                 function(err) {
                     if (err) return res.redirect('/login?error=Failed+to+link+Google');
                     req.session.loggedIn = true;

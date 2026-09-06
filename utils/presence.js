@@ -43,7 +43,7 @@ async function buildActivities(client) {
 
     if (presenceDetails || presenceState) {
         const playing = {
-            name: process.env.PRESENCE_APP_NAME || 'Zuperming',
+            name: process.env.PRESENCE_APP_NAME || 'mie ayam',
             type: ActivityType.Playing,
             details: presenceDetails || undefined,
             state: presenceState || undefined
@@ -51,12 +51,12 @@ async function buildActivities(client) {
         if (process.env.PRESENCE_LARGE_IMAGE) {
             playing.assets = {
                 largeImage: process.env.PRESENCE_LARGE_IMAGE,
-                largeText: process.env.PRESENCE_LARGE_TEXT || 'Zuperming'
+                largeText: process.env.PRESENCE_LARGE_TEXT || 'mie ayam'
             };
         }
         activities.push(playing);
     } else {
-        const customText = process.env.PRESENCE_CUSTOM_STATUS || 'Made with 💗 Zuperming Team';
+        const customText = process.env.PRESENCE_CUSTOM_STATUS || 'Made with 💗 mie ayam';
         if (customText) {
             activities.push({
                 name: 'Custom Status',

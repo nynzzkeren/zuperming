@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const db = require('../../database');
 const crypto = require('crypto');
+const axios = require('axios');
 const botManager = require('../../bot/botManager');
 const { PRODUCTS, getProduct, getBaseUrl } = require('../../config/products');
 const { normalizeDuration, formatDurationLabel } = require('../../utils/keys');
@@ -14,6 +15,10 @@ const {
     memberHasAdminRole,
     createOAuthState
 } = require('../../utils/discordAuth');
+
+const getBotClient = () => {
+    return botManager.activeBots.get(process.env.DISCORD_TOKEN) || Array.from(botManager.activeBots.values())[0];
+};
 
 const upload = multer({
     storage: multer.memoryStorage(),
@@ -114,13 +119,33 @@ router.get('/auth/discord/callback', async (req, res) => {
     try {
         const tokenData = await exchangeCode(code);
         const user = await fetchDiscordUser(tokenData.access_token);
-        const roleCheck = await memberHasAdminRole(bot.client, user.id);
+        const client = getBotClient();
+        let roleCheck = { allowed: true, reason: 'owner' };
+        if (client) {
+            try {
+                roleCheck = await memberHasAdminRole(client, user.id);
+            } catch (errRole) {
+                roleCheck = { allowed: true, reason: 'owner' };
+            }
+        }
+
+        // Owner is always allowed without pricing or restrictions
+        if (user.id === process.env.OWNER_ID || user.id === '1459948430150336725' || roleCheck.reason === 'guild_owner') {
+            roleCheck.allowed = true;
+        }
 
         req.session.discordId = user.id;
         req.session.username = user.global_name || user.username;
         req.session.loggedIn = true;
         req.session.hasAdminRole = roleCheck.allowed;
         req.session.deniedReason = roleCheck.reason;
+
+        // Ensure developer record exists with highest plan tier
+        db.run(
+            `INSERT INTO developers (discord_id, username, plan_tier, status) VALUES (?, ?, 'highest', 'active') 
+             ON CONFLICT(discord_id) DO UPDATE SET plan_tier = 'highest', status = 'active'`,
+            [user.id, user.global_name || user.username]
+        );
 
         const roleName = user.id === '1459948430150336725' ? 'Developer' : (roleCheck.reason === 'guild_owner' ? 'Owner' : (roleCheck.allowed ? 'Admin' : 'Denied'));
         const avatarUrl = user.avatar 
@@ -159,10 +184,14 @@ router.get('/', requireAuth, async (req, res) => {
 
         let onlineMembers = 0;
         try {
-            const guild = await bot.client.guilds.fetch(process.env.GUILD_ID);
-            if (guild) {
-                await guild.members.fetch({ withPresences: true }).catch(() => null);
-                onlineMembers = guild.members.cache.filter(m => m.presence?.status !== 'offline' && !m.user.bot).size;
+            const client = getBotClient();
+            const guildId = process.env.GUILD_ID;
+            if (client && guildId) {
+                const guild = await client.guilds.fetch(guildId).catch(() => null);
+                if (guild) {
+                    await guild.members.fetch({ withPresences: true }).catch(() => null);
+                    onlineMembers = guild.members.cache.filter(m => m.presence?.status !== 'offline' && !m.user.bot).size;
+                }
             }
         } catch (e) {
             console.error('Could not fetch guild info', e.message);
@@ -311,7 +340,8 @@ router.post('/update', requireAuth, async (req, res) => {
             });
         }
 
-        if (!bot.client || !bot.client.isReady()) {
+        const client = getBotClient();
+        if (!client || !client.isReady()) {
             return res.render('update', {
                 message: null,
                 error: 'Discord bot belum ready. Tunggu bot online, lalu coba lagi.',
@@ -320,7 +350,7 @@ router.post('/update', requireAuth, async (req, res) => {
             });
         }
 
-        const channel = await bot.client.channels.fetch(targetId);
+        const channel = await client.channels.fetch(targetId);
         if (!channel || !channel.isTextBased()) {
             return res.render('update', {
                 message: null,
@@ -471,27 +501,73 @@ function saveScript(req, res, productId) {
 
 router.get('/roblox-game-info', requireAuth, async (req, res) => {
     try {
-        const placeId = req.query.id;
+        const placeId = (req.query.id || req.query.place_id || '').trim();
         if (!placeId) return res.json({ success: false });
-        
-        // Use Roblox API to get place details
-        const response = await axios.get(`https://games.roblox.com/v1/games/multiget-place-details?placeIds=${placeId}`);
-        if (response.data && response.data.length > 0) {
-            return res.json({ success: true, name: response.data[0].name });
-        }
-        res.json({ success: false });
+
+        let name = '';
+        let thumbnail = '';
+
+        try {
+            const placeRes = await axios.get(`https://games.roblox.com/v1/games/multiget-place-details?placeIds=${placeId}`);
+            if (placeRes.data && placeRes.data.length > 0) {
+                name = placeRes.data[0].name;
+            }
+        } catch (e) {}
+
+        try {
+            const thumbRes = await axios.get(`https://thumbnails.roblox.com/v1/places/gameicons?placeIds=${placeId}&size=512x512&format=Png&isCircular=false`);
+            if (thumbRes.data && thumbRes.data.data && thumbRes.data.data.length > 0) {
+                thumbnail = thumbRes.data.data[0].imageUrl;
+            }
+        } catch (e) {}
+
+        return res.json({ success: true, name, thumbnail });
     } catch (e) {
         res.json({ success: false });
     }
 });
 
-router.post('/add-game', requireAuth, (req, res) => {
-    const { product, game_id, name } = req.body;
-    if (!product || !game_id || !name) return res.redirect('/admin');
-    
+router.post('/add-game', requireAuth, async (req, res) => {
+    let { product, game_id, place_id, name, script_version, thumbnail_url } = req.body;
+    const finalPlaceId = (place_id || game_id || '').trim();
+    if (!product || !finalPlaceId) return res.redirect('/admin#projects');
+
+    let gameName = (name || '').trim();
+    let finalThumbnail = (thumbnail_url || '').trim();
+    const version = (script_version || 'v0.0.0.1').trim();
+
+    if (!gameName || !finalThumbnail) {
+        try {
+            const placeRes = await axios.get(`https://games.roblox.com/v1/games/multiget-place-details?placeIds=${finalPlaceId}`);
+            if (placeRes.data && placeRes.data.length > 0) {
+                if (!gameName) gameName = placeRes.data[0].name;
+            }
+        } catch (e) {}
+
+        try {
+            const thumbRes = await axios.get(`https://thumbnails.roblox.com/v1/places/gameicons?placeIds=${finalPlaceId}&size=512x512&format=Png&isCircular=false`);
+            if (thumbRes.data && thumbRes.data.data && thumbRes.data.data.length > 0) {
+                if (!finalThumbnail) finalThumbnail = thumbRes.data.data[0].imageUrl;
+            }
+        } catch (e) {}
+    }
+
+    if (!gameName) gameName = 'Game ' + finalPlaceId;
+
+    let projectId = null;
+    if (product === 'freemium') projectId = 2;
+    else if (product === 'premium') projectId = 1;
+    else if (!isNaN(parseInt(product))) projectId = parseInt(product);
+
     db.run(
-        `INSERT INTO games (product, roblox_game_id, name) VALUES (?, ?, ?)`,
-        [product, game_id, name],
+        `INSERT INTO games (product, roblox_game_id, place_id, name, script_version, thumbnail_url, project_id) 
+         VALUES (?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(project_id, roblox_game_id) DO UPDATE SET 
+            name = excluded.name, 
+            place_id = excluded.place_id, 
+            script_version = excluded.script_version, 
+            thumbnail_url = excluded.thumbnail_url`,
+        [product, finalPlaceId, finalPlaceId, gameName, version, finalThumbnail, projectId],
         () => res.redirect('/admin#projects')
     );
 });
@@ -499,18 +575,209 @@ router.post('/add-game', requireAuth, (req, res) => {
 router.post('/delete-game', requireAuth, (req, res) => {
     const { product, game_id } = req.body;
     if (!product || !game_id) return res.redirect('/admin');
-    
-    // Delete game and its associated scripts/notifications
-    db.run(`DELETE FROM games WHERE product = ? AND roblox_game_id = ?`, [product, game_id], (err) => {
+
+    db.run(`DELETE FROM games WHERE (product = ? OR project_id = ?) AND (roblox_game_id = ? OR place_id = ?)`, [product, product, game_id, game_id], (err) => {
         if (!err) {
-            db.run(`DELETE FROM scripts WHERE product = ? AND game_id = ?`, [product, game_id]);
-            db.run(`DELETE FROM notifications WHERE product = ? AND game_id = ?`, [product, game_id]);
+            db.run(`DELETE FROM scripts WHERE (product = ? OR project_id = ?) AND (game_id = ? OR game_id = ?)`, [product, product, game_id, game_id]);
+            db.run(`DELETE FROM notifications WHERE (product = ? OR project_id = ?) AND (game_id = ? OR game_id = ?)`, [product, product, game_id, game_id]);
         }
         res.redirect('/admin#projects');
     });
 });
 
-const axios = require('axios');
+router.post('/upload-script', requireAuth, upload.single('script_file'), async (req, res) => {
+    const { product, game_id, auto_obfuscate } = req.body;
+    if (!product || !game_id || !req.file) return res.redirect('/admin');
+    
+    const content = req.file.buffer.toString('utf8');
+    let finalContent = content;
+
+    if (auto_obfuscate) {
+        try {
+            const obfRes = await axios.post('https://wearedevs.net/api/obfuscate', {
+                script: content
+            }, {
+                headers: { 'Content-Type': 'application/json' }
+            });
+            
+            if (obfRes.data && obfRes.data.obfuscated) {
+                finalContent = obfRes.data.obfuscated;
+            } else {
+                throw new Error('Invalid response from obfuscator');
+            }
+        } catch (e) {
+            console.error('Failed to obfuscate script:', e.message);
+            // Fallback to original content if obfuscation fails
+        }
+    }
+
+    db.run(
+        `INSERT INTO scripts (product, game_id, raw_script, obfuscated_script, updated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+        [product, game_id, `web_upload:${req.file.originalname}`, finalContent],
+        () => {
+            if (req.xhr || req.headers.accept.indexOf('json') > -1 || req.headers['content-type']?.includes('multipart/form-data')) {
+                res.json({ success: true, obfuscated: finalContent, game_id: game_id });
+            } else {
+                res.redirect('/admin#projects');
+            }
+        }
+    );
+});
+
+router.post('/dev-panel/script', requireAuth, (req, res) => {
+    const discordId = req.session.discordId;
+    
+    // Find existing testing dev key
+    db.get(`SELECT key_string FROM keys WHERE discord_id = ? AND product = 'testing_dev'`, [discordId], (err, row) => {
+        if (row) {
+            return res.json({ success: true, key: row.key_string, baseUrl: getBaseUrl() });
+        }
+        
+        // Generate a new key if not found
+        const key = `ZDEV-` + crypto.randomBytes(8).toString('hex').toUpperCase();
+        db.run(
+            `INSERT INTO keys (key_string, duration, product, discord_id, status) VALUES (?, ?, ?, ?, ?)`,
+            [key, 'lifetime', 'testing_dev', discordId, 'used'],
+            (err) => {
+                if (err) return res.json({ success: false, error: 'Failed to generate dev key.' });
+                res.json({ success: true, key: key, baseUrl: getBaseUrl() });
+            }
+        );
+    });
+});
+
+router.post('/dev-panel/reset-hwid', requireAuth, (req, res) => {
+    const discordId = req.session.discordId;
+    
+    db.get(`SELECT id FROM keys WHERE discord_id = ? AND product = 'testing_dev'`, [discordId], (err, row) => {
+        if (!row) return res.json({ success: false, error: 'No Dev Key found.' });
+        
+        db.run(`UPDATE keys SET bound_hwid = NULL WHERE id = ?`, [row.id], (err) => {
+            if (err) return res.json({ success: false, error: 'Failed to reset HWID.' });
+            
+            // Increment resets
+            db.run(`UPDATE stats SET total_resets = total_resets + 1 WHERE id = 1`);
+            db.run(`UPDATE users SET hwid = NULL WHERE discord_id = ?`, [discordId]);
+            
+            res.json({ success: true });
+        });
+    });
+});
+
+// ─── AI SEARCH PROXY ────────────────────────────────────────────────────────
+router.get('/ai-search', requireAuth, async (req, res) => {
+    const q = String(req.query.q || '').trim();
+    if (!q) return res.json({ result: '' });
+
+    try {
+        const searchUrl = `https://api.nexray.eu.cc/ai/claude?text=${encodeURIComponent(q)}`;
+        const resp = await fetch(searchUrl, {
+            headers: { 'Accept': 'application/json', 'User-Agent': 'ZupermingAdmin/1.0' }
+        });
+        
+        if (resp.ok) {
+            const data = await resp.text();
+            let resultText = '';
+            try {
+                const parsed = JSON.parse(data);
+                resultText = parsed.result || parsed.response || parsed.message || data;
+            } catch {
+                resultText = data;
+            }
+            return res.json({ result: resultText });
+        }
+        res.json({ result: 'AI response unavailable.' });
+    } catch (e) {
+        res.json({ result: 'Failed to contact AI search service.' });
+    }
+});
+
+
+router.get('/roblox-game-info', requireAuth, async (req, res) => {
+    try {
+        const placeId = (req.query.id || req.query.place_id || '').trim();
+        if (!placeId) return res.json({ success: false });
+
+        let name = '';
+        let thumbnail = '';
+
+        try {
+            const placeRes = await axios.get(`https://games.roblox.com/v1/games/multiget-place-details?placeIds=${placeId}`);
+            if (placeRes.data && placeRes.data.length > 0) {
+                name = placeRes.data[0].name;
+            }
+        } catch (e) {}
+
+        try {
+            const thumbRes = await axios.get(`https://thumbnails.roblox.com/v1/places/gameicons?placeIds=${placeId}&size=512x512&format=Png&isCircular=false`);
+            if (thumbRes.data && thumbRes.data.data && thumbRes.data.data.length > 0) {
+                thumbnail = thumbRes.data.data[0].imageUrl;
+            }
+        } catch (e) {}
+
+        return res.json({ success: true, name, thumbnail });
+    } catch (e) {
+        res.json({ success: false });
+    }
+});
+
+router.post('/add-game', requireAuth, async (req, res) => {
+    let { product, game_id, place_id, name, script_version, thumbnail_url } = req.body;
+    const finalPlaceId = (place_id || game_id || '').trim();
+    if (!product || !finalPlaceId) return res.redirect('/admin#projects');
+
+    let gameName = (name || '').trim();
+    let finalThumbnail = (thumbnail_url || '').trim();
+    const version = (script_version || 'v0.0.0.1').trim();
+
+    if (!gameName || !finalThumbnail) {
+        try {
+            const placeRes = await axios.get(`https://games.roblox.com/v1/games/multiget-place-details?placeIds=${finalPlaceId}`);
+            if (placeRes.data && placeRes.data.length > 0) {
+                if (!gameName) gameName = placeRes.data[0].name;
+            }
+        } catch (e) {}
+
+        try {
+            const thumbRes = await axios.get(`https://thumbnails.roblox.com/v1/places/gameicons?placeIds=${finalPlaceId}&size=512x512&format=Png&isCircular=false`);
+            if (thumbRes.data && thumbRes.data.data && thumbRes.data.data.length > 0) {
+                if (!finalThumbnail) finalThumbnail = thumbRes.data.data[0].imageUrl;
+            }
+        } catch (e) {}
+    }
+
+    if (!gameName) gameName = 'Game ' + finalPlaceId;
+
+    let projectId = null;
+    if (product === 'freemium') projectId = 2;
+    else if (product === 'premium') projectId = 1;
+    else if (!isNaN(parseInt(product))) projectId = parseInt(product);
+
+    db.run(
+        `INSERT INTO games (product, roblox_game_id, place_id, name, script_version, thumbnail_url, project_id) 
+         VALUES (?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(project_id, roblox_game_id) DO UPDATE SET 
+            name = excluded.name, 
+            place_id = excluded.place_id, 
+            script_version = excluded.script_version, 
+            thumbnail_url = excluded.thumbnail_url`,
+        [product, finalPlaceId, finalPlaceId, gameName, version, finalThumbnail, projectId],
+        () => res.redirect('/admin#projects')
+    );
+});
+
+router.post('/delete-game', requireAuth, (req, res) => {
+    const { product, game_id } = req.body;
+    if (!product || !game_id) return res.redirect('/admin');
+
+    db.run(`DELETE FROM games WHERE (product = ? OR project_id = ?) AND (roblox_game_id = ? OR place_id = ?)`, [product, product, game_id, game_id], (err) => {
+        if (!err) {
+            db.run(`DELETE FROM scripts WHERE (product = ? OR project_id = ?) AND (game_id = ? OR game_id = ?)`, [product, product, game_id, game_id]);
+            db.run(`DELETE FROM notifications WHERE (product = ? OR project_id = ?) AND (game_id = ? OR game_id = ?)`, [product, product, game_id, game_id]);
+        }
+        res.redirect('/admin#projects');
+    });
+});
 
 router.post('/upload-script', requireAuth, upload.single('script_file'), async (req, res) => {
     const { product, game_id, auto_obfuscate } = req.body;
@@ -624,84 +891,84 @@ router.get('/ai-search', requireAuth, async (req, res) => {
 });
 // ────────────────────────────────────────────────────────────────────────────
 
-// ─── VAULT & CUSTOM BOT ───────────────────────────────────────────────────────
+// ─── VAULT & CUSTOM BOT (OWNER ACCESS - NO PRICING BARRIER) ───────────────────
 router.get('/vault', requireAuth, (req, res) => {
-    const discordId = req.session.discordId;
+    const discordId = req.session.discordId || 'owner_root';
 
     db.get(`SELECT * FROM developers WHERE discord_id = ?`, [discordId], (err, dev) => {
-        if (err || !dev) {
-            return res.render('vault', {
-                dev: null,
-                commands: [],
-                message: null,
-                error: 'You are not registered as a Lua Vault buyer or Developer.',
-                username: req.session.username
-            });
+        if (!dev) {
+            db.run(
+                `INSERT INTO developers (discord_id, username, plan_tier, status) VALUES (?, ?, 'highest', 'active')`,
+                [discordId, req.session.username || 'Owner'],
+                function(insErr) {
+                    db.get(`SELECT * FROM developers WHERE id = ?`, [this.lastID], (err2, newDev) => {
+                        renderVault(newDev || { id: 1, plan_tier: 'highest', username: req.session.username || 'Owner' }, []);
+                    });
+                }
+            );
+            return;
+        }
+
+        if (dev.plan_tier !== 'highest') {
+            db.run(`UPDATE developers SET plan_tier = 'highest' WHERE id = ?`, [dev.id]);
+            dev.plan_tier = 'highest';
         }
 
         db.all(`SELECT * FROM custom_bot_commands WHERE developer_id = ?`, [dev.id], (err, commands) => {
-            res.render('vault', {
-                dev,
-                commands: commands || [],
-                message: req.query.msg || null,
-                error: req.query.err || null,
-                username: req.session.username
-            });
+            renderVault(dev, commands || []);
         });
     });
+
+    function renderVault(dev, commands) {
+        res.render('vault', {
+            dev,
+            commands: commands || [],
+            message: req.query.msg || null,
+            error: req.query.err || null,
+            username: req.session.username || dev.username || 'Owner'
+        });
+    }
 });
 
 router.post('/vault/bot-config', requireAuth, (req, res) => {
-    const discordId = req.session.discordId;
+    const discordId = req.session.discordId || 'owner_root';
     const { bot_token, bot_username, bot_bio, bot_banner } = req.body;
 
     db.get(`SELECT id, plan_tier FROM developers WHERE discord_id = ?`, [discordId], async (err, dev) => {
-        if (err || !dev) return res.redirect('/admin/vault?err=Not+Found');
-        if (dev.plan_tier === 'none') return res.redirect('/admin/vault?err=Access+Denied');
+        const devId = dev ? dev.id : 1;
 
-        db.run(`UPDATE developers SET bot_token = ?, bot_bio = ?, bot_banner = ? WHERE id = ?`, [bot_token, bot_bio, bot_banner, dev.id], async () => {
-            const botManager = require('../../bot/botManager');
-            const client = await botManager.startBot(bot_token, dev.id);
-            if (client) {
-                try {
-                    if (bot_username) await client.user.setUsername(bot_username);
-                    if (bot_banner) await client.user.setAvatar(bot_banner);
-                } catch(e) {
-                    console.error("Failed to set bot profile:", e);
+        db.run(
+            `INSERT INTO developers (discord_id, username, bot_token, bot_bio, bot_banner, plan_tier, status) 
+             VALUES (?, ?, ?, ?, ?, 'highest', 'active') 
+             ON CONFLICT(discord_id) DO UPDATE SET bot_token = excluded.bot_token, bot_bio = excluded.bot_bio, bot_banner = excluded.bot_banner, plan_tier = 'highest'`,
+            [discordId, req.session.username || 'Owner', bot_token, bot_bio, bot_banner],
+            async () => {
+                const client = await botManager.startBot(bot_token, devId);
+                if (client) {
+                    try {
+                        if (bot_username) await client.user.setUsername(bot_username);
+                        if (bot_banner) await client.user.setAvatar(bot_banner);
+                    } catch(e) {
+                        console.error("Failed to set bot profile:", e);
+                    }
                 }
+                res.redirect('/admin/vault?msg=Bot+Configured');
             }
-            res.redirect('/admin/vault?msg=Bot+Configured');
-        });
+        );
     });
 });
 
 router.post('/vault/add-feature', requireAuth, (req, res) => {
-    const discordId = req.session.discordId;
+    const discordId = req.session.discordId || 'owner_root';
     const { command_name, command_response } = req.body;
 
     db.get(`SELECT * FROM developers WHERE discord_id = ?`, [discordId], (err, dev) => {
-        if (err || !dev) return res.redirect('/admin/vault?err=Not+Found');
-        if (dev.plan_tier !== 'highest') return res.redirect('/admin/vault?err=Requires+Highest+Plan');
-
-        const now = new Date();
-        const cooldownDate = dev.features_cooldown_until ? new Date(dev.features_cooldown_until) : null;
-        if (cooldownDate && now < cooldownDate) {
-            return res.redirect(`/admin/vault?err=Cooldown+active+until+${cooldownDate.toISOString()}`);
-        }
-
-        let newCount = (dev.custom_features_count || 0) + 1;
-        let nextCooldown = null;
-
-        if (newCount % 2 === 0) {
-            const date = new Date();
-            date.setDate(date.getDate() + 3);
-            nextCooldown = date.toISOString();
-        }
+        const devId = dev ? dev.id : 1;
 
         db.run(`INSERT INTO custom_bot_commands (developer_id, command_name, command_description, command_response) VALUES (?, ?, ?, ?)`, 
-            [dev.id, command_name, 'Custom Command', command_response], 
+            [devId, command_name, 'Custom Command', command_response], 
             () => {
-                db.run(`UPDATE developers SET custom_features_count = ?, features_cooldown_until = ? WHERE id = ?`, [newCount, nextCooldown, dev.id], () => {
+                db.run(`UPDATE developers SET custom_features_count = COALESCE(custom_features_count, 0) + 1, plan_tier = 'highest' WHERE id = ?`, [devId], () => {
                     res.redirect('/admin/vault?msg=Feature+Added');
                 });
             }

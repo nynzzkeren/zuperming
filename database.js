@@ -175,19 +175,42 @@ const db = new sqlite3.Database(dbPath, (err) => {
             db.run(`ALTER TABLE developers ADD COLUMN bot_bio TEXT`, alterIgnore);
             db.run(`ALTER TABLE developers ADD COLUMN bot_banner TEXT`, alterIgnore);
 
-            // New columns for dynamic panel / discord settings per project
+            // Dynamic panel / discord settings per project
             db.run(`ALTER TABLE projects ADD COLUMN guild_id TEXT`, alterIgnore);
             db.run(`ALTER TABLE projects ADD COLUMN buyer_role_id TEXT`, alterIgnore);
             db.run(`ALTER TABLE projects ADD COLUMN update_channel_id TEXT`, alterIgnore);
             db.run(`ALTER TABLE projects ADD COLUMN brand_logo_url TEXT`, alterIgnore);
+            db.run(`ALTER TABLE projects ADD COLUMN is_free BOOLEAN DEFAULT 0`, alterIgnore);
+            db.run(`ALTER TABLE projects ADD COLUMN description TEXT`, alterIgnore);
 
-            // New columns for web authentication
+            // Web authentication columns
             db.run(`ALTER TABLE developers ADD COLUMN email TEXT`, alterIgnore);
             db.run(`CREATE UNIQUE INDEX IF NOT EXISTS idx_developers_email ON developers(email)`, alterIgnore);
             db.run(`ALTER TABLE developers ADD COLUMN password_hash TEXT`, alterIgnore);
             db.run(`ALTER TABLE developers ADD COLUMN google_id TEXT`, alterIgnore);
             db.run(`CREATE UNIQUE INDEX IF NOT EXISTS idx_developers_google_id ON developers(google_id)`, alterIgnore);
             db.run(`ALTER TABLE developers ADD COLUMN username TEXT`, alterIgnore);
+
+            // New columns for games (Place ID, version, thumbnail)
+            db.run(`ALTER TABLE games ADD COLUMN place_id TEXT`, alterIgnore);
+            db.run(`ALTER TABLE games ADD COLUMN script_version TEXT DEFAULT 'v0.0.0.1'`, alterIgnore);
+            db.run(`ALTER TABLE games ADD COLUMN thumbnail_url TEXT`, alterIgnore);
+            db.run(`UPDATE games SET place_id = roblox_game_id WHERE place_id IS NULL OR place_id = ''`, alterIgnore);
+
+            // Ensure default developer and projects exist
+            db.run(`INSERT OR IGNORE INTO developers (id, discord_id, username, plan_tier, status) VALUES (1, 'owner_root', 'Owner', 'highest', 'active')`, alterIgnore);
+            db.run(`UPDATE developers SET plan_tier = 'highest' WHERE plan_tier = 'none' OR plan_tier IS NULL`, alterIgnore);
+
+            // Seed default projects if not present
+            db.get(`SELECT COUNT(*) as count FROM projects`, (err, row) => {
+                if (!err && (!row || row.count === 0)) {
+                    db.run(`INSERT OR IGNORE INTO projects (id, developer_id, name, uuid, is_free, description) 
+                            VALUES (1, 1, 'mie ayam Premium', '373dac54-b41c-4ae6-9819-76a3e60941b8', 0, 'Official Premium Script Hub')`);
+                    db.run(`INSERT OR IGNORE INTO projects (id, developer_id, name, uuid, is_free, description) 
+                            VALUES (2, 1, 'mie ayam Free', 'f4ee2a10-89bc-4cd8-b3d9-95e219712ab1', 1, 'Official Keyless Free Script Hub')`);
+                    console.log('[Database] Seeded default Premium and Free projects.');
+                }
+            });
         });
     }
 });

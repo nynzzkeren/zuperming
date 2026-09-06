@@ -1,6 +1,8 @@
 const {
     SlashCommandBuilder,
     ContainerBuilder,
+    SectionBuilder,
+    SeparatorBuilder,
     ActionRowBuilder,
     ButtonBuilder,
     ButtonStyle,
@@ -8,60 +10,102 @@ const {
 } = require('discord.js');
 const db = require('../../database');
 
+function isUsableHttpUrl(str) {
+    if (!str) return false;
+    try {
+        const url = new URL(str);
+        return url.protocol === 'http:' || url.protocol === 'https:';
+    } catch {
+        return false;
+    }
+}
+
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('gamelist')
-        .setDescription('Manage games and view scripts (Admin only)')
-        .setDefaultMemberPermissions(8), // Administrator
+        .setDescription('View supported games and details')
+        .addIntegerOption(option =>
+            option.setName('project_id')
+                .setDescription('Optional project ID to filter')
+                .setRequired(false)
+        ),
     async execute(interaction) {
-        db.all(`
-            SELECT g.*, 
-            (SELECT COUNT(*) FROM scripts s WHERE s.product = g.product AND s.game_id = g.roblox_game_id) as script_count 
-            FROM games g
-            ORDER BY g.name ASC
-        `, async (err, games) => {
+        const projectId = interaction.options.getInteger('project_id');
+        const query = projectId 
+            ? `SELECT * FROM games WHERE project_id = ? ORDER BY id ASC`
+            : `SELECT * FROM games ORDER BY id ASC`;
+        const queryParams = projectId ? [projectId] : [];
+
+        db.all(query, queryParams, async (err, games) => {
             if (err) {
                 console.error(err);
                 return interaction.reply({ content: 'Database error', ephemeral: true });
             }
 
-            const working = games.filter(g => g.status === 'Working Script' || g.status === 'Working');
-            const needsUpdate = games.filter(g => g.status === 'Needs Update');
-            const dead = games.filter(g => g.status === 'Dead Script' || g.status === 'Dead');
-            const unknown = games.filter(g => g.status !== 'Working Script' && g.status !== 'Working' && g.status !== 'Needs Update' && g.status !== 'Dead Script' && g.status !== 'Dead');
-            
-            // Push unknown ones to working as a fallback
-            working.push(...unknown);
+            if (!games || games.length === 0) {
+                const emptyContainer = new ContainerBuilder()
+                    .setAccentColor(0x0a0a0a)
+                    .addTextDisplayComponents(
+                        (text) => text.setContent('# Game supported'),
+                        (text) => text.setContent('Belum ada game yang didaftarkan.')
+                    );
+                return interaction.reply({
+                    components: [emptyContainer],
+                    flags: MessageFlags.IsComponentsV2
+                });
+            }
 
-            const formatList = (list) => {
-                if (list.length === 0) return '_None_';
-                return list.map(g => `• ${g.name}${g.product === 'freemium' ? ' (Free)' : ''}`).join('\n');
-            };
+            const container = new ContainerBuilder()
+                .setAccentColor(0x0a0a0a); // Black accent border on left
 
-            const container = new ContainerBuilder();
-            container.addTextDisplayComponents(
-                (text) => text.setContent('# Zuperming List Game'),
-                (text) => text.setContent('This channel lists all the games available in the Zuperming Official\n🟢 Working Script\n🟠 Needs Update\n🔴 Dead Script'),
-                (text) => text.setContent(
-                    '🟢 **Working Script**\n' + formatList(working) + '\n\n' +
-                    '🟠 **Needs Update**\n' + formatList(needsUpdate) + '\n\n' +
-                    '🔴 **Dead Script**\n' + formatList(dead)
-                )
-            );
+            const playButtons = [];
 
-            const row = new ActionRowBuilder().addComponents(
-                new ButtonBuilder()
-                    .setCustomId('btn_add_game_modal')
-                    .setLabel('Add New Game')
-                    .setStyle(ButtonStyle.Primary),
-                new ButtonBuilder()
-                    .setCustomId('btn_upload_script_flow')
-                    .setLabel('Upload Script')
-                    .setStyle(ButtonStyle.Success)
-            );
+            games.forEach((game, idx) => {
+                const placeId = game.place_id || game.roblox_game_id;
+                const statusEmoji = (game.status && (game.status.includes('Dead') || game.status.includes('Patched'))) ? '🔴'
+                    : (game.status && (game.status.includes('Update') || game.status.includes('Maintenance'))) ? '🟠'
+                    : '🟢';
+
+                const section = new SectionBuilder()
+                    .addTextDisplayComponents(
+                        (t) => t.setContent('# Game supported'),
+                        (t) => t.setContent(
+                            `• **Game name :** **${game.name}**\n` +
+                            `• **Script version :** **${game.script_version || 'v0.0.0.1'}**\n` +
+                            `• **Status :** ${statusEmoji}`
+                        )
+                    );
+
+                const thumbUrl = game.thumbnail_url;
+                if (thumbUrl && isUsableHttpUrl(thumbUrl)) {
+                    section.setThumbnailAccessory((thumb) => thumb.setURL(thumbUrl).setDescription(game.name));
+                }
+
+                container.addSectionComponents(section);
+
+                if (idx < games.length - 1) {
+                    container.addSeparatorComponents(new SeparatorBuilder().setDivider(true));
+                }
+
+                if (playButtons.length < 5 && placeId) {
+                    playButtons.push(
+                        new ButtonBuilder()
+                            .setLabel(games.length === 1 ? 'Play on Roblox' : `Play ${game.name.slice(0, 18)}`)
+                            .setEmoji('🔗')
+                            .setStyle(ButtonStyle.Link)
+                            .setURL(`https://www.roblox.com/games/${placeId}`)
+                    );
+                }
+            });
+
+            if (playButtons.length > 0) {
+                container.addSeparatorComponents(new SeparatorBuilder().setDivider(true));
+                const actionRow = new ActionRowBuilder().addComponents(...playButtons);
+                container.addActionRowComponents(actionRow);
+            }
 
             await interaction.reply({ 
-                components: [container, row],
+                components: [container],
                 flags: MessageFlags.IsComponentsV2
             });
         });

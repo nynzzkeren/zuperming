@@ -68,7 +68,7 @@ local apiUrl = base .. "/api/execute?key=" .. ZUPER_KEY .. "&hwid=" .. hwid .. "
     .. "&unc_score=" .. tostring(execScore)
     .. "&unc_total=" .. tostring(execTotal)
 
-n("Detected GameId: " .. gameId)
+n("Detected PlaceId: " .. placeId)
 task.wait(0.4)
 n("Authenticating Key...")
 task.wait(0.8)

@@ -105,70 +105,217 @@ function maybeWarnExecutor(keyRow, req) {
     });
 }
 
-// We now use dynamic routes based on projectId instead of hardcoded products.
-router.get('/loader/:projectId', (req, res) => {
-    const projectId = req.params.projectId;
-    const luaScript = `
--- Zuperming Loader (Project ID: ${projectId})
-local HttpService = game:GetService("HttpService")
-local executor = identifyexecutor and identifyexecutor() or "Unknown Executor"
+function buildSecureLoaderScript(project, baseUrl) {
+    const isFree = project.is_free == 1;
+    return `-- mie ayam Secure Loader v4.0
+-- Project: ${project.name} (${project.uuid})
+repeat task.wait() until game:IsLoaded()
+repeat task.wait() until game.Players.LocalPlayer and game.Players.LocalPlayer.Character
 
-local function requestExecute()
-    local hwid = game:GetService("RbxAnalyticsService"):GetClientId()
-    local url = "${getBaseUrl()}/api/execute/${projectId}"
-    
-    local headers = {
-        ["Content-Type"] = "application/json",
-        ["User-Agent"] = "ZupermingLoader/1.0"
-    }
-    
-    local body = HttpService:JSONEncode({
-        key = script_key or (getgenv and getgenv().script_key) or _G.script_key or _G.key_script,
-        hwid = hwid,
-        executor = executor,
-        game_id = tostring(game.GameId),
-        place_id = tostring(game.PlaceId)
-    })
-    
-    local success, response = pcall(function()
-        return request({
-            Url = url,
-            Method = "POST",
-            Headers = headers,
-            Body = body
+local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
+local StarterGui = game:GetService("StarterGui")
+local LocalPlayer = Players.LocalPlayer
+
+local function notify(title, text, duration)
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = title or "mie ayam",
+            Text = text or "",
+            Duration = duration or 4
         })
     end)
-    
-    if success and response then
-        local decoded
-        local s2, e2 = pcall(function() decoded = HttpService:JSONDecode(response.Body) end)
-        if s2 and decoded then
-            if decoded.success and decoded.script then
-                loadstring(decoded.script)()
-            else
-                game.Players.LocalPlayer:Kick("Zuperming: " .. (decoded.message or "Unknown error"))
-            end
-        else
-            game.Players.LocalPlayer:Kick("Zuperming: Failed to decode response from server.")
-        end
-    else
-        game.Players.LocalPlayer:Kick("Zuperming: Server did not respond properly. Please contact support.")
-    end
 end
 
-requestExecute()
-    `;
-    res.type('text/plain');
-    res.send(luaScript);
-});
+-- Key extraction (_G / getgenv / script_key)
+local ZUPER_KEY = script_key or (getgenv and getgenv().script_key) or _G.script_key or _G.key
+${isFree ? `
+if not ZUPER_KEY or ZUPER_KEY == "" then
+    ZUPER_KEY = "KEYLESS_FREE"
+end
+` : `
+if not ZUPER_KEY or ZUPER_KEY == "" then
+    notify("Authentication Error", "Please set script_key before loading.", 5)
+    LocalPlayer:Kick("mie ayam: Please set script_key before executing.")
+    return
+end
+`}
 
-router.post('/execute/:projectId', express.json(), (req, res) => {
-    const projectId = req.params.projectId;
-    const { key, hwid, game_id: universeId, place_id: placeId, executor } = req.body;
-    const brand = "Zuperming Premium"; // Could be fetched from project settings
+local function detectExecutor()
+    local name = "Unknown"
+    pcall(function()
+        if identifyexecutor then name = tostring(identifyexecutor())
+        elseif getexecutorname then name = tostring(getexecutorname())
+        end
+    end)
+    return name
+end
 
-    if (!key || !hwid) {
-        return res.json({ success: false, message: "Missing Key or HWID" });
+local execName = detectExecutor()
+local hwid = ""
+pcall(function()
+    if gethwid then
+        hwid = tostring(gethwid())
+    elseif game:GetService("RbxAnalyticsService") then
+        hwid = tostring(game:GetService("RbxAnalyticsService"):GetClientId())
+    end
+end)
+if not hwid or hwid == "" then
+    hwid = tostring(LocalPlayer.UserId)
+end
+
+local placeId = tostring(game.PlaceId)
+local universeId = tostring(game.GameId)
+local baseUrl = "${baseUrl}"
+
+notify("mie ayam", "Connecting for Place ID: " .. placeId .. "...", 3)
+
+local requestFunc = request or http_request or (syn and syn.request) or (http and http.request)
+if not requestFunc then
+    local getUrl = baseUrl .. "/api/execute/${project.uuid}?key=" .. HttpService:UrlEncode(tostring(ZUPER_KEY))
+        .. "&hwid=" .. HttpService:UrlEncode(hwid)
+        .. "&place_id=" .. placeId
+        .. "&game_id=" .. universeId
+        .. "&executor=" .. HttpService:UrlEncode(execName)
+
+    local success, response = pcall(function()
+        return game:HttpGet(getUrl)
+    end)
+
+    if success and response then
+        local decoded
+        local s2, _ = pcall(function() decoded = HttpService:JSONDecode(response) end)
+        if s2 and decoded then
+            if decoded.success and decoded.script then
+                notify("mie ayam", "Key Validated! Loading Script...", 3)
+                local func, err = loadstring(decoded.script)
+                if func then
+                    local ok, runErr = pcall(func)
+                    if not ok then
+                        warn("[mie ayam Runtime Error] " .. tostring(runErr))
+                    end
+                else
+                    warn("[mie ayam Compile Error] " .. tostring(err))
+                    LocalPlayer:Kick("mie ayam: Failed to compile script.")
+                end
+            else
+                LocalPlayer:Kick("mie ayam: " .. (decoded.message or "Unauthorized."))
+            end
+        else
+            loadstring(response)()
+        end
+    else
+        LocalPlayer:Kick("mie ayam: Failed to connect to authentication server.")
+    end
+    return
+end
+
+local headers = {
+    ["Content-Type"] = "application/json",
+    ["User-Agent"] = "mieAyamLoader/4.0"
+}
+
+local body = HttpService:JSONEncode({
+    key = ZUPER_KEY,
+    hwid = hwid,
+    executor = execName,
+    place_id = placeId,
+    game_id = universeId
+})
+
+local success, response = pcall(function()
+    return requestFunc({
+        Url = baseUrl .. "/api/execute/${project.uuid}",
+        Method = "POST",
+        Headers = headers,
+        Body = body
+    })
+end)
+
+if success and response then
+    local decoded
+    local s2, _ = pcall(function() decoded = HttpService:JSONDecode(response.Body) end)
+    if s2 and decoded then
+        if decoded.success and decoded.script then
+            notify("mie ayam", "Key Validated! Loading Script...", 3)
+            local func, err = loadstring(decoded.script)
+            if func then
+                local ok, runErr = pcall(func)
+                if not ok then
+                    pcall(function()
+                        requestFunc({
+                            Url = baseUrl .. "/api/report-error",
+                            Method = "POST",
+                            Headers = { ["Content-Type"] = "application/json" },
+                            Body = HttpService:JSONEncode({
+                                error = tostring(runErr),
+                                executor = execName,
+                                hwid = hwid,
+                                place_id = placeId,
+                                game_id = universeId,
+                                project = "${project.uuid}"
+                            })
+                        })
+                    end)
+                    warn("[mie ayam Runtime Error] " .. tostring(runErr))
+                end
+            else
+                warn("[mie ayam Compile Error] " .. tostring(err))
+                LocalPlayer:Kick("mie ayam: Failed to compile script.")
+            end
+        else
+            LocalPlayer:Kick("mie ayam: " .. (decoded.message or "Execution failed."))
+        end
+    else
+        LocalPlayer:Kick("mie ayam: Invalid response from server.")
+    end
+else
+    LocalPlayer:Kick("mie ayam: Failed to connect to secure server.")
+end
+`;
+}
+
+function handleLoaderRequest(req, res) {
+    const rawParam = req.params.loaderFile || req.params.projectId || req.params[0] || '';
+    const uuidOrId = rawParam.replace(/\.lua$/i, '').trim();
+
+    db.get(`SELECT * FROM projects WHERE uuid = ? OR id = ?`, [uuidOrId, uuidOrId], (err, project) => {
+        if (err || !project) {
+            // Fallback check default projects
+            db.get(`SELECT * FROM projects ORDER BY id ASC LIMIT 1`, (err2, defaultProj) => {
+                if (!defaultProj) {
+                    res.type('text/plain');
+                    return res.send(`game.Players.LocalPlayer:Kick("mie ayam: Project not found.")`);
+                }
+                res.type('text/plain');
+                return res.send(buildSecureLoaderScript(defaultProj, getBaseUrl()));
+            });
+            return;
+        }
+
+        res.type('text/plain');
+        res.send(buildSecureLoaderScript(project, getBaseUrl()));
+    });
+}
+
+// DX-SR / Luarmor style loader endpoints
+router.get('/v4/loaders/:loaderFile', handleLoaderRequest);
+router.get('/scripts/v4/loaders/:loaderFile', handleLoaderRequest);
+router.get('/loader/:projectId', handleLoaderRequest);
+
+function handleExecute(req, res) {
+    const rawId = (req.params.identifier || req.params.projectId || '').replace(/\.lua$/i, '').trim();
+    const isPost = req.method === 'POST';
+    const data = isPost ? req.body : req.query;
+
+    const key = data.key || '';
+    const hwid = data.hwid || '';
+    const universeId = String(data.game_id || '');
+    const placeId = String(data.place_id || '');
+    const executor = data.executor || 'Unknown';
+
+    if (!rawId) {
+        return res.json({ success: false, message: "Missing project identifier" });
     }
 
     const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress;
@@ -177,61 +324,117 @@ router.post('/execute/:projectId', express.json(), (req, res) => {
         if (banned) return res.json({ success: false, message: "Access denied." });
         if (!universeId && !placeId) return res.json({ success: false, message: "Missing game_id or place_id" });
 
-        db.get(
-            `SELECT * FROM keys WHERE key_string = ? AND status = 'used' AND project_id = ?`,
-            [key, projectId],
-            (err, keyRow) => {
-                if (err || !keyRow) {
-                    if (!checkRateLimit(ip)) {
-                        return res.json({ success: false, message: "Too many failed attempts. IP banned." });
-                    }
-                    return res.json({ success: false, message: "Invalid Key" });
-                }
+        // Resolve project
+        db.get(`SELECT * FROM projects WHERE uuid = ? OR id = ?`, [rawId, rawId], (err, project) => {
+            if (err || !project) {
+                return res.json({ success: false, message: "Project not found" });
+            }
 
-                if (isKeyExpired(keyRow)) {
-                    return res.json({ success: false, message: "Key expired." });
-                }
+            const projectId = project.id;
+            const isFree = project.is_free == 1;
 
-                clearRateLimit(ip);
-                req.query = { executor }; // shim for maybeWarnExecutor
-                maybeWarnExecutor(keyRow, req);
+            const checkGameAndDeliverScript = (keyRow) => {
+                // Universal / Single loader verification determined by Place ID or Game ID
+                db.get(
+                    `SELECT * FROM games WHERE (project_id = ? OR project_id IS NULL) AND (place_id = ? OR roblox_game_id = ? OR place_id = ? OR roblox_game_id = ?)`,
+                    [projectId, placeId, placeId, universeId, universeId],
+                    (err, gameRow) => {
+                        if (err || !gameRow) {
+                            return res.json({ 
+                                success: false, 
+                                message: `Game not supported (Place ID: ${placeId}). Please check supported games in Discord.` 
+                            });
+                        }
 
-                db.get(`SELECT * FROM users WHERE discord_id = ?`, [keyRow.discord_id], (err, userRow) => {
-                    if (err || !userRow) return res.json({ success: false, message: "User not found in database" });
-                    if (userRow.is_blacklisted) return res.json({ success: false, message: "You are blacklisted." });
-
-                    const afterAuth = () => {
-                        db.get(`SELECT name, roblox_game_id FROM games WHERE project_id = ? AND (roblox_game_id = ? OR roblox_game_id = ?)`, [projectId, String(universeId), String(placeId)], (err, gameRow) => {
-                            if (err || !gameRow) return res.json({ success: false, message: `Game not supported` });
-
-                            db.get(`SELECT obfuscated_script FROM scripts WHERE project_id = ? AND game_id = ? ORDER BY id DESC LIMIT 1`, [projectId, gameRow.roblox_game_id], (err, scriptRow) => {
-                                if (err || !scriptRow || !scriptRow.obfuscated_script) return res.json({ success: false, message: `No script uploaded yet.` });
+                        // Fetch latest script for this game
+                        const gameTarget = gameRow.place_id || gameRow.roblox_game_id;
+                        db.get(
+                            `SELECT obfuscated_script FROM scripts WHERE (project_id = ? OR project_id IS NULL) AND (game_id = ? OR game_id = ?) ORDER BY id DESC LIMIT 1`,
+                            [projectId, gameTarget, gameRow.roblox_game_id],
+                            (err, scriptRow) => {
+                                if (err || !scriptRow || !scriptRow.obfuscated_script) {
+                                    return res.json({ success: false, message: `No script uploaded yet for ${gameRow.name}.` });
+                                }
 
                                 db.run(`UPDATE stats SET total_executions = total_executions + 1 WHERE id = 1`);
-                                if (keyRow.discord_id) {
+                                if (keyRow && keyRow.discord_id) {
                                     db.run(`UPDATE users SET total_executions = COALESCE(total_executions, 0) + 1, last_ip = ? WHERE discord_id = ?`, [ip, keyRow.discord_id], () => {});
                                 }
-                                
-                                res.json({ success: true, script: scriptRow.obfuscated_script });
-                            });
-                        });
-                    };
 
-                    if (!userRow.hwid) {
-                        db.run(`UPDATE users SET hwid = ? WHERE discord_id = ?`, [hwid, keyRow.discord_id], (err) => {
-                            if (err) return res.json({ success: false, message: "Failed to bind HWID" });
-                            afterAuth();
-                        });
-                    } else if (userRow.hwid !== hwid) {
-                        return res.json({ success: false, message: "HWID Mismatch. Please reset your HWID in Discord." });
-                    } else {
-                        afterAuth();
+                                res.json({ success: true, script: scriptRow.obfuscated_script });
+                            }
+                        );
                     }
-                });
+                );
+            };
+
+            // If Free Project: allow keyless or auto-validate
+            if (isFree) {
+                if (key && key !== 'KEYLESS_FREE') {
+                    // Check if key exists
+                    db.get(`SELECT * FROM keys WHERE key_string = ? AND project_id = ?`, [key, projectId], (err, kRow) => {
+                        checkGameAndDeliverScript(kRow || null);
+                    });
+                } else {
+                    checkGameAndDeliverScript(null);
+                }
+                return;
             }
-        );
+
+            // Premium Project: strictly validate key and HWID
+            if (!key || !hwid) {
+                return res.json({ success: false, message: "Missing Key or HWID" });
+            }
+
+            db.get(
+                `SELECT * FROM keys WHERE key_string = ? AND (project_id = ? OR project_id IS NULL)`,
+                [key, projectId],
+                (err, keyRow) => {
+                    if (err || !keyRow) {
+                        if (!checkRateLimit(ip)) {
+                            return res.json({ success: false, message: "Too many failed attempts. IP banned." });
+                        }
+                        return res.json({ success: false, message: "Invalid license key." });
+                    }
+
+                    if (isKeyExpired(keyRow)) {
+                        return res.json({ success: false, message: "Key expired." });
+                    }
+
+                    clearRateLimit(ip);
+                    req.query = { executor };
+                    maybeWarnExecutor(keyRow, req);
+
+                    if (!keyRow.discord_id) {
+                        // Key not bound to discord user yet, bind directly or deliver
+                        return checkGameAndDeliverScript(keyRow);
+                    }
+
+                    db.get(`SELECT * FROM users WHERE discord_id = ?`, [keyRow.discord_id], (err, userRow) => {
+                        if (userRow && userRow.is_blacklisted) {
+                            return res.json({ success: false, message: "You are blacklisted." });
+                        }
+
+                        if (!userRow || !userRow.hwid) {
+                            db.run(`INSERT INTO users (discord_id, hwid) VALUES (?, ?) ON CONFLICT(discord_id) DO UPDATE SET hwid = ?`, [keyRow.discord_id, hwid, hwid], (err) => {
+                                checkGameAndDeliverScript(keyRow);
+                            });
+                        } else if (userRow.hwid !== hwid) {
+                            return res.json({ success: false, message: "HWID Mismatch. Please reset your HWID using the Discord bot." });
+                        } else {
+                            checkGameAndDeliverScript(keyRow);
+                        }
+                    });
+                }
+            );
+        });
     });
-});
+}
+
+router.post('/execute/:identifier', express.json(), handleExecute);
+router.get('/execute/:identifier', handleExecute);
+router.post('/v4/execute/:identifier', express.json(), handleExecute);
+router.get('/v4/execute/:identifier', handleExecute);
 
 function handlePoll(req, res) {
     const { project_id, game_id, hwid, discord_id, last_id } = req.query;
