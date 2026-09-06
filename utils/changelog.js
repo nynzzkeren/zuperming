@@ -3,6 +3,7 @@ const {
     SeparatorBuilder,
     ButtonBuilder,
     ButtonStyle,
+    TextDisplayBuilder,
     MessageFlags
 } = require('discord.js');
 
@@ -32,26 +33,30 @@ function buildChangelogPayload({
     improved,
     removed,
     pingEveryone,
+    roleMention,         // <-- new: mention string e.g. "@everyone" or "<@&123>"
     reportUrl,
     suggestionUrl,
     includeThumbnail = true
 }) {
     const typeLabel = Array.isArray(types) ? types.filter(Boolean).join(' & ') : String(types || 'Premium');
-    const addedLines = linesFromTextarea(added);
+    const addedLines    = linesFromTextarea(added);
     const improvedLines = linesFromTextarea(improved);
-    const removedLines = linesFromTextarea(removed);
+    const removedLines  = linesFromTextarea(removed);
 
     const logoUrl = process.env.BRAND_LOGO_URL || '';
     const canThumb = includeThumbnail && isUsableHttpUrl(logoUrl);
 
-    // ── Container 1: Game info (game name, version, status) ──
-    const infoContainer = new ContainerBuilder();
+    // ── Container 1: Game info — white accent ──
+    const infoContainer = new ContainerBuilder().setAccentColor(0xFFFFFF);
+
+    // Role ping line at the top of info container
+    const pingLine = roleMention ? `${roleMention}\n` : '';
 
     if (canThumb) {
         infoContainer.addSectionComponents((section) =>
             section
                 .addTextDisplayComponents(
-                    (text) => text.setContent(`# ${game} Script Update Logs`),
+                    (text) => text.setContent(`${pingLine}# ${game} Script Update Logs`),
                     (text) => text.setContent(`• **Game:** ${game}`),
                     (text) => text.setContent(`• **Version:** ${version}`),
                     (text) => text.setContent(`• **Status:** ${status || 'Undetected'}`)
@@ -62,36 +67,20 @@ function buildChangelogPayload({
         );
     } else {
         infoContainer.addTextDisplayComponents(
-            (text) => text.setContent(`# ${game} Script Update Logs`),
+            (text) => text.setContent(`${pingLine}# ${game} Script Update Logs`),
             (text) => text.setContent(`• **Game:** ${game}`),
             (text) => text.setContent(`• **Version:** ${version}`),
             (text) => text.setContent(`• **Status:** ${status || 'Undetected'}`)
         );
     }
 
-    // ── Container 2: Changelog (Fixed / Added / Removed) ──
-    const changelogContainer = new ContainerBuilder();
+    // ── Container 2: Changelog — white accent ──
+    const changelogContainer = new ContainerBuilder().setAccentColor(0xFFFFFF);
 
     const sections = [];
-
-    if (addedLines.length) {
-        sections.push({
-            header: '[ + ] Added',
-            lines: addedLines
-        });
-    }
-    if (improvedLines.length) {
-        sections.push({
-            header: '[ ~ ] Fixed',
-            lines: improvedLines
-        });
-    }
-    if (removedLines.length) {
-        sections.push({
-            header: '[ - ] Removed',
-            lines: removedLines
-        });
-    }
+    if (addedLines.length)    sections.push({ header: '[ + ] Added',   lines: addedLines });
+    if (improvedLines.length) sections.push({ header: '[ ~ ] Fixed',   lines: improvedLines });
+    if (removedLines.length)  sections.push({ header: '[ - ] Removed', lines: removedLines });
 
     if (sections.length === 0) {
         changelogContainer.addTextDisplayComponents(
@@ -104,7 +93,6 @@ function buildChangelogPayload({
                 (text) => text.setContent(`**${section.header}**`),
                 (text) => text.setContent(section.lines.map((l) => `• ${l}`).join('\n'))
             );
-            // Add separator between sections, not after last one
             if (i < sections.length - 1) {
                 changelogContainer.addSeparatorComponents(
                     new SeparatorBuilder().setDivider(true)
@@ -113,9 +101,10 @@ function buildChangelogPayload({
         });
     }
 
-    const report = reportUrl || process.env.REPORT_BUG_URL || '';
-    const suggestion = suggestionUrl || process.env.SUGGESTION_URL || '';
-    const buttons = [];
+    // ── Container 3: Buttons (only if URLs are set) — white accent ──
+    const report     = reportUrl     || process.env.REPORT_BUG_URL  || '';
+    const suggestion = suggestionUrl || process.env.SUGGESTION_URL  || '';
+    const buttons    = [];
 
     if (isUsableHttpUrl(report)) {
         buttons.push(
@@ -134,28 +123,35 @@ function buildChangelogPayload({
         );
     }
 
-    // ── Container 3: Buttons (only if URLs are set) ──
     const containers = [infoContainer, changelogContainer];
 
     if (buttons.length) {
-        const buttonContainer = new ContainerBuilder();
-        buttonContainer.addActionRowComponents((row) => row.addComponents(...buttons));
+        const buttonContainer = new ContainerBuilder()
+            .setAccentColor(0xFFFFFF)
+            .addActionRowComponents((row) => row.addComponents(...buttons));
         containers.push(buttonContainer);
     }
 
-    const payload = {
+    // Allowed mentions: ping the role inside the message
+    let allowedMentions = { parse: [] };
+    if (pingEveryone) {
+        allowedMentions = { parse: ['everyone'] };
+    } else if (roleMention) {
+        allowedMentions = { parse: ['roles'] };
+    }
+
+    return {
         components: containers,
         flags: MessageFlags.IsComponentsV2,
-        allowedMentions: pingEveryone ? { parse: ['everyone'] } : { parse: [] }
+        allowedMentions
     };
-
-    return payload;
 }
 
 function buildExecutorWarnDm({ executorName, score, total }) {
     const executors = require('../config/executors');
 
     const container = new ContainerBuilder()
+        .setAccentColor(0xFFFFFF)
         .addTextDisplayComponents(
             (text) => text.setContent('# Change Your Executor'),
             (text) => text.setContent(

@@ -62,7 +62,7 @@ module.exports = {
             const logoUrl = project.brand_logo_url || process.env.BRAND_LOGO_URL || '';
 
             // ── Container 1: Info / Description ──
-            const infoContainer = new ContainerBuilder();
+            const infoContainer = new ContainerBuilder().setAccentColor(0xFFFFFF);
 
             if (isUsableHttpUrl(logoUrl)) {
                 infoContainer.addSectionComponents((section) =>
@@ -83,7 +83,7 @@ module.exports = {
             }
 
             // ── Container 2: Action Buttons ──
-            const buttonContainer = new ContainerBuilder();
+            const buttonContainer = new ContainerBuilder().setAccentColor(0xFFFFFF);
 
             const actionRows = [];
             let currentRow = new ActionRowBuilder();
@@ -165,33 +165,45 @@ module.exports = {
 
         function buildAndSendDefault(project) {
             const isFree = project.is_free == 1 || type === 'free';
+
+            // Try to get key prefix from env or fallback
+            const keyPrefix = process.env.KEY_PREFIX || project.key_prefix || 'ZUPER';
+
             if (isFree) {
-                const title = `${project.name} • Secure Environment`;
+                const title = `${project.name} • Free Access`;
                 const description =
-                    `**ACCESS TERMINAL**\n` +
-                    `Authenticate your hardware and get your script instantly. No key required — completely free. Select an operation below to proceed.\n\n` +
-                    `**${project.name.toUpperCase()}**`;
+                    `**KEYLESS ZONE**\n` +
+                    `No purchase required. Your hardware is auto-registered on first execution.\n\n` +
+                    `- Platform: **Roblox**\n` +
+                    `- Auth method: **HWID Lock**\n` +
+                    `- Key required: **None**\n\n` +
+                    `Press **Get Script** to receive your loader instantly.`;
 
                 const buttons = [
                     { label: 'Get Script', customId: `btn_script_${project.id}`, style: ButtonStyle.Success },
-                    { label: 'Game List', customId: `btn_games_${project.id}`, style: ButtonStyle.Secondary }
+                    { label: 'Game List',  customId: `btn_games_${project.id}`,  style: ButtonStyle.Secondary }
                 ];
                 renderPanel(project, title, description, buttons);
             } else {
-                const title = `${project.name} • Secure Environment`;
+                const premPrefix = `${keyPrefix}-PREM`;
+                const title = `${project.name} • Premium Access`;
                 const description =
-                    `**ACCESS TERMINAL**\n` +
-                    `Authenticate your hardware and manage your active licenses. Select an operation below to proceed.\n\n` +
-                    `**${project.name.toUpperCase()}**`;
+                    `**LICENSED TERMINAL**\n` +
+                    `This panel is restricted to verified license holders only.\n\n` +
+                    `- Platform: **Roblox**\n` +
+                    `- Auth method: **Key + HWID Lock**\n` +
+                    `- Key format: \`${premPrefix}-XXXXX-XXX\`\n\n` +
+                    `Use **Redeem Key** to activate your license, then **Get Script** to load.`;
 
                 const buttons = [
-                    { label: 'Get Script', customId: `btn_script_${project.id}`, style: ButtonStyle.Success },
-                    { label: 'Reset HWID', customId: `btn_hwid_${project.id}`, style: ButtonStyle.Secondary },
-                    { label: 'Get Stats', customId: `btn_stats_${project.id}`, style: ButtonStyle.Secondary },
-                    { label: 'Redeem Key', customId: `btn_redeem_${project.id}`, style: ButtonStyle.Primary }
+                    { label: 'Get Script',  customId: `btn_script_${project.id}`, style: ButtonStyle.Success },
+                    { label: 'Reset HWID',  customId: `btn_hwid_${project.id}`,   style: ButtonStyle.Secondary },
+                    { label: 'Get Stats',   customId: `btn_stats_${project.id}`,  style: ButtonStyle.Secondary },
+                    { label: 'Redeem Key',  customId: `btn_redeem_${project.id}`, style: ButtonStyle.Primary }
                 ];
                 renderPanel(project, title, description, buttons);
             }
         }
     },
 };
+

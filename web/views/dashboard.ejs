@@ -1062,7 +1062,7 @@
                             </div>
                         </div>
                         <div class="proj-card-bd">
-                            <form onsubmit="handleUpload(event,'<%- g.roblox_game_id %>','<%- g.product %>'); return false;">
+                            <form onsubmit="handleUpload(event,'<%- g.roblox_game_id %>','<%- g.product %>'); return false;" id="upload-form-<%- g.roblox_game_id %>">
                                 <input type="hidden" name="game_id" value="<%- g.roblox_game_id %>">
                                 <input type="hidden" name="product" value="<%- g.product %>">
                                 <label class="file-area" for="file-<%- g.roblox_game_id %>">
@@ -1081,16 +1081,13 @@
                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                                         Upload Script
                                     </button>
-                                    <form action="/admin/delete-game" method="POST" style="margin:0;" onsubmit="return confirm('Delete \'<%- g.name %>\'? All scripts will be removed.');">
-                                        <input type="hidden" name="game_id" value="<%- g.roblox_game_id %>">
-                                        <input type="hidden" name="product" value="<%- g.product %>">
-                                        <button type="submit" class="btn btn-red">
-                                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
-                                        </button>
-                                    </form>
+                                    <button type="button" class="btn btn-red" onclick="deleteGame('<%- g.roblox_game_id %>','<%- g.product %>','<%- g.name.replace(/'/g, `\\'`) %>')">
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+                                    </button>
                                 </div>
                             </form>
                         </div>
+
                     </div>
                     <% }); %>
                 </div>
@@ -1380,6 +1377,22 @@
         } catch {
             toast('Network error. Try again.', false);
             btn.disabled = false; btn.innerHTML = orig;
+        }
+    }
+
+    /* ─── DELETE GAME ─── */
+    async function deleteGame(gameId, product, gameName) {
+        if (!confirm(`Delete "${gameName}"? This will remove all scripts permanently.`)) return;
+        try {
+            const fd = new FormData();
+            fd.append('game_id', gameId);
+            fd.append('product', product);
+            const res = await fetch('/admin/delete-game', { method: 'POST', body: fd });
+            // Server redirects on success — just reload the page
+            toast('Game "' + gameName + '" deleted.');
+            setTimeout(() => window.location.reload(), 800);
+        } catch (e) {
+            toast('Delete failed: ' + e.message, false);
         }
     }
 

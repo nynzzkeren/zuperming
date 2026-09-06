@@ -35,6 +35,95 @@ function clearRateLimit(ip) {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─── FORBIDDEN PAGE (shown to browsers accessing loader URLs) ────────────────
+function buildForbiddenPage(loaderSnippet) {
+    const escaped = loaderSnippet
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forbidden — Loader Protected</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;display:flex;align-items:center;justify-content:center;
+background:radial-gradient(ellipse at 60% 0%,rgba(120,20,60,.35) 0%,transparent 60%),
+radial-gradient(ellipse at 10% 80%,rgba(40,10,80,.4) 0%,transparent 55%),
+#0d0d14;
+font-family:'Inter',sans-serif;color:#e8eaf6;padding:24px;}
+.card{width:100%;max-width:560px;background:rgba(16,17,30,.82);
+border:1px solid rgba(255,255,255,.08);border-radius:20px;
+backdrop-filter:blur(18px);overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,.6);}
+.hero{display:flex;flex-direction:column;align-items:center;padding:48px 40px 36px;text-align:center;border-bottom:1px solid rgba(255,255,255,.07);}
+.icon-wrap{width:80px;height:80px;border-radius:20px;background:rgba(220,50,50,.15);
+border:1px solid rgba(220,50,50,.25);display:flex;align-items:center;justify-content:center;margin-bottom:20px;}
+.icon-wrap svg{width:40px;height:40px;stroke:#ef4444;stroke-width:1.8;fill:none;}
+h1{font-size:26px;font-weight:700;letter-spacing:-.01em;margin-bottom:8px;}
+.sub{color:rgba(200,205,230,.55);font-size:14.5px;}
+.body{padding:28px 32px 32px;display:flex;flex-direction:column;gap:16px;}
+.section-label{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:rgba(200,205,230,.35);margin-bottom:4px;}
+.code-wrap{position:relative;background:rgba(10,12,22,.8);border:1px solid rgba(255,255,255,.08);border-radius:12px;overflow:hidden;}
+.copy-btn{position:absolute;top:10px;right:10px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);
+color:#c9d1f5;border-radius:8px;padding:5px 11px;font-size:12px;font-family:'Inter',sans-serif;
+font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .18s;}
+.copy-btn:hover{background:rgba(255,255,255,.17);}
+.copy-btn svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;}
+pre{padding:18px 16px 16px;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.65;overflow-x:auto;color:#a5b4fc;white-space:pre-wrap;word-break:break-all;}
+.keyword{color:#f472b6}
+.string{color:#34d399}
+.notice{display:flex;align-items:center;gap:10px;padding:13px 16px;background:rgba(245,158,11,.06);
+border:1px solid rgba(245,158,11,.2);border-radius:10px;font-size:13px;color:rgba(245,158,11,.85);}
+.notice svg{flex-shrink:0;width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="hero">
+    <div class="icon-wrap">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+    </div>
+    <h1>Forbidden</h1>
+    <p class="sub">You are not allowed to view these files.</p>
+  </div>
+  <div class="body">
+    <div>
+      <div class="section-label">Loader Script</div>
+      <div class="code-wrap">
+        <button class="copy-btn" onclick="copySnippet()">
+          <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          <span id="copy-lbl">Copy</span>
+        </button>
+        <pre id="snippet"><span class="keyword">script_key</span> = <span class="string">"YOUR_KEY_HERE"</span>;  <span style="color:rgba(165,180,252,.4);font-style:italic">-- A key might be required, if not, delete this line</span>
+<span class="keyword">loadstring</span>(<span class="keyword">game</span>:<span class="keyword">HttpGet</span>(<span class="string">"${escaped.split('\n')[1]?.match(/loadstring\(game:HttpGet\("([^"]+)"\)\)/)?.[1] || ''}"</span>))()</pre>
+      </div>
+    </div>
+    <div class="notice">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      Contents can not be displayed on browser
+    </div>
+  </div>
+</div>
+<script>
+const RAW = ${JSON.stringify(loaderSnippet)};
+function copySnippet(){
+  navigator.clipboard.writeText(RAW).then(()=>{
+    const lbl=document.getElementById('copy-lbl');
+    lbl.textContent='Copied!';
+    setTimeout(()=>lbl.textContent='Copy',2000);
+  });
+}
+</script>
+</body>
+</html>`;
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 
 function serveLoader(req, res, productId) {
     const ua = req.headers['user-agent'] || '';
@@ -275,9 +364,31 @@ end
 `;
 }
 
+function isBrowserRequest(req) {
+    const ua = req.headers['user-agent'] || '';
+    if (!ua) return false; // no UA = likely executor
+    const isRoblox = ua.toLowerCase().includes('roblox');
+    if (isRoblox) return false;
+    // Any standard browser UA
+    return (
+        ua.includes('Mozilla/') ||
+        ua.includes('Chrome/') ||
+        ua.includes('Safari/') ||
+        ua.includes('Edge/') ||
+        ua.includes('Opera/') ||
+        ua.includes('Firefox/')
+    );
+}
+
 function handleLoaderRequest(req, res) {
     const rawParam = req.params.loaderFile || req.params.projectId || req.params[0] || '';
     const uuidOrId = rawParam.replace(/\.lua$/i, '').trim();
+
+    // ── Block browsers: show Forbidden page ──
+    if (isBrowserRequest(req)) {
+        const loaderSnippet = `script_key = "YOUR_KEY_HERE";\nloadstring(game:HttpGet("${getBaseUrl()}/scripts/v4/loaders/${uuidOrId}.lua"))()`;
+        return res.status(403).send(buildForbiddenPage(loaderSnippet));
+    }
 
     db.get(`SELECT * FROM projects WHERE uuid = ? OR id = ?`, [uuidOrId, uuidOrId], (err, project) => {
         if (err || !project) {
@@ -302,6 +413,7 @@ function handleLoaderRequest(req, res) {
 router.get('/v4/loaders/:loaderFile', handleLoaderRequest);
 router.get('/scripts/v4/loaders/:loaderFile', handleLoaderRequest);
 router.get('/loader/:projectId', handleLoaderRequest);
+
 
 function handleExecute(req, res) {
     const rawId = (req.params.identifier || req.params.projectId || '').replace(/\.lua$/i, '').trim();

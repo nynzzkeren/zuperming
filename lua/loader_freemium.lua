@@ -1,25 +1,57 @@
--- Zuperming Freemium Secure Loader
+-- Zuperming Freemium Secure Loader v5.0
+-- ╔══════════════════════════════════════════════════════════╗
+-- ║  ANTI-TAMPER VM LAYER — DO NOT DECOMPILE OR REDISTRIBUTE ║
+-- ╚══════════════════════════════════════════════════════════╝
+repeat task.wait() until game:IsLoaded()
 repeat task.wait() until game.Players.LocalPlayer and game.Players.LocalPlayer.Character
-if not game:IsLoaded() then game.Loaded:Wait() end
 
-local g = game
-local s = g:GetService("StarterGui")
-local n = function(t,d) pcall(function() s:SetCore("SendNotification",{Title="Zuperming Freemium",Text=t,Duration=d or 3}) end) end
+-- ── [VM] Reference isolation: all service refs through cloneref where possible ──
+local _game          = typeof(cloneref) == "function" and cloneref(game) or game
+local _Players       = _game:GetService("Players")
+local _HttpService   = _game:GetService("HttpService")
+local _StarterGui    = _game:GetService("StarterGui")
+local _RbxAnalytics  = _game:GetService("RbxAnalyticsService")
+local _LocalPlayer   = _Players.LocalPlayer
 
-local ZUPER_KEY = script_key or (getgenv and getgenv().script_key) or _G.script_key
-if not ZUPER_KEY then
-    n("Key not found!", 4)
-    g.Players.LocalPlayer:Kick("Zuperming: Please set script_key before loading.")
+local function _notify(title, text, dur)
+    pcall(function()
+        _StarterGui:SetCore("SendNotification", {
+            Title = title,
+            Text = text or "",
+            Duration = dur or 4
+        })
+    end)
+end
+
+-- ── [VM] Integrity check: detect hooking of loadstring / game:HttpGet ──
+local function _integrityCheck()
+    local ok1 = pcall(function()
+        local fn, _ = loadstring("return 1")
+        assert(type(fn) == "function", "hook")
+        assert(fn() == 1, "hook")
+    end)
+    local ok2 = typeof(_game.HttpGet) == "function"
+    return ok1 and ok2
+end
+
+if not _integrityCheck() then
+    _LocalPlayer:Kick("[Zuperming Free] Integrity check failed. Do not tamper with executor functions.")
     return
 end
 
-local function detectExecutor()
+-- ── [VM] Freemium: key is optional — KEYLESS_FREE used if not set ──
+local _env = {}
+_env["\x73\x63\x72\x69\x70\x74\x5f\x6b\x65\x79"] = (function()
+    return script_key or (getgenv and getgenv().script_key) or _G.script_key or _G.key
+end)()
+local ZUPER_KEY = _env["\x73\x63\x72\x69\x70\x74\x5f\x6b\x65\x79"] or "KEYLESS_FREE"
+
+-- ── [VM] Executor fingerprint ──
+local function _detectExecutor()
     local name = "Unknown"
     pcall(function()
-        if identifyexecutor then
-            name = tostring(identifyexecutor())
-        elseif getexecutorname then
-            name = tostring(getexecutorname())
+        if identifyexecutor then name = tostring(identifyexecutor())
+        elseif getexecutorname then name = tostring(getexecutorname())
         end
     end)
 
@@ -28,7 +60,7 @@ local function detectExecutor()
         function() return crypt ~= nil and (crypt.encrypt ~= nil or crypt.hash ~= nil) end,
         function() return writefile ~= nil and readfile ~= nil and isfile ~= nil end,
         function() return getgenv ~= nil end,
-        function() return gethui ~= nil or (get_hidden_gui ~= nil) end,
+        function() return gethui ~= nil or get_hidden_gui ~= nil end,
         function() return cloneref ~= nil end,
         function() return hookmetamethod ~= nil end,
         function() return Drawing ~= nil and Drawing.new ~= nil end,
@@ -50,70 +82,108 @@ local function detectExecutor()
     return name, quality, passed, total
 end
 
-local execName, execQuality, execScore, execTotal = detectExecutor()
-n("Executor: " .. tostring(execName) .. " (" .. execQuality .. ")")
+local execName, execQuality, execScore, execTotal = _detectExecutor()
 
 if execQuality == "bad" or execQuality == "medium" then
-    n("WARNING: Change your executor! UNC/sUNC weak.", 6)
-    warn("[Zuperming Freemium] Executor UNC/sUNC quality is " .. execQuality .. ". Please change your executor.")
+    _notify("Zuperming Free", "WARNING: Change your executor! UNC/sUNC weak.", 6)
+    warn("[Zuperming Free] Executor quality: " .. execQuality .. " — please use a better executor.")
 end
 
-local hwid = game:GetService("RbxAnalyticsService"):GetClientId()
-local placeId = tostring(g.PlaceId)
-local universeId = tostring(g.GameId)
-local base = "{{BASE_URL}}"
-local apiUrl = base .. "/api/free/execute?key=" .. ZUPER_KEY .. "&hwid=" .. hwid .. "&game_id=" .. universeId .. "&place_id=" .. placeId
-    .. "&executor=" .. g:GetService("HttpService"):UrlEncode(tostring(execName))
-    .. "&unc_quality=" .. execQuality
-    .. "&unc_score=" .. tostring(execScore)
-    .. "&unc_total=" .. tostring(execTotal)
-
-n("Detected GameId: " .. universeId)
-task.wait(0.4)
-n("Authenticating Key...")
-task.wait(0.8)
-
-local success, result = pcall(function()
-    return game:HttpGet(apiUrl)
+-- ── [VM] HWID collection ──
+local hwid = ""
+pcall(function()
+    if gethwid then
+        hwid = tostring(gethwid())
+    else
+        hwid = tostring(_RbxAnalytics:GetClientId())
+    end
 end)
 
-if success then
-    if string.find(result, "Zuperming Freemium:") and string.find(result, "Kick") then
-        n("Authentication Failed!", 4)
-        loadstring(result)()
-        return
-    end
+local placeId    = tostring(_game.PlaceId)
+local universeId = tostring(_game.GameId)
 
-    local func, err = loadstring(result)
-    if func then
-        n("Key Validated! Loading Script...")
-        local ok, runtimeErr = pcall(func)
-        if not ok then
-            pcall(function()
-                local HttpService = game:GetService("HttpService")
-                local req = request or http_request or (syn and syn.request) or (http and http.request)
-                if req then
-                    req({
-                        Url = base .. "/api/report-error",
-                        Method = "POST",
-                        Headers = { ["Content-Type"] = "application/json" },
-                        Body = HttpService:JSONEncode({
-                            error = tostring(runtimeErr),
-                            executor = tostring(execName),
-                            hwid = tostring(hwid),
-                            game_id = tostring(universeId),
-                            product = "freemium"
-                        })
-                    })
-                end
-            end)
-            warn("Zuperming Freemium Runtime Error: " .. tostring(runtimeErr))
+-- ── [VM] URL construction — split to resist static analysis ──
+local _base = "{{BASE_URL}}"
+local _p1   = "/api/free/execute?key="
+local _p2   = "&hwid="
+local _p3   = "&game_id="
+local _p4   = "&place_id="
+local _p5   = "&executor="
+local _p6   = "&unc_quality="
+local _p7   = "&unc_score="
+local _p8   = "&unc_total="
+
+local apiUrl = _base .. _p1 .. ZUPER_KEY
+    .. _p2 .. hwid
+    .. _p3 .. universeId
+    .. _p4 .. placeId
+    .. _p5 .. _HttpService:UrlEncode(tostring(execName))
+    .. _p6 .. execQuality
+    .. _p7 .. tostring(execScore)
+    .. _p8 .. tostring(execTotal)
+
+-- Clear key from memory after URL build
+ZUPER_KEY = nil
+_env = nil
+
+_notify("Zuperming Free", "Authenticating...")
+task.wait(0.5)
+
+local ok, result = pcall(function()
+    return _game:HttpGet(apiUrl)
+end)
+
+apiUrl = nil
+
+if not ok then
+    _notify("Zuperming Free", "Server connection failed.", 4)
+    _LocalPlayer:Kick("[Zuperming Free] Failed to reach secure server.")
+    return
+end
+
+if type(result) ~= "string" or #result < 8 then
+    _notify("Zuperming Free", "Invalid server response.", 4)
+    _LocalPlayer:Kick("[Zuperming Free] Server returned invalid response.")
+    return
+end
+
+if result:find("Zuperming") and result:find("Kick") then
+    _notify("Zuperming Free", "Authentication failed.", 4)
+    pcall(loadstring(result))
+    return
+end
+
+_notify("Zuperming Free", "Authorized! Loading...")
+
+local fn, compileErr = loadstring(result)
+result = nil
+
+if not fn then
+    _notify("Zuperming Free", "Script load error.", 4)
+    warn("[Zuperming Free] Compile error: " .. tostring(compileErr))
+    return
+end
+
+local runOk, runtimeErr = pcall(fn)
+fn = nil
+
+if not runOk then
+    pcall(function()
+        local req = request or http_request or (syn and syn.request) or (http and http.request)
+        if req then
+            req({
+                Url = _base .. "/api/report-error",
+                Method = "POST",
+                Headers = { ["Content-Type"] = "application/json" },
+                Body = _HttpService:JSONEncode({
+                    error = tostring(runtimeErr):sub(1, 500),
+                    executor = tostring(execName),
+                    hwid = tostring(hwid),
+                    game_id = tostring(universeId),
+                    product = "freemium"
+                })
+            })
         end
-    else
-        n("Failed to load protected script.", 4)
-        warn("Zuperming Freemium: " .. tostring(err))
-    end
-else
-    n("Server connection failed!", 4)
-    g.Players.LocalPlayer:Kick("Zuperming Freemium: Failed to connect to secure server.")
+    end)
+    warn("[Zuperming Free] Runtime error: " .. tostring(runtimeErr))
 end
