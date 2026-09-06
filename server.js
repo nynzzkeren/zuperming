@@ -45,10 +45,11 @@ app.use(session({
 }));
 
 // Setup Routes
-const adminRoutes = require('./web/routes/admin');
-const apiRoutes = require('./web/routes/api');
+const adminRoutes    = require('./web/routes/admin');
+const apiRoutes      = require('./web/routes/api');
 const freemiumRoutes = require('./web/routes/freemium');
-const authRoutes = require('./web/routes/auth');
+const authRoutes     = require('./web/routes/auth');
+const paymentRoutes  = require('./web/routes/payment');
 
 app.use('/admin', adminRoutes);
 app.use('/api', apiRoutes);
@@ -56,6 +57,8 @@ app.use('/scripts', apiRoutes);
 app.use('/loader', apiRoutes);
 app.use('/api/freemium', freemiumRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/payment', paymentRoutes); // Tripay QRIS payment callbacks
+
 
 // Freemium get-key page
 app.get('/get-key', (req, res) => {

@@ -166,8 +166,10 @@ module.exports = {
         function buildAndSendDefault(project) {
             const isFree = project.is_free == 1 || type === 'free';
 
-            // Try to get key prefix from env or fallback
-            const keyPrefix = process.env.KEY_PREFIX || project.key_prefix || 'ZUPER';
+            // Get prefix from products config or env
+            const { PRODUCTS } = require('../../config/products');
+            const productConfig = isFree ? PRODUCTS.freemium : PRODUCTS.premium;
+            const keyPrefix = productConfig.keyPrefix || process.env.KEY_PREFIX || 'MIE';
 
             if (isFree) {
                 const title = `${project.name} • Free Access`;
@@ -185,7 +187,7 @@ module.exports = {
                 ];
                 renderPanel(project, title, description, buttons);
             } else {
-                const premPrefix = `${keyPrefix}-PREM`;
+                const premPrefix = `${keyPrefix}_PREM`;
                 const title = `${project.name} • Premium Access`;
                 const description =
                     `**LICENSED TERMINAL**\n` +

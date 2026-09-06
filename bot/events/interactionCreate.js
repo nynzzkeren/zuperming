@@ -76,6 +76,65 @@ module.exports = {
             }
             // ──────────────────────────────────────────────────────────────────
 
+            // ─── TICKET SYSTEM BUTTONS ─────────────────────────────────────────
+            const ticketManager = require('../utils/ticketManager');
+
+            if (customId === 'btn_buy_ticket_monthly' || customId === 'btn_buy_ticket_lifetime') {
+                const planKey = customId === 'btn_buy_ticket_monthly' ? 'monthly' : 'lifetime';
+                try {
+                    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+                    const res = await ticketManager.createTicketChannel(interaction.guild, interaction.user, planKey);
+                    if (res.exists) {
+                        return interaction.editReply({
+                            content: `⚠️ You already have an open ticket in <#${res.channel.id}>! Please proceed there.`
+                        });
+                    }
+                    return interaction.editReply({
+                        content: `✅ Your purchase ticket has been created: <#${res.channel.id}>`
+                    });
+                } catch (err) {
+                    console.error('[Ticket] Error creating ticket channel:', err);
+                    return interaction.editReply({
+                        content: `Failed to create ticket: ${err.message}`
+                    });
+                }
+            }
+
+            if (customId === 'btn_ticket_open_qris') {
+                return ticketManager.handleOpenQris(interaction);
+            }
+
+            if (customId === 'btn_ticket_done_payment') {
+                return ticketManager.handleDonePayment(interaction);
+            }
+
+            if (customId === 'btn_ticket_check') {
+                return ticketManager.handleCheckPayment(interaction);
+            }
+
+            if (customId.startsWith('btn_ticket_approve_')) {
+                const ticketId = parseInt(customId.replace('btn_ticket_approve_', ''));
+                return ticketManager.handleApprovePayment(interaction, ticketId);
+            }
+
+            if (customId.startsWith('btn_ticket_reject_')) {
+                const ticketId = parseInt(customId.replace('btn_ticket_reject_', ''));
+                return ticketManager.handleRejectPayment(interaction, ticketId);
+            }
+
+            if (customId === 'btn_ticket_close') {
+                return ticketManager.handleCloseTicket(interaction);
+            }
+
+            if (customId === 'btn_ticket_confirm_close') {
+                return ticketManager.handleConfirmClose(interaction);
+            }
+
+            if (customId === 'btn_ticket_cancel_close') {
+                return interaction.reply({ content: 'Ticket close cancelled.', flags: MessageFlags.Ephemeral });
+            }
+            // ──────────────────────────────────────────────────────────────────
+
             // Parse custom ID for dynamic panels (Format: btn_action_projectId)
             if (!customId.startsWith('btn_')) return;
             const parts = customId.split('_');

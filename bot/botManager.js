@@ -1,4 +1,5 @@
 const { Client, GatewayIntentBits, Partials, Collection } = require('discord.js');
+const { joinVoiceChannel, getVoiceConnection } = require('@discordjs/voice');
 const fs = require('fs');
 const path = require('path');
 const db = require('../database');
@@ -52,6 +53,7 @@ async function startBot(token, developerId) {
             GatewayIntentBits.GuildMessages,
             GatewayIntentBits.MessageContent,
             GatewayIntentBits.GuildPresences,
+            GatewayIntentBits.GuildVoiceStates,
             GatewayIntentBits.DirectMessages
         ],
         partials: [Partials.Message, Partials.Channel, Partials.Reaction]
@@ -69,7 +71,44 @@ async function startBot(token, developerId) {
         
         // Update database with bot_id
         db.run(`UPDATE developers SET bot_id = ? WHERE id = ?`, [client.user.id, developerId]);
-        
+
+        // ── 24/7 Voice Channel ──
+        const VC_CHANNEL_ID = process.env.VC_24_7_CHANNEL_ID || '1545960548804333720';
+
+        async function join24_7VC() {
+            try {
+                const channel = await client.channels.fetch(VC_CHANNEL_ID).catch(() => null);
+                if (!channel || !channel.isVoiceBased()) return;
+
+                const existingConn = getVoiceConnection(channel.guildId);
+                if (existingConn) return; // already connected
+
+                joinVoiceChannel({
+                    channelId: channel.id,
+                    guildId: channel.guildId,
+                    adapterCreator: channel.guild.voiceAdapterCreator,
+                    selfDeaf: true,
+                    selfMute: true
+                });
+                console.log(`[BotManager] Joined 24/7 VC: ${channel.name} (${VC_CHANNEL_ID})`);
+            } catch (e) {
+                console.error('[BotManager] Failed to join 24/7 VC:', e.message);
+            }
+        }
+
+        // Join on ready
+        client.once('ready', () => join24_7VC());
+
+        // Rejoin if bot gets disconnected from the VC
+        client.on('voiceStateUpdate', (oldState, newState) => {
+            if (oldState.member?.id !== client.user.id) return;
+            // Bot was disconnected (had a channel, now doesn't)
+            if (oldState.channelId === VC_CHANNEL_ID && !newState.channelId) {
+                console.log('[BotManager] Disconnected from 24/7 VC — rejoining in 3s...');
+                setTimeout(() => join24_7VC(), 3000);
+            }
+        });
+
         return client;
     } catch (err) {
         console.error(`[BotManager] Failed to start bot for developer ${developerId}:`, err.message);

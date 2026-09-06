@@ -2,7 +2,7 @@ const PRODUCTS = {
     premium: {
         id: 'premium',
         name: 'Zuperming Premium',
-        keyPrefix: 'ZUPER',
+        keyPrefix: 'MIE',
         brand: 'Zuperming',
         loaderFile: 'loader_template.lua',
         loaderRoute: '/loader',

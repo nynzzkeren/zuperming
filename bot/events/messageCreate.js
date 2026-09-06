@@ -33,6 +33,27 @@ module.exports = {
             }
         }
 
+        // Check if message is in an active ticket channel and has attachments (payment proof)
+        if (message.attachments.size > 0 && message.channel.type === 0 /* GuildText */) {
+            db.get(
+                `SELECT * FROM tickets WHERE channel_id = ? AND status != 'closed'`,
+                [message.channel.id],
+                (err, ticket) => {
+                    if (err || !ticket) return;
+                    const firstAttachment = message.attachments.first();
+                    if (firstAttachment && (!firstAttachment.contentType || firstAttachment.contentType.startsWith('image/'))) {
+                        db.run(
+                            `UPDATE tickets SET proof_url = ?, status = 'proof_pending' WHERE id = ?`,
+                            [firstAttachment.url, ticket.id]
+                        );
+                        message.reply({
+                            content: `📥 **Receipt recorded!** Staff has been notified and can verify your transaction using the **Check Payment** button above.`
+                        }).catch(() => {});
+                    }
+                }
+            );
+        }
+
         // Check if this channel is the configured auto-bypass channel
         db.get(`SELECT value FROM settings WHERE key = 'autobypass_channel'`, async (err, row) => {
             if (err || !row) return;

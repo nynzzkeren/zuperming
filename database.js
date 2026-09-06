@@ -197,6 +197,35 @@ const db = new sqlite3.Database(dbPath, (err) => {
             db.run(`ALTER TABLE games ADD COLUMN thumbnail_url TEXT`, alterIgnore);
             db.run(`UPDATE games SET place_id = roblox_game_id WHERE place_id IS NULL OR place_id = ''`, alterIgnore);
 
+            // Payment orders table (Tripay / QRIS payment tracking)
+            db.run(`CREATE TABLE IF NOT EXISTS payment_orders (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                order_id TEXT UNIQUE NOT NULL,
+                discord_id TEXT NOT NULL,
+                plan TEXT NOT NULL,
+                amount INTEGER NOT NULL,
+                status TEXT DEFAULT 'pending',
+                key_string TEXT,
+                tripay_ref TEXT,
+                paid_at DATETIME,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )`);
+
+            // Purchase Tickets table
+            db.run(`CREATE TABLE IF NOT EXISTS tickets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                channel_id TEXT UNIQUE NOT NULL,
+                discord_id TEXT NOT NULL,
+                plan TEXT NOT NULL,
+                status TEXT DEFAULT 'open',
+                key_string TEXT,
+                proof_url TEXT,
+                closed_at DATETIME,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )`, alterIgnore);
+
+            db.run(`ALTER TABLE keys ADD COLUMN product TEXT DEFAULT 'premium'`, alterIgnore);
+
             // Ensure default developer and projects exist
             db.run(`INSERT OR IGNORE INTO developers (id, discord_id, username, plan_tier, status) VALUES (1, 'owner_root', 'Owner', 'highest', 'active')`, alterIgnore);
             db.run(`UPDATE developers SET plan_tier = 'highest' WHERE plan_tier = 'none' OR plan_tier IS NULL`, alterIgnore);
