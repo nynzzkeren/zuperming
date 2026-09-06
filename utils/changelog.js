@@ -1,5 +1,6 @@
 const {
     ContainerBuilder,
+    SeparatorBuilder,
     ButtonBuilder,
     ButtonStyle,
     MessageFlags
@@ -40,51 +41,77 @@ function buildChangelogPayload({
     const improvedLines = linesFromTextarea(improved);
     const removedLines = linesFromTextarea(removed);
 
-    let changelogBody = '';
-    if (addedLines.length) {
-        changelogBody += `**[+] Added**\n${addedLines.map((l) => `• ${l}`).join('\n')}\n\n`;
-    }
-    if (improvedLines.length) {
-        changelogBody += `**[!] Improved**\n${improvedLines.map((l) => `• ${l}`).join('\n')}\n\n`;
-    }
-    if (removedLines.length) {
-        changelogBody += `**[-] Removed**\n${removedLines.map((l) => `• ${l}`).join('\n')}\n\n`;
-    }
-    changelogBody = changelogBody.trim() || '_No changelog details provided._';
-
     const logoUrl = process.env.BRAND_LOGO_URL || '';
     const canThumb = includeThumbnail && isUsableHttpUrl(logoUrl);
 
-    const container = new ContainerBuilder();
+    // ── Container 1: Game info (game name, version, status) ──
+    const infoContainer = new ContainerBuilder();
 
     if (canThumb) {
-        container.addSectionComponents((section) =>
+        infoContainer.addSectionComponents((section) =>
             section
                 .addTextDisplayComponents(
-                    (text) => text.setContent(`**Game:** ${game}`),
-                    (text) => text.setContent(`**Type:** ${typeLabel}`),
-                    (text) => text.setContent(`**Version:** ${version}`),
-                    (text) => text.setContent(`**Status:** ${status || 'Undetected'}`)
+                    (text) => text.setContent(`# ${game} Script Update Logs`),
+                    (text) => text.setContent(`• **Game:** ${game}`),
+                    (text) => text.setContent(`• **Version:** ${version}`),
+                    (text) => text.setContent(`• **Status:** ${status || 'Undetected'}`)
                 )
                 .setThumbnailAccessory((thumb) =>
-                    thumb.setURL(logoUrl).setDescription('Zuperming')
+                    thumb.setURL(logoUrl).setDescription(game)
                 )
         );
     } else {
-        container.addTextDisplayComponents(
-            (text) => text.setContent(`**Game:** ${game}`),
-            (text) => text.setContent(`**Type:** ${typeLabel}`),
-            (text) => text.setContent(`**Version:** ${version}`),
-            (text) => text.setContent(`**Status:** ${status || 'Undetected'}`)
+        infoContainer.addTextDisplayComponents(
+            (text) => text.setContent(`# ${game} Script Update Logs`),
+            (text) => text.setContent(`• **Game:** ${game}`),
+            (text) => text.setContent(`• **Version:** ${version}`),
+            (text) => text.setContent(`• **Status:** ${status || 'Undetected'}`)
         );
     }
 
-    container
-        .addSeparatorComponents((sep) => sep.setDivider(true))
-        .addTextDisplayComponents(
-            (text) => text.setContent('# Change Log'),
-            (text) => text.setContent(changelogBody)
+    // ── Container 2: Changelog (Fixed / Added / Removed) ──
+    const changelogContainer = new ContainerBuilder();
+
+    const sections = [];
+
+    if (addedLines.length) {
+        sections.push({
+            header: '[ + ] Added',
+            lines: addedLines
+        });
+    }
+    if (improvedLines.length) {
+        sections.push({
+            header: '[ ~ ] Fixed',
+            lines: improvedLines
+        });
+    }
+    if (removedLines.length) {
+        sections.push({
+            header: '[ - ] Removed',
+            lines: removedLines
+        });
+    }
+
+    if (sections.length === 0) {
+        changelogContainer.addTextDisplayComponents(
+            (text) => text.setContent('**[ ~ ] Fixed**'),
+            (text) => text.setContent('• No changelog details provided.')
         );
+    } else {
+        sections.forEach((section, i) => {
+            changelogContainer.addTextDisplayComponents(
+                (text) => text.setContent(`**${section.header}**`),
+                (text) => text.setContent(section.lines.map((l) => `• ${l}`).join('\n'))
+            );
+            // Add separator between sections, not after last one
+            if (i < sections.length - 1) {
+                changelogContainer.addSeparatorComponents(
+                    new SeparatorBuilder().setDivider(true)
+                );
+            }
+        });
+    }
 
     const report = reportUrl || process.env.REPORT_BUG_URL || '';
     const suggestion = suggestionUrl || process.env.SUGGESTION_URL || '';
@@ -93,28 +120,31 @@ function buildChangelogPayload({
     if (isUsableHttpUrl(report)) {
         buttons.push(
             new ButtonBuilder()
-                .setLabel('Report Bug')
+                .setLabel('Report Bugs')
                 .setStyle(ButtonStyle.Link)
                 .setURL(report)
-                .setEmoji('🐞')
         );
     }
     if (isUsableHttpUrl(suggestion)) {
         buttons.push(
             new ButtonBuilder()
-                .setLabel('Suggestion')
+                .setLabel('Suggest a Feature')
                 .setStyle(ButtonStyle.Link)
                 .setURL(suggestion)
-                .setEmoji('✉️')
         );
     }
 
+    // ── Container 3: Buttons (only if URLs are set) ──
+    const containers = [infoContainer, changelogContainer];
+
     if (buttons.length) {
-        container.addActionRowComponents((row) => row.addComponents(...buttons));
+        const buttonContainer = new ContainerBuilder();
+        buttonContainer.addActionRowComponents((row) => row.addComponents(...buttons));
+        containers.push(buttonContainer);
     }
 
     const payload = {
-        components: [container],
+        components: containers,
         flags: MessageFlags.IsComponentsV2,
         allowedMentions: pingEveryone ? { parse: ['everyone'] } : { parse: [] }
     };

@@ -587,7 +587,9 @@ router.post('/delete-game', requireAuth, (req, res) => {
 
 router.post('/upload-script', requireAuth, upload.single('script_file'), async (req, res) => {
     const { product, game_id, auto_obfuscate } = req.body;
-    if (!product || !game_id || !req.file) return res.redirect('/admin');
+    if (!product || !game_id || !req.file) {
+        return res.json({ success: false, error: 'Missing product, game_id, or file.' });
+    }
     
     const content = req.file.buffer.toString('utf8');
     let finalContent = content;
@@ -614,12 +616,12 @@ router.post('/upload-script', requireAuth, upload.single('script_file'), async (
     db.run(
         `INSERT INTO scripts (product, game_id, raw_script, obfuscated_script, updated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`,
         [product, game_id, `web_upload:${req.file.originalname}`, finalContent],
-        () => {
-            if (req.xhr || req.headers.accept.indexOf('json') > -1 || req.headers['content-type']?.includes('multipart/form-data')) {
-                res.json({ success: true, obfuscated: finalContent, game_id: game_id });
-            } else {
-                res.redirect('/admin#projects');
+        (err) => {
+            if (err) {
+                return res.json({ success: false, error: 'Failed to save script: ' + err.message });
             }
+            // Always return JSON — JS handleUpload() in dashboard always expects JSON
+            res.json({ success: true, obfuscated: finalContent, game_id: game_id });
         }
     );
 });
@@ -779,44 +781,7 @@ router.post('/delete-game', requireAuth, (req, res) => {
     });
 });
 
-router.post('/upload-script', requireAuth, upload.single('script_file'), async (req, res) => {
-    const { product, game_id, auto_obfuscate } = req.body;
-    if (!product || !game_id || !req.file) return res.redirect('/admin');
-    
-    const content = req.file.buffer.toString('utf8');
-    let finalContent = content;
-
-    if (auto_obfuscate) {
-        try {
-            const obfRes = await axios.post('https://wearedevs.net/api/obfuscate', {
-                script: content
-            }, {
-                headers: { 'Content-Type': 'application/json' }
-            });
-            
-            if (obfRes.data && obfRes.data.obfuscated) {
-                finalContent = obfRes.data.obfuscated;
-            } else {
-                throw new Error('Invalid response from obfuscator');
-            }
-        } catch (e) {
-            console.error('Failed to obfuscate script:', e.message);
-            // Fallback to original content if obfuscation fails
-        }
-    }
-
-    db.run(
-        `INSERT INTO scripts (product, game_id, raw_script, obfuscated_script, updated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-        [product, game_id, `web_upload:${req.file.originalname}`, finalContent],
-        () => {
-            if (req.xhr || req.headers.accept.indexOf('json') > -1 || req.headers['content-type']?.includes('multipart/form-data')) {
-                res.json({ success: true, obfuscated: finalContent, game_id: game_id });
-            } else {
-                res.redirect('/admin#projects');
-            }
-        }
-    );
-});
+// Note: /upload-script is defined above (line ~588) — removed duplicate
 
 router.post('/dev-panel/script', requireAuth, (req, res) => {
     const discordId = req.session.discordId;

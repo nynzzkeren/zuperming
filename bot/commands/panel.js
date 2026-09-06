@@ -32,7 +32,7 @@ module.exports = {
                     { name: 'Premium (Key Whitelist)', value: 'premium' }
                 )
         )
-        .addIntegerOption(option => 
+        .addIntegerOption(option =>
             option.setName('panel_id')
                 .setDescription('Optional specific panel ID')
                 .setRequired(false)
@@ -53,16 +53,22 @@ module.exports = {
         const projectId = interaction.options.getInteger('project_id');
         const type = interaction.options.getString('type') || 'premium';
 
+        /**
+         * Renders 2 containers:
+         * - Container 1: Brand info / description (with optional thumbnail)
+         * - Container 2: Buttons row
+         */
         const renderPanel = async (project, title, description, buttons) => {
             const logoUrl = project.brand_logo_url || process.env.BRAND_LOGO_URL || '';
-            const container = new ContainerBuilder()
-                .setAccentColor(0x0a0a0a); // Black accent border on the left edge
+
+            // ── Container 1: Info / Description ──
+            const infoContainer = new ContainerBuilder();
 
             if (isUsableHttpUrl(logoUrl)) {
-                container.addSectionComponents((section) =>
+                infoContainer.addSectionComponents((section) =>
                     section
                         .addTextDisplayComponents(
-                            (text) => text.setContent('# ' + title),
+                            (text) => text.setContent(`**${title}**`),
                             (text) => text.setContent(description)
                         )
                         .setThumbnailAccessory((thumbnail) =>
@@ -70,15 +76,15 @@ module.exports = {
                         )
                 );
             } else {
-                container.addTextDisplayComponents(
-                    (text) => text.setContent('# ' + title),
+                infoContainer.addTextDisplayComponents(
+                    (text) => text.setContent(`**${title}**`),
                     (text) => text.setContent(description)
                 );
             }
 
-            container.addSeparatorComponents(new SeparatorBuilder().setDivider(true));
+            // ── Container 2: Action Buttons ──
+            const buttonContainer = new ContainerBuilder();
 
-            // Place ActionRow buttons inside the ContainerBuilder
             const actionRows = [];
             let currentRow = new ActionRowBuilder();
 
@@ -95,10 +101,7 @@ module.exports = {
                     button.setStyle(btn.style || ButtonStyle.Secondary)
                           .setCustomId(btn.customId || `${btn.custom_id}_${project.id}`);
                 }
-
-                if (btn.emoji) {
-                    button.setEmoji(btn.emoji);
-                }
+                // No emoji — intentional per design
 
                 currentRow.addComponents(button);
             });
@@ -108,15 +111,15 @@ module.exports = {
             }
 
             actionRows.forEach(row => {
-                container.addActionRowComponents(row);
+                buttonContainer.addActionRowComponents(row);
             });
 
             try {
                 await interaction.channel.send({
-                    components: [container],
+                    components: [infoContainer, buttonContainer],
                     flags: MessageFlags.IsComponentsV2
                 });
-                return interaction.editReply({ content: `✅ Panel "${title}" successfully spawned!` });
+                return interaction.editReply({ content: `Panel "${title}" successfully spawned!` });
             } catch (e) {
                 console.error('Failed to spawn Components V2 panel:', e);
                 return interaction.editReply({ content: 'Failed to spawn panel: ' + e.message });
@@ -141,8 +144,8 @@ module.exports = {
         }
 
         // Auto spawn based on project or type
-        const query = projectId 
-            ? `SELECT * FROM projects WHERE id = ?` 
+        const query = projectId
+            ? `SELECT * FROM projects WHERE id = ?`
             : (type === 'free' ? `SELECT * FROM projects WHERE is_free = 1 ORDER BY id ASC LIMIT 1` : `SELECT * FROM projects WHERE is_free = 0 ORDER BY id ASC LIMIT 1`);
         const queryParams = projectId ? [projectId] : [];
 
@@ -163,28 +166,29 @@ module.exports = {
         function buildAndSendDefault(project) {
             const isFree = project.is_free == 1 || type === 'free';
             if (isFree) {
-                const title = 'mie ayam | Free Panel';
-                const description = `Selamat datang di **${project.name}**!\n\n` +
-                    `• **Akses:** Bebas / Keyless (Tanpa Shortener)\n` +
-                    `• **Status:** Aktif & Siap Pakai\n\n` +
-                    `Klik tombol **Get Script** di bawah untuk langsung mendapatkan script dan key otomatis tanpa ribet!`;
-                
+                const title = `${project.name} • Secure Environment`;
+                const description =
+                    `**ACCESS TERMINAL**\n` +
+                    `Authenticate your hardware and get your script instantly. No key required — completely free. Select an operation below to proceed.\n\n` +
+                    `**${project.name.toUpperCase()}**`;
+
                 const buttons = [
-                    { label: 'Get Script', customId: `btn_script_${project.id}`, style: ButtonStyle.Success, emoji: '📜' },
-                    { label: 'Game supported', customId: `btn_games_${project.id}`, style: ButtonStyle.Secondary, emoji: '🎮' }
+                    { label: 'Get Script', customId: `btn_script_${project.id}`, style: ButtonStyle.Success },
+                    { label: 'Game List', customId: `btn_games_${project.id}`, style: ButtonStyle.Secondary }
                 ];
                 renderPanel(project, title, description, buttons);
             } else {
-                const title = 'mie ayam | Premium Panel';
-                const description = `Selamat datang di **${project.name}**!\n\n` +
-                    `Gunakan tombol di bawah untuk redeem key, ambil script terproteksi, reset HWID, dan klaim role buyer.`;
+                const title = `${project.name} • Secure Environment`;
+                const description =
+                    `**ACCESS TERMINAL**\n` +
+                    `Authenticate your hardware and manage your active licenses. Select an operation below to proceed.\n\n` +
+                    `**${project.name.toUpperCase()}**`;
 
                 const buttons = [
-                    { label: 'Redeem Key', customId: `btn_redeem_${project.id}`, style: ButtonStyle.Success, emoji: '🔑' },
-                    { label: 'Get Script', customId: `btn_script_${project.id}`, style: ButtonStyle.Primary, emoji: '📜' },
-                    { label: 'Reset HWID', customId: `btn_hwid_${project.id}`, style: ButtonStyle.Secondary, emoji: '🔄' },
-                    { label: 'Claim Role', customId: `btn_role_${project.id}`, style: ButtonStyle.Secondary, emoji: '⭐' },
-                    { label: 'Game supported', customId: `btn_games_${project.id}`, style: ButtonStyle.Secondary, emoji: '🎮' }
+                    { label: 'Get Script', customId: `btn_script_${project.id}`, style: ButtonStyle.Success },
+                    { label: 'Reset HWID', customId: `btn_hwid_${project.id}`, style: ButtonStyle.Secondary },
+                    { label: 'Get Stats', customId: `btn_stats_${project.id}`, style: ButtonStyle.Secondary },
+                    { label: 'Redeem Key', customId: `btn_redeem_${project.id}`, style: ButtonStyle.Primary }
                 ];
                 renderPanel(project, title, description, buttons);
             }
