@@ -12,7 +12,11 @@ module.exports = {
     name: Events.MessageCreate,
     async execute(message, client) {
         // Ignore bots
-        if (message.author.bot) return;
+        if (message.author.bot || !message.guild) return;
+
+        // ── Leveling / Chat XP System ──
+        const { handleMessageXp } = require('../utils/levelManager');
+        handleMessageXp(message).catch(console.error);
 
         // Check for custom bot commands (if this bot is a custom bot)
         if (client.developerId && client.developerId !== 'admin') {

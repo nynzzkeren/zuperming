@@ -224,6 +224,15 @@ const db = new sqlite3.Database(dbPath, (err) => {
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )`, alterIgnore);
 
+            // User Levels / XP table
+            db.run(`CREATE TABLE IF NOT EXISTS user_levels (
+                discord_id TEXT PRIMARY KEY,
+                xp INTEGER DEFAULT 0,
+                level INTEGER DEFAULT 0,
+                total_messages INTEGER DEFAULT 0,
+                last_message_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )`, alterIgnore);
+
             db.run(`ALTER TABLE keys ADD COLUMN product TEXT DEFAULT 'premium'`, alterIgnore);
 
             // Auto-migrate legacy key prefixes to MIE_PREM
