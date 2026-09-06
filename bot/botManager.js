@@ -1,5 +1,12 @@
 const { Client, GatewayIntentBits, Partials, Collection } = require('discord.js');
-const { joinVoiceChannel, getVoiceConnection } = require('@discordjs/voice');
+let joinVoiceChannel, getVoiceConnection;
+try {
+    const voice = require('@discordjs/voice');
+    joinVoiceChannel = voice.joinVoiceChannel;
+    getVoiceConnection = voice.getVoiceConnection;
+} catch (e) {
+    console.warn('[BotManager] @discordjs/voice is not installed. Run "npm install" to enable 24/7 VC.');
+}
 const fs = require('fs');
 const path = require('path');
 const db = require('../database');
@@ -77,6 +84,7 @@ async function startBot(token, developerId) {
 
         async function join24_7VC() {
             try {
+                if (!joinVoiceChannel) return;
                 const channel = await client.channels.fetch(VC_CHANNEL_ID).catch(() => null);
                 if (!channel || !channel.isVoiceBased()) return;
 
