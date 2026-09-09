@@ -60,6 +60,18 @@ module.exports = {
                     await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
                 }
             }
+        }
+
+        if (interaction.isAutocomplete()) {
+            const command = client.commands.get(interaction.commandName);
+            if (!command) return;
+            try {
+                if (command.autocomplete) {
+                    await command.autocomplete(interaction);
+                }
+            } catch (error) {
+                console.error('Autocomplete error:', error);
+            }
             return;
         }
 

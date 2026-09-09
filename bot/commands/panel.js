@@ -39,9 +39,21 @@ module.exports = {
         )
         .addIntegerOption(option =>
             option.setName('project_id')
-                .setDescription('Optional specific project ID')
+                .setDescription('Select the project from the database')
                 .setRequired(false)
+                .setAutocomplete(true)
         ),
+    async autocomplete(interaction) {
+        const focusedValue = interaction.options.getFocused();
+        db.all(`SELECT id, display_name, name FROM projects WHERE display_name LIKE ? OR name LIKE ? LIMIT 25`, [`%${focusedValue}%`, `%${focusedValue}%`], (err, projects) => {
+            if (err || !projects) return interaction.respond([]).catch(() => {});
+            const choices = projects.map(p => ({
+                name: String(p.display_name || p.name).substring(0, 100),
+                value: p.id
+            }));
+            interaction.respond(choices).catch(() => {});
+        });
+    },
     async execute(interaction) {
         if (!interaction.member.permissions.has('Administrator')) {
             return interaction.reply({ content: 'Admin only.', ephemeral: true });
