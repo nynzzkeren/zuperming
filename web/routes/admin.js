@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const db = require('../../database');
@@ -976,11 +976,11 @@ router.get('/api/discord-stats', requireAuth, async (req, res) => {
 
 // ─── PROJECT v2: CREATE ───────────────────────────────────────────────────────
 router.post('/project/create', requireAuth, upload.single('logo_file'), (req, res) => {
-    const { name, description, logo_url } = req.body;
+    const { name, description, logo_url, is_free } = req.body;
     if (!name) return res.redirect('/admin?error=Project+name+required#projects');
 
     const discordId = req.session.discordId || 'owner_root';
-    const uuid = require('crypto').randomBytes(8).toString('hex');
+    const uuid = require('crypto').randomUUID();
 
     let logoUrl = logo_url || null;
     if (req.file) {
@@ -991,9 +991,10 @@ router.post('/project/create', requireAuth, upload.single('logo_file'), (req, re
 
     db.get(`SELECT id FROM developers WHERE discord_id = ?`, [discordId], (err, dev) => {
         const devId = dev?.id || 1;
+        const isFreeVal = is_free === '1' ? 1 : 0;
         db.run(
-            `INSERT INTO projects (developer_id, name, display_name, uuid, description, logo_url, is_free) VALUES (?,?,?,?,?,?,0)`,
-            [devId, name, name, uuid, description || null, logoUrl],
+            `INSERT INTO projects (developer_id, name, display_name, uuid, description, logo_url, is_free) VALUES (?,?,?,?,?,?,?)`,
+            [devId, name, name, uuid, description || null, logoUrl, isFreeVal],
             function(err) {
                 if (err) return res.redirect('/admin?error=Failed+to+create+project#projects');
                 res.redirect('/admin?msg=Project+created#projects');
