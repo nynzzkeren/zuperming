@@ -239,6 +239,50 @@ const db = new sqlite3.Database(dbPath, (err) => {
             db.run(`UPDATE keys SET key_string = REPLACE(key_string, 'ZUPER-', 'MIE_PREM-') WHERE key_string LIKE 'ZUPER-%'`, alterIgnore);
             db.run(`UPDATE keys SET key_string = REPLACE(key_string, 'MIE-', 'MIE_PREM-') WHERE key_string LIKE 'MIE-%' AND key_string NOT LIKE 'MIE_PREM-%' AND key_string NOT LIKE 'MIE_FREE-%' AND key_string NOT LIKE 'MIE_LTM-%'`, alterIgnore);
 
+            // ─── Geo-Tracking: execution logs ────────────────────────────────
+            db.run(`CREATE TABLE IF NOT EXISTS execution_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id INTEGER,
+                key_string TEXT,
+                discord_id TEXT,
+                ip TEXT,
+                country TEXT,
+                country_code TEXT,
+                region TEXT,
+                city TEXT,
+                executor TEXT,
+                hwid TEXT,
+                place_id TEXT,
+                game_id TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )`, alterIgnore);
+
+            // ─── Project Files (file management v2) ──────────────────────────
+            db.run(`CREATE TABLE IF NOT EXISTS project_files (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id INTEGER NOT NULL,
+                display_name TEXT NOT NULL,
+                logo_url TEXT,
+                file_content TEXT NOT NULL,
+                file_type TEXT DEFAULT 'lua',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
+            )`, alterIgnore);
+
+            // ─── Referral System ─────────────────────────────────────────────
+            db.run(`CREATE TABLE IF NOT EXISTS referrals (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                referrer_discord_id TEXT NOT NULL,
+                referee_discord_id TEXT,
+                key_string TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )`, alterIgnore);
+
+            // ─── Project v2 columns ───────────────────────────────────────────
+            db.run(`ALTER TABLE projects ADD COLUMN logo_url TEXT`, alterIgnore);
+            db.run(`ALTER TABLE projects ADD COLUMN display_name TEXT`, alterIgnore);
+
             // Ensure default developer and projects exist
             db.run(`INSERT OR IGNORE INTO developers (id, discord_id, username, plan_tier, status) VALUES (1, 'owner_root', 'Owner', 'highest', 'active')`, alterIgnore);
             db.run(`UPDATE developers SET plan_tier = 'highest' WHERE plan_tier = 'none' OR plan_tier IS NULL`, alterIgnore);

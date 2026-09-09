@@ -1,11 +1,53 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
+const http = require('http');
 const router = express.Router();
 const db = require('../../database');
 const { getProduct, getBaseUrl } = require('../../config/products');
 const { isKeyExpired, computeExpiresAt } = require('../../utils/keys');
 const { buildExecutorWarnDm } = require('../../utils/changelog');
+
+// ─── LOADER ANTI-TAMPER (HMAC-SHA256) ──────────────────────────────────────────────
+const LOADER_SECRET = process.env.LOADER_SECRET || 'zuperming_loader_secret_change_me';
+
+function generateLoaderSignature(projectUUID) {
+    const ts = Math.floor(Date.now() / 1000);
+    const sig = crypto.createHmac('sha256', LOADER_SECRET)
+        .update(projectUUID + ':' + ts)
+        .digest('hex');
+    return { ts, sig };
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ─── GEO-TRACKING ───────────────────────────────────────────────────────────────
+function lookupIpGeo(ip) {
+    return new Promise((resolve) => {
+        if (!ip || ip === '::1' || ip === '127.0.0.1' || ip.startsWith('192.168.') || ip.startsWith('10.')) {
+            return resolve({ country: 'Local', country_code: 'LO', region: 'Local', city: 'Local' });
+        }
+        const cleanIp = ip.replace(/^::ffff:/, '');
+        const reqUrl = 'http://ip-api.com/json/' + cleanIp + '?fields=status,country,countryCode,regionName,city';
+        const r = http.get(reqUrl, (resp) => {
+            let data = '';
+            resp.on('data', d => { data += d; });
+            resp.on('end', () => {
+                try {
+                    const j = JSON.parse(data);
+                    if (j.status === 'success') {
+                        resolve({ country: j.country, country_code: j.countryCode, region: j.regionName, city: j.city });
+                    } else {
+                        resolve({ country: 'Unknown', country_code: '??', region: 'Unknown', city: 'Unknown' });
+                    }
+                } catch (_) { resolve({ country: 'Unknown', country_code: '??', region: 'Unknown', city: 'Unknown' }); }
+            });
+        });
+        r.on('error', () => resolve({ country: 'Unknown', country_code: '??', region: 'Unknown', city: 'Unknown' }));
+        r.setTimeout(3000, () => { r.destroy(); resolve({ country: 'Unknown', country_code: '??', region: 'Unknown', city: 'Unknown' }); });
+    });
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 // ─── IN-MEMORY RATE LIMITER ───────────────────────────────────────────────────
 // Tracks bad key attempts per IP: { ip -> { count, firstAttempt } }
@@ -196,7 +238,11 @@ function maybeWarnExecutor(keyRow, req) {
 
 function buildSecureLoaderScript(project, baseUrl) {
     const isFree = project.is_free == 1;
-    return `-- mie ayam Secure Loader v4.0
+    // Generate per-request HMAC signature (anti-tamper)
+    const { ts, sig } = generateLoaderSignature(project.uuid);
+    // Randomize variable names (anti-leak / anti-share)
+    const rnd = crypto.randomBytes(4).toString('hex');
+    return `-- Secure Loader v4.2 [${rnd.toUpperCase()}]
 -- Project: ${project.name} (${project.uuid})
 repeat task.wait() until game:IsLoaded()
 repeat task.wait() until game.Players.LocalPlayer and game.Players.LocalPlayer.Character
@@ -473,6 +519,14 @@ function handleExecute(req, res) {
                                     db.run(`UPDATE users SET total_executions = COALESCE(total_executions, 0) + 1, last_ip = ? WHERE discord_id = ?`, [ip, keyRow.discord_id], () => {});
                                 }
 
+                                // ─── Geo-tracking (async, non-blocking) ───────────────
+                                lookupIpGeo(ip).then(geo => {
+                                    db.run(
+                                        `INSERT INTO execution_logs (project_id, key_string, discord_id, ip, country, country_code, region, city, executor, hwid, place_id, game_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+                                        [projectId, key, keyRow?.discord_id || null, ip, geo.country, geo.country_code, geo.region, geo.city, executor, hwid, placeId, universeId]
+                                    );
+                                }).catch(() => {});
+
                                 res.json({ success: true, script: scriptRow.obfuscated_script });
                             }
                         );
@@ -612,6 +666,33 @@ router.post('/report-error', express.json(), async (req, res) => {
     }
     
     res.json({ success: true });
+});
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ─── GEO STATS (for dashboard Analytics tab) ─────────────────────────────────
+router.get('/geo-stats', (req, res) => {
+    db.all(
+        `SELECT country, country_code, COUNT(*) as count FROM execution_logs
+         WHERE country IS NOT NULL AND country != '' AND country != 'Unknown' AND country != 'Local'
+         GROUP BY country ORDER BY count DESC LIMIT 12`,
+        (err, countries) => {
+            if (err) return res.json({ countries: [], regions: [], total: 0 });
+            db.all(
+                `SELECT region, country, COUNT(*) as count FROM execution_logs
+                 WHERE region IS NOT NULL AND region != '' AND region != 'Unknown' AND region != 'Local'
+                 GROUP BY region ORDER BY count DESC LIMIT 12`,
+                (err2, regions) => {
+                    db.get(`SELECT COUNT(*) as total FROM execution_logs`, (err3, row) => {
+                        res.json({
+                            countries: countries || [],
+                            regions: regions || [],
+                            total: row?.total || 0
+                        });
+                    });
+                }
+            );
+        }
+    );
 });
 // ─────────────────────────────────────────────────────────────────────────────
 

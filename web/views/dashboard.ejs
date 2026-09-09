@@ -26,11 +26,12 @@
 
             --border: rgba(255,255,255,0.06);
             --border-md: rgba(255,255,255,0.1);
+            --border-glow: rgba(255,255,255,0.18);
 
             --font: 'Space Grotesk', system-ui, sans-serif;
             --mono: 'JetBrains Mono', monospace;
             --sidebar-w: 228px;
-            --r: 8px;
+            --r: 10px;
         }
 
         html, body { height: 100%; }
@@ -381,15 +382,211 @@
 
         /* ─── PANEL ─── */
         .panel {
-            background: var(--gray-900);
+            background: rgba(13,13,13,0.85);
             border: 1px solid var(--border);
             border-radius: var(--r);
             margin-bottom: 16px;
             overflow: hidden;
-            transition: border-color 0.18s;
+            transition: border-color 0.22s, box-shadow 0.22s;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
         }
 
-        .panel:hover { border-color: rgba(255,255,255,0.1); }
+        .panel:hover {
+            border-color: rgba(255,255,255,0.12);
+            box-shadow: 0 0 0 1px rgba(255,255,255,0.04), 0 8px 32px rgba(0,0,0,0.4);
+        }
+
+        /* ─── MODAL ─── */
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(6px);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-backdrop.show { display: flex; }
+        .modal {
+            background: #0d0d0d;
+            border: 1px solid var(--border-md);
+            border-radius: 14px;
+            padding: 28px;
+            width: 100%;
+            max-width: 480px;
+            box-shadow: 0 32px 80px rgba(0,0,0,0.8);
+            animation: modalIn 0.2s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        @keyframes modalIn {
+            from { opacity:0; transform: scale(0.93) translateY(12px); }
+            to   { opacity:1; transform: scale(1) translateY(0); }
+        }
+        .modal-title { font-size: 17px; font-weight: 700; color: var(--white); margin-bottom: 18px; display: flex; align-items: center; gap: 9px; }
+        .modal-close { margin-left: auto; cursor: pointer; color: var(--gray-500); background: none; border: none; }
+        .modal-close:hover { color: var(--white); }
+
+        /* ─── PROJECT v2 CARDS ─── */
+        .pv2-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 14px;
+            margin-bottom: 10px;
+        }
+        .pv2-card {
+            background: rgba(13,13,13,0.9);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: border-color 0.22s, transform 0.22s, box-shadow 0.22s;
+            position: relative;
+        }
+        .pv2-card::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.04) 0%, transparent 60%);
+            pointer-events: none;
+        }
+        .pv2-card:hover {
+            border-color: rgba(255,255,255,0.18);
+            transform: translateY(-2px);
+            box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 12px 40px rgba(0,0,0,0.5);
+        }
+        .pv2-card-top {
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        .pv2-logo {
+            width: 44px; height: 44px;
+            border-radius: 10px;
+            background: var(--gray-800);
+            border: 1px solid var(--border-md);
+            flex-shrink: 0;
+            overflow: hidden;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px;
+        }
+        .pv2-logo img { width: 100%; height: 100%; object-fit: cover; }
+        .pv2-name { font-size: 14px; font-weight: 700; color: var(--white); }
+        .pv2-uuid { font-family: var(--mono); font-size: 10px; color: var(--gray-500); margin-top: 2px; }
+        .pv2-card-bot { padding: 12px 16px; display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+        .pv2-meta { font-size: 11.5px; color: var(--gray-500); display: flex; align-items: center; gap: 14px; }
+
+        /* ─── PROJECT DRAWER ─── */
+        .drawer-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px);
+            z-index: 900;
+            display: none;
+        }
+        .drawer-backdrop.show { display: block; }
+        .drawer {
+            position: fixed;
+            top: 0; right: -600px;
+            width: 100%; max-width: 560px;
+            height: 100vh;
+            background: #0a0a0a;
+            border-left: 1px solid var(--border-md);
+            z-index: 901;
+            overflow-y: auto;
+            transition: right 0.3s cubic-bezier(0.4,0,0.2,1);
+            padding: 24px;
+            scrollbar-width: thin;
+            scrollbar-color: var(--gray-700) transparent;
+        }
+        .drawer.open { right: 0; }
+        .drawer-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+        .drawer-logo {
+            width: 48px; height: 48px;
+            border-radius: 10px;
+            background: var(--gray-800);
+            border: 1px solid var(--border-md);
+            overflow: hidden;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px; flex-shrink: 0;
+        }
+        .drawer-logo img { width: 100%; height: 100%; object-fit: cover; }
+        .drawer-title { font-size: 18px; font-weight: 700; color: var(--white); }
+        .drawer-uuid { font-family: var(--mono); font-size: 10.5px; color: var(--gray-500); margin-top: 2px; }
+
+        /* ─── FILE LIST ─── */
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 11px 14px;
+            border-radius: 9px;
+            background: var(--gray-900);
+            border: 1px solid var(--border);
+            margin-bottom: 8px;
+            transition: border-color 0.18s;
+        }
+        .file-item:hover { border-color: var(--gray-600); }
+        .file-icon {
+            width: 34px; height: 34px;
+            border-radius: 7px;
+            background: var(--gray-800);
+            border: 1px solid var(--border-md);
+            flex-shrink: 0;
+            overflow: hidden;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .file-icon img { width: 100%; height: 100%; object-fit: cover; }
+        .file-name { font-size: 13px; font-weight: 600; color: var(--white); }
+        .file-meta { font-size: 10.5px; color: var(--gray-500); margin-top: 2px; }
+        .file-actions { margin-left: auto; display: flex; gap: 5px; }
+
+        /* ─── GEO STATS BAR ─── */
+        .geo-bar {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .geo-row {
+            display: grid;
+            grid-template-columns: 30px 140px 1fr 50px;
+            align-items: center;
+            gap: 12px;
+        }
+        .geo-flag { font-size: 18px; text-align: center; }
+        .geo-country { font-size: 12.5px; font-weight: 600; color: var(--white); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .geo-progress {
+            height: 4px;
+            border-radius: 4px;
+            background: var(--gray-800);
+            overflow: hidden;
+        }
+        .geo-fill {
+            height: 100%;
+            border-radius: 4px;
+            background: var(--white);
+            transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+        }
+        .geo-count { font-family: var(--mono); font-size: 11px; color: var(--gray-400); text-align: right; }
+
+        /* ─── DISCORD STATS BADGE ─── */
+        .dc-stat {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px 5px 8px;
+            border-radius: 8px;
+            background: var(--gray-900);
+            border: 1px solid var(--border);
+            font-size: 12px;
+            color: var(--gray-300);
+        }
+        .dc-dot { width: 7px; height: 7px; border-radius: 50%; }
+        .dc-dot.green { background: #22c55e; box-shadow: 0 0 6px rgba(34,197,94,0.6); }
+        .dc-dot.gray  { background: var(--gray-500); }
 
         .panel-hd {
             padding: 12px 16px;
@@ -820,6 +1017,10 @@
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             Search AI
         </a>
+        <a class="nav-item" onclick="switchTab('analytics', this)">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>
+            Analytics
+        </a>
         <a class="nav-item" onclick="switchTab('keys', this)">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
             Access Keys
@@ -905,34 +1106,49 @@
                 <div class="pg-sub">High-level telemetry across all active instances.</div>
             </div>
 
+            <!-- Discord live stats bar -->
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+                <div class="dc-stat">
+                    <div class="dc-dot green"></div>
+                    <span id="dc-online-count"><%- onlineMembers %></span>
+                    <span style="color:var(--gray-500)">online</span>
+                </div>
+                <div class="dc-stat">
+                    <div class="dc-dot gray"></div>
+                    <span id="dc-total-count"><%- totalMembers %></span>
+                    <span style="color:var(--gray-500)">total members</span>
+                </div>
+                <div style="margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--gray-600);" id="dc-last-updated">updating...</div>
+            </div>
+
             <div class="stats-grid">
                 <div class="stat">
                     <div class="stat-icon">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
                     </div>
                     <div class="stat-label">Projects</div>
-                    <div class="stat-val"><%- totalGames %></div>
+                    <div class="stat-val" id="stat-projects" data-target="<%- totalGames %>">0</div>
                 </div>
                 <div class="stat">
                     <div class="stat-icon">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
                     </div>
                     <div class="stat-label">Active Keys</div>
-                    <div class="stat-val"><%- totalKeys %></div>
+                    <div class="stat-val" id="stat-keys" data-target="<%- totalKeys %>">0</div>
                 </div>
                 <div class="stat">
                     <div class="stat-icon">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                     </div>
                     <div class="stat-label">Users</div>
-                    <div class="stat-val"><%- totalUsers %></div>
+                    <div class="stat-val" id="stat-users" data-target="<%- totalUsers %>">0</div>
                 </div>
                 <div class="stat">
                     <div class="stat-icon">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                     </div>
                     <div class="stat-label">Executions</div>
-                    <div class="stat-val"><%- totalExecutions %></div>
+                    <div class="stat-val" id="stat-execs" data-target="<%- totalExecutions %>">0</div>
                 </div>
             </div>
 
@@ -969,56 +1185,69 @@
                             Search
                         </button>
                     </div>
-                    
                     <div id="ai-search-result" class="terminal" style="margin-top: 14px; display: none;"></div>
                 </div>
             </div>
         </div>
 
-        <!-- PROJECTS -->
-        <div id="tab-projects" class="tab-pane">
+        <!-- ANALYTICS -->
+        <div id="tab-analytics" class="tab-pane">
             <div class="pg-head">
                 <div class="pg-title">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
-                    Project Directory
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>
+                    Analytics
                 </div>
-                <div class="pg-sub">Manage Lua environments for registered games.</div>
+                <div class="pg-sub">Geographic breakdown of script executions by country and region.</div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+                <div class="panel">
+                    <div class="panel-hd">
+                        <span class="panel-title"><span class="panel-dot"></span> Top Countries</span>
+                        <span id="geo-total-badge" class="badge badge-white">loading...</span>
+                    </div>
+                    <div class="panel-bd">
+                        <div id="geo-countries" class="geo-bar">
+                            <div style="color:var(--gray-600);font-size:12px;text-align:center;padding:20px;">Loading geo data...</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="panel">
+                    <div class="panel-hd"><span class="panel-title"><span class="panel-dot"></span> Top Regions</span></div>
+                    <div class="panel-bd">
+                        <div id="geo-regions" class="geo-bar">
+                            <div style="color:var(--gray-600);font-size:12px;text-align:center;padding:20px;">Loading...</div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="panel">
-                <div class="panel-hd"><span class="panel-title"><span class="panel-dot"></span> New Project / Add Game</span></div>
-                <div class="panel-bd">
-                    <form action="/admin/add-game" method="POST">
-                        <div class="form-row" style="display:grid;grid-template-columns:1.2fr 1.2fr 0.8fr 1fr auto;gap:10px;align-items:flex-end;">
-                            <div class="field">
-                                <label class="lbl">Roblox Place ID</label>
-                                <input type="text" name="place_id" id="proj-place-id" class="inp" placeholder="e.g. 2753915549" required onblur="fetchRobloxInfo(this.value)">
-                            </div>
-                            <div class="field">
-                                <label class="lbl">Game Name (Auto-fetched)</label>
-                                <input type="text" name="name" id="proj-name" class="inp" placeholder="Auto-fetched or custom">
-                            </div>
-                            <div class="field">
-                                <label class="lbl">Script Version</label>
-                                <input type="text" name="version" id="proj-version" class="inp" value="v0.0.0.1" placeholder="v0.0.0.1">
-                            </div>
-                            <div class="field">
-                                <label class="lbl">Project Tier</label>
-                                <select name="product" class="sel" required>
-                                    <option value="" disabled selected>Select tier...</option>
-                                    <% Object.values(products).forEach(function(p) { %>
-                                        <option value="<%- p.id %>"><%- p.name %></option>
-                                    <% }); %>
-                                </select>
-                            </div>
-                            <button type="submit" class="btn btn-white" style="height:36px;white-space:nowrap;">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                                Add Game
-                            </button>
-                        </div>
-                    </form>
+                <div class="panel-hd"><span class="panel-title"><span class="panel-dot"></span> Execution Log</span></div>
+                <div class="panel-bd" style="text-align:center;color:var(--gray-600);font-size:12.5px;padding:12px 0;">
+                    Geographic data is collected on every script execution. Data populates as users run scripts.
                 </div>
             </div>
+        </div>
+
+        <!-- PROJECTS v2 -->
+        <div id="tab-projects" class="tab-pane">
+            <div class="pg-head" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                <div>
+                    <div class="pg-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+                        Projects
+                    </div>
+                    <div class="pg-sub">Manage script projects &amp; files. Click a project to open its detail panel.</div>
+                </div>
+                <button class="btn btn-white" onclick="document.getElementById('modal-create-proj').classList.add('show')">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    New Project
+                </button>
+            </div>
+
+            <!-- Legacy games section -->
+            <div class="sec-head"><span class="sec-lbl">Game Script Uploads (Legacy)</span><div class="sec-line"></div><span class="badge badge-white"><%- games.length %></span></div>
 
             <%
                 const projectTypes = [
@@ -1027,19 +1256,11 @@
                     { id: 'testing_dev', label: 'Testing Dev' }
                 ];
             %>
-
             <% projectTypes.forEach(function(ptype) { %>
                 <% const typeGames = games.filter(g => g.product === ptype.id); %>
-                <div class="sec-head">
-                    <span class="sec-lbl"><%- ptype.label %></span>
-                    <div class="sec-line"></div>
-                    <span class="badge badge-white"><%- typeGames.length %></span>
-                </div>
-
-                <% if (typeGames.length === 0) { %>
-                    <div style="color:var(--gray-600);font-size:12.5px;padding:6px 2px;margin-bottom:14px;font-style:italic;">No projects in this tier.</div>
-                <% } else { %>
-                <div class="proj-grid">
+                <% if (typeGames.length > 0) { %>
+                <div style="color:var(--gray-500);font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin:12px 0 8px;"><%- ptype.label %></div>
+                <div class="proj-grid" style="margin-bottom:12px;">
                     <% typeGames.forEach(function(g) { %>
                     <div class="proj-card">
                         <div class="proj-card-hd">
@@ -1049,17 +1270,14 @@
                                 <% } %>
                                 <div style="min-width:0;">
                                     <div class="proj-name" style="text-overflow:ellipsis;overflow:hidden;white-space:nowrap;"><%- g.name %></div>
-                                    <div class="proj-id">Place ID: <%- g.place_id || g.roblox_game_id %> &bull; <%- g.script_version || 'v0.0.0.1' %></div>
+                                    <div class="proj-id"><%- g.place_id || g.roblox_game_id %></div>
                                 </div>
                             </div>
-                            <div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">
-                                <% if (g.last_script_update) { %>
-                                    <span id="upload-status-<%- g.roblox_game_id %>" class="badge badge-on">Uploaded</span>
-                                <% } else { %>
-                                    <span id="upload-status-<%- g.roblox_game_id %>" class="badge badge-off">Not Uploaded</span>
-                                <% } %>
-                                <span class="badge badge-warn"><%- ptype.label %></span>
-                            </div>
+                            <% if (g.last_script_update) { %>
+                                <span class="badge badge-on">Uploaded</span>
+                            <% } else { %>
+                                <span class="badge badge-off">No Script</span>
+                            <% } %>
                         </div>
                         <div class="proj-card-bd">
                             <form onsubmit="handleUpload(event,'<%- g.roblox_game_id %>','<%- g.product %>'); return false;" id="upload-form-<%- g.roblox_game_id %>">
@@ -1074,25 +1292,65 @@
                                 <div class="tog-row">
                                     <input type="checkbox" class="tog" name="auto_obfuscate" id="obf-<%- g.roblox_game_id %>" value="true" checked>
                                     <label class="tog-track" for="obf-<%- g.roblox_game_id %>"></label>
-                                    <label class="tog-lbl" for="obf-<%- g.roblox_game_id %>">Auto-Obfuscate (WeAreDevs)</label>
+                                    <label class="tog-lbl" for="obf-<%- g.roblox_game_id %>">Auto-Obfuscate</label>
                                 </div>
-                                <div style="display:flex;gap:7px;align-items:center;">
-                                    <button type="submit" class="btn btn-ghost" style="flex:1;" id="up-btn-<%- g.roblox_game_id %>">
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                                        Upload Script
-                                    </button>
+                                <div style="display:flex;gap:7px;">
+                                    <button type="submit" class="btn btn-ghost" style="flex:1;" id="up-btn-<%- g.roblox_game_id %>">Upload Script</button>
                                     <button type="button" class="btn btn-red" onclick="deleteGame('<%- g.roblox_game_id %>','<%- g.product %>','<%- g.name.replace(/'/g, `\\'`) %>')">
                                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
                                     </button>
                                 </div>
                             </form>
                         </div>
-
                     </div>
                     <% }); %>
                 </div>
                 <% } %>
             <% }); %>
+
+            <!-- Projects v2 section -->
+            <div class="sec-head" style="margin-top:24px;">
+                <span class="sec-lbl">Your Projects</span>
+                <div class="sec-line"></div>
+                <span class="badge badge-white"><%- projectsV2.length %></span>
+            </div>
+
+            <% if (projectsV2.length === 0) { %>
+            <div style="background:var(--gray-950);border:1px dashed var(--gray-700);border-radius:12px;padding:40px;text-align:center;color:var(--gray-600);">
+                <div style="font-size:28px;margin-bottom:10px;">📁</div>
+                <div style="font-weight:600;color:var(--gray-400);margin-bottom:6px;">No projects yet</div>
+                <div style="font-size:12.5px;">Click <strong style="color:var(--white);">New Project</strong> to create your first project.</div>
+            </div>
+            <% } else { %>
+            <div class="pv2-grid">
+                <% projectsV2.forEach(function(p) { %>
+                <div class="pv2-card" onclick="openProjectDrawer(<%- p.id %>, '<%- (p.display_name || p.name).replace(/'/g, `\\'`) %>', '<%- p.uuid %>', '<%- (p.logo_url || '').replace(/'/g, `\\'`) %>')">
+                    <div class="pv2-card-top">
+                        <div class="pv2-logo">
+                            <% if (p.logo_url) { %>
+                                <img src="<%- p.logo_url %>" alt="">
+                            <% } else { %>
+                                📦
+                            <% } %>
+                        </div>
+                        <div style="flex:1;min-width:0;">
+                            <div class="pv2-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><%- p.display_name || p.name %></div>
+                            <div class="pv2-uuid"><%- p.uuid %></div>
+                        </div>
+                    </div>
+                    <div class="pv2-card-bot">
+                        <div class="pv2-meta">
+                            <span>📄 <%- p.file_count %> file<%- p.file_count !== 1 ? 's' : '' %></span>
+                            <span style="color:var(--gray-600);"><%- p.is_free ? 'Free' : 'Premium' %></span>
+                        </div>
+                        <button class="btn btn-red" style="padding:4px 9px;font-size:11px;" onclick="event.stopPropagation();deleteProject(<%- p.id %>,'<%- (p.display_name||p.name).replace(/'/g,`\\'`) %>')">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <% }); %>
+            </div>
+            <% } %>
         </div>
 
         <!-- KEYS -->
@@ -1306,15 +1564,136 @@
     </div>
 </main>
 
+<!-- ═══ PROJECT CREATE MODAL ═══ -->
+<div id="modal-create-proj" class="modal-backdrop" onclick="if(event.target===this)this.classList.remove('show')">
+    <div class="modal">
+        <div class="modal-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+            New Project
+            <button class="modal-close" onclick="document.getElementById('modal-create-proj').classList.remove('show')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <form action="/admin/project/create" method="POST" enctype="multipart/form-data">
+            <div class="field" style="margin-bottom:12px;">
+                <label class="lbl">Project Name *</label>
+                <input type="text" name="name" class="inp" placeholder="e.g. Fisch Premium" required>
+            </div>
+            <div class="field" style="margin-bottom:12px;">
+                <label class="lbl">Description</label>
+                <input type="text" name="description" class="inp" placeholder="Short description of this project">
+            </div>
+            <div class="field" style="margin-bottom:12px;">
+                <label class="lbl">Logo / Icon</label>
+                <label class="file-area" for="modal-logo-file" style="margin-bottom:0;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    <span id="modal-logo-name">Upload logo image (PNG/JPG)</span>
+                    <input type="file" id="modal-logo-file" name="logo_file" accept="image/*" style="display:none;" onchange="document.getElementById('modal-logo-name').textContent=this.files[0]?.name||'Choose image'">
+                </label>
+                <div style="margin-top:8px;">
+                    <label class="lbl">Or Logo URL</label>
+                    <input type="text" name="logo_url" class="inp" placeholder="https://... (optional)">
+                </div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:6px;">
+                <button type="submit" class="btn btn-white" style="flex:1;">Create Project</button>
+                <button type="button" class="btn btn-ghost" onclick="document.getElementById('modal-create-proj').classList.remove('show')">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ═══ PROJECT DRAWER ═══ -->
+<div id="drawer-backdrop" class="drawer-backdrop" onclick="closeDrawer()"></div>
+<aside id="project-drawer" class="drawer">
+    <div class="drawer-header">
+        <div class="drawer-logo" id="drawer-logo">📦</div>
+        <div>
+            <div class="drawer-title" id="drawer-name">Project</div>
+            <div class="drawer-uuid" id="drawer-uuid"></div>
+        </div>
+        <button class="modal-close" style="margin-left:auto;" onclick="closeDrawer()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+    </div>
+
+    <!-- Loader URL -->
+    <div class="panel" style="margin-bottom:14px;">
+        <div class="panel-hd"><span class="panel-title"><span class="panel-dot"></span> Loader URL</span></div>
+        <div class="panel-bd" style="display:flex;gap:8px;align-items:center;">
+            <code id="drawer-loader-url" style="font-family:var(--mono);font-size:11px;color:var(--gray-400);flex:1;word-break:break-all;"></code>
+            <button class="btn btn-ghost" style="padding:5px 10px;font-size:11px;flex-shrink:0;" onclick="copyLoaderUrl()">Copy</button>
+        </div>
+    </div>
+
+    <!-- Upload file -->
+    <div class="panel" style="margin-bottom:14px;">
+        <div class="panel-hd"><span class="panel-title"><span class="panel-dot"></span> Add File</span></div>
+        <div class="panel-bd">
+            <div id="file-upload-form">
+                <div class="field" style="margin-bottom:10px;">
+                    <label class="lbl">File Display Name *</label>
+                    <input type="text" id="new-file-name" class="inp" placeholder="e.g. Main Script v2.1">
+                </div>
+                <label class="file-area" for="new-file-input" style="margin-bottom:10px;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    <span id="new-file-label">Choose .lua or .txt file</span>
+                    <input type="file" id="new-file-input" accept=".lua,.txt" style="display:none;" onchange="document.getElementById('new-file-label').textContent=this.files[0]?.name||'Choose file'">
+                </label>
+                <button class="btn btn-white" style="width:100%;" onclick="uploadFileToProject()">Upload File</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- File list -->
+    <div class="sec-head" style="margin-top:0;"><span class="sec-lbl">Files</span><div class="sec-line"></div><span id="drawer-file-count" class="badge badge-white">0</span></div>
+    <div id="drawer-file-list"></div>
+</aside>
+
 <script>
+    let _activeProjectId = null;
+    let _activeProjectUuid = null;
+    const BASE_URL = '<%- baseUrl %>';
+
     /* ─── TABS ─── */
     window.addEventListener('DOMContentLoaded', () => {
+        // Animated stat counters
+        animateCounters();
+        // Refresh Discord stats every 30s
+        refreshDiscordStats();
+        setInterval(refreshDiscordStats, 30000);
+
         const hash = window.location.hash.slice(1);
         if (hash && document.getElementById('tab-' + hash)) {
             const el = document.querySelector(`.nav-item[onclick*="'${hash}'"]`);
             if (el) switchTab(hash, el);
         }
     });
+
+    function animateCounters() {
+        document.querySelectorAll('.stat-val[data-target]').forEach(el => {
+            const target = parseInt(el.dataset.target, 10) || 0;
+            if (target === 0) { el.textContent = '0'; return; }
+            let current = 0;
+            const step = Math.max(1, Math.ceil(target / 40));
+            const timer = setInterval(() => {
+                current = Math.min(current + step, target);
+                el.textContent = current.toLocaleString();
+                if (current >= target) clearInterval(timer);
+            }, 20);
+        });
+    }
+
+    async function refreshDiscordStats() {
+        try {
+            const r = await fetch('/admin/api/discord-stats');
+            const d = await r.json();
+            document.getElementById('dc-online-count').textContent = d.online;
+            document.getElementById('dc-total-count').textContent = d.total;
+            const now = new Date();
+            document.getElementById('dc-last-updated').textContent = 'updated ' + now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+        } catch(_) {}
+    }
 
     function switchTab(id, el) {
         window.location.hash = id;
@@ -1323,6 +1702,175 @@
         document.getElementById('tab-' + id).classList.add('active');
         el.classList.add('active');
         document.getElementById('crumb-active').textContent = id;
+        if (id === 'analytics') loadGeoStats();
+    }
+
+    /* ─── GEO ANALYTICS ─── */
+    const countryFlags = { 'ID':'🇮🇩','US':'🇺🇸','SG':'🇸🇬','MY':'🇲🇾','PH':'🇵🇭','TH':'🇹🇭','AU':'🇦🇺','GB':'🇬🇧','DE':'🇩🇪','NL':'🇳🇱','CA':'🇨🇦','BR':'🇧🇷','JP':'🇯🇵','KR':'🇰🇷','VN':'🇻🇳','FR':'🇫🇷','IT':'🇮🇹','RU':'🇷🇺','TR':'🇹🇷','SA':'🇸🇦' };
+    async function loadGeoStats() {
+        try {
+            const r = await fetch('/api/geo-stats');
+            const d = await r.json();
+            document.getElementById('geo-total-badge').textContent = d.total.toLocaleString() + ' execs';
+
+            const countriesEl = document.getElementById('geo-countries');
+            const regionsEl = document.getElementById('geo-regions');
+
+            if (!d.countries.length) {
+                countriesEl.innerHTML = '<div style="color:var(--gray-600);font-size:12px;text-align:center;padding:20px;">No data yet — execute scripts to see geo stats.</div>';
+                regionsEl.innerHTML = countriesEl.innerHTML;
+                return;
+            }
+
+            const maxC = d.countries[0]?.count || 1;
+            countriesEl.innerHTML = d.countries.map(c => `
+                <div class="geo-row">
+                    <div class="geo-flag">${countryFlags[c.country_code] || '🌐'}</div>
+                    <div class="geo-country">${c.country}</div>
+                    <div class="geo-progress"><div class="geo-fill" style="width:${Math.round(c.count/maxC*100)}%"></div></div>
+                    <div class="geo-count">${c.count}</div>
+                </div>`).join('');
+
+            const maxR = d.regions[0]?.count || 1;
+            regionsEl.innerHTML = d.regions.map(r => `
+                <div class="geo-row">
+                    <div class="geo-flag">${countryFlags[r.country?.slice(0,2)?.toUpperCase()] || '📍'}</div>
+                    <div class="geo-country">${r.region || '—'}<span style="color:var(--gray-600);font-size:10px;"> · ${r.country || ''}</span></div>
+                    <div class="geo-progress"><div class="geo-fill" style="width:${Math.round(r.count/maxR*100)}%"></div></div>
+                    <div class="geo-count">${r.count}</div>
+                </div>`).join('');
+        } catch(e) {
+            document.getElementById('geo-countries').innerHTML = '<div style="color:var(--gray-600);font-size:12px;text-align:center;padding:20px;">Failed to load geo data.</div>';
+        }
+    }
+
+    /* ─── PROJECT DRAWER ─── */
+    function openProjectDrawer(id, name, uuid, logoUrl) {
+        _activeProjectId = id;
+        _activeProjectUuid = uuid;
+        document.getElementById('drawer-name').textContent = name;
+        document.getElementById('drawer-uuid').textContent = uuid;
+        const loaderUrl = BASE_URL + '/scripts/v4/loaders/' + uuid + '.lua';
+        document.getElementById('drawer-loader-url').textContent = loaderUrl;
+
+        const logoEl = document.getElementById('drawer-logo');
+        if (logoUrl) {
+            logoEl.innerHTML = '<img src="' + logoUrl + '" alt="">';
+        } else {
+            logoEl.innerHTML = '📦';
+        }
+
+        document.getElementById('drawer-backdrop').classList.add('show');
+        document.getElementById('project-drawer').classList.add('open');
+        loadProjectFiles();
+    }
+
+    function closeDrawer() {
+        document.getElementById('drawer-backdrop').classList.remove('show');
+        document.getElementById('project-drawer').classList.remove('open');
+        _activeProjectId = null;
+    }
+
+    function copyLoaderUrl() {
+        const url = document.getElementById('drawer-loader-url').textContent;
+        navigator.clipboard.writeText(url).then(() => toast('Loader URL copied!'));
+    }
+
+    async function loadProjectFiles() {
+        if (!_activeProjectId) return;
+        const el = document.getElementById('drawer-file-list');
+        el.innerHTML = '<div style="color:var(--gray-600);font-size:12px;padding:12px;">Loading...</div>';
+        try {
+            const r = await fetch('/admin/project/' + _activeProjectId + '/files');
+            const d = await r.json();
+            const files = d.files || [];
+            document.getElementById('drawer-file-count').textContent = files.length;
+
+            if (!files.length) {
+                el.innerHTML = '<div style="color:var(--gray-600);font-size:12.5px;padding:8px 2px;font-style:italic;">No files yet. Upload one above.</div>';
+                return;
+            }
+
+            el.innerHTML = files.map(f => {
+                const createdAgo = timeAgo(f.created_at);
+                const updatedAgo = timeAgo(f.updated_at);
+                return `<div class="file-item" id="file-item-${f.id}">
+                    <div class="file-icon">
+                        ${f.logo_url ? '<img src="'+f.logo_url+'" alt="">' : (f.file_type === 'lua' ? '🗂️' : '📄')}
+                    </div>
+                    <div style="flex:1;min-width:0;">
+                        <div class="file-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.display_name}</div>
+                        <div class="file-meta">Created ${createdAgo} &bull; Updated ${updatedAgo} &bull; .${f.file_type}</div>
+                    </div>
+                    <div class="file-actions">
+                        <button class="btn btn-red" onclick="deleteProjectFile(${f.id})" title="Delete file">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+                        </button>
+                    </div>
+                </div>`;
+            }).join('');
+        } catch(e) {
+            el.innerHTML = '<div style="color:var(--gray-500);font-size:12px;">Error loading files.</div>';
+        }
+    }
+
+    async function uploadFileToProject() {
+        if (!_activeProjectId) return;
+        const nameInput = document.getElementById('new-file-name');
+        const fileInput = document.getElementById('new-file-input');
+        if (!nameInput.value.trim()) { toast('Please enter a file display name.', false); return; }
+        if (!fileInput.files[0]) { toast('Please choose a file.', false); return; }
+
+        const fd = new FormData();
+        fd.append('display_name', nameInput.value.trim());
+        fd.append('script_file', fileInput.files[0]);
+
+        const btn = event.currentTarget || document.querySelector('#file-upload-form .btn-white');
+        const orig = btn.textContent;
+        btn.disabled = true; btn.textContent = 'Uploading...';
+
+        try {
+            const r = await fetch('/admin/project/' + _activeProjectId + '/add-file', { method: 'POST', body: fd });
+            const d = await r.json();
+            if (d.success) {
+                toast('File uploaded!');
+                nameInput.value = '';
+                fileInput.value = '';
+                document.getElementById('new-file-label').textContent = 'Choose .lua or .txt file';
+                loadProjectFiles();
+            } else {
+                toast('Upload failed: ' + (d.message || 'error'), false);
+            }
+        } catch(e) {
+            toast('Network error.', false);
+        } finally {
+            btn.disabled = false; btn.textContent = orig;
+        }
+    }
+
+    async function deleteProjectFile(fileId) {
+        if (!confirm('Delete this file? This cannot be undone.')) return;
+        const r = await fetch('/admin/project/' + _activeProjectId + '/file/' + fileId + '/delete', { method: 'POST' });
+        const d = await r.json();
+        if (d.success) { toast('File deleted.'); loadProjectFiles(); }
+        else toast('Delete failed.', false);
+    }
+
+    async function deleteProject(id, name) {
+        if (!confirm('Delete project "' + name + '" and all its files? This CANNOT be undone.')) return;
+        const r = await fetch('/admin/project/' + id + '/delete', { method: 'POST' });
+        const d = await r.json();
+        if (d.success) { toast('Project deleted.'); setTimeout(() => window.location.reload(), 800); }
+        else toast('Delete failed.', false);
+    }
+
+    function timeAgo(dateStr) {
+        if (!dateStr) return '—';
+        const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
+        if (diff < 60) return Math.round(diff) + 's ago';
+        if (diff < 3600) return Math.round(diff/60) + 'm ago';
+        if (diff < 86400) return Math.round(diff/3600) + 'h ago';
+        return Math.round(diff/86400) + 'd ago';
     }
 
     /* ─── TOAST ─── */

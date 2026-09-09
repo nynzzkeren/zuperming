@@ -22,13 +22,15 @@ const getBotClient = () => {
 
 const upload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 5 * 1024 * 1024 },
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB for images
     fileFilter: (req, file, cb) => {
         const name = (file.originalname || '').toLowerCase();
-        if (name.endsWith('.lua') || name.endsWith('.txt') || file.mimetype.startsWith('text/') || file.mimetype === 'application/octet-stream') {
+        const mime = file.mimetype || '';
+        // Allow scripts, images
+        if (name.endsWith('.lua') || name.endsWith('.txt') || mime.startsWith('text/') || mime === 'application/octet-stream' || mime.startsWith('image/')) {
             cb(null, true);
         } else {
-            cb(new Error('Only .lua or .txt files are allowed'));
+            cb(new Error('Only .lua, .txt or image files are allowed'));
         }
     }
 });
@@ -183,6 +185,7 @@ router.get('/', requireAuth, async (req, res) => {
         if (err) stats = { total_executions: 0, total_resets: 0 };
 
         let onlineMembers = 0;
+        let totalMembers = 0;
         try {
             const client = getBotClient();
             const guildId = process.env.GUILD_ID;
@@ -190,7 +193,9 @@ router.get('/', requireAuth, async (req, res) => {
                 const guild = await client.guilds.fetch(guildId).catch(() => null);
                 if (guild) {
                     await guild.members.fetch({ withPresences: true }).catch(() => null);
-                    onlineMembers = guild.members.cache.filter(m => m.presence?.status !== 'offline' && !m.user.bot).size;
+                    const humanMembers = guild.members.cache.filter(m => !m.user.bot);
+                    totalMembers = humanMembers.size;
+                    onlineMembers = humanMembers.filter(m => m.presence?.status !== 'offline').size;
                 }
             }
         } catch (e) {
@@ -207,29 +212,38 @@ router.get('/', requireAuth, async (req, res) => {
                 db.all(`SELECT * FROM keys ORDER BY created_at DESC LIMIT 15`, (err, keys) => {
                     db.all(`SELECT * FROM login_logs ORDER BY login_time DESC LIMIT 50`, (err, loginLogs) => {
                         db.all(`SELECT * FROM banned_ips ORDER BY banned_at DESC`, (err, bannedIps) => {
-                            const gamesList = games || [];
-                            const keysList = keys || [];
-                            const usersList = users || [];
-                            res.render('dashboard', {
-                                stats,
-                                onlineMembers,
-                                users: usersList,
-                                games: gamesList,
-                                keys: keysList.map(k => ({
-                                    ...k,
-                                    duration_label: formatDurationLabel(k.duration)
-                                })),
-                                loginLogs: loginLogs || [],
-                                bannedIps: bannedIps || [],
-                                products: PRODUCTS,
-                                baseUrl: getBaseUrl(),
-                                message: null,
-                                error: null,
-                                username: req.session.username,
-                                totalGames: gamesList.length,
-                                totalKeys: keysList.filter(k => k.status !== 'used').length,
-                                totalUsers: usersList.length,
-                                totalExecutions: (stats && stats.total_executions) ? stats.total_executions : 0
+                            // ─── Load projects v2 with file counts ───────────────
+                            db.all(`
+                                SELECT p.*,
+                                (SELECT COUNT(*) FROM project_files pf WHERE pf.project_id = p.id) as file_count
+                                FROM projects p ORDER BY p.created_at DESC
+                            `, (err2, projectsV2) => {
+                                const gamesList = games || [];
+                                const keysList = keys || [];
+                                const usersList = users || [];
+                                res.render('dashboard', {
+                                    stats,
+                                    onlineMembers,
+                                    totalMembers,
+                                    users: usersList,
+                                    games: gamesList,
+                                    projectsV2: projectsV2 || [],
+                                    keys: keysList.map(k => ({
+                                        ...k,
+                                        duration_label: formatDurationLabel(k.duration)
+                                    })),
+                                    loginLogs: loginLogs || [],
+                                    bannedIps: bannedIps || [],
+                                    products: PRODUCTS,
+                                    baseUrl: getBaseUrl(),
+                                    message: req.query.msg || null,
+                                    error: req.query.error || null,
+                                    username: req.session.username,
+                                    totalGames: gamesList.length,
+                                    totalKeys: keysList.filter(k => k.status !== 'used').length,
+                                    totalUsers: usersList.length,
+                                    totalExecutions: (stats && stats.total_executions) ? stats.total_executions : 0
+                                });
                             });
                         });
                     });
@@ -941,5 +955,128 @@ router.post('/vault/add-feature', requireAuth, (req, res) => {
     });
 });
 // ────────────────────────────────────────────────────────────────────────────
+
+// ─── DISCORD LIVE STATS (for dashboard Overview) ─────────────────────────────
+router.get('/api/discord-stats', requireAuth, async (req, res) => {
+    try {
+        const client = getBotClient();
+        const guildId = process.env.GUILD_ID;
+        if (!client || !guildId) return res.json({ total: 0, online: 0 });
+        const guild = await client.guilds.fetch(guildId).catch(() => null);
+        if (!guild) return res.json({ total: 0, online: 0 });
+        await guild.members.fetch({ withPresences: true }).catch(() => {});
+        const members = guild.members.cache.filter(m => !m.user.bot);
+        const online = members.filter(m => m.presence?.status !== 'offline').size;
+        res.json({ total: members.size, online });
+    } catch (e) {
+        res.json({ total: 0, online: 0 });
+    }
+});
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ─── PROJECT v2: CREATE ───────────────────────────────────────────────────────
+router.post('/project/create', requireAuth, upload.single('logo_file'), (req, res) => {
+    const { name, description, logo_url } = req.body;
+    if (!name) return res.redirect('/admin?error=Project+name+required#projects');
+
+    const discordId = req.session.discordId || 'owner_root';
+    const uuid = require('crypto').randomBytes(8).toString('hex');
+
+    let logoUrl = logo_url || null;
+    if (req.file) {
+        // Store as base64 data URL
+        const ext = req.file.originalname.split('.').pop().toLowerCase();
+        logoUrl = `data:image/${ext === 'jpg' ? 'jpeg' : ext};base64,${req.file.buffer.toString('base64')}`;
+    }
+
+    db.get(`SELECT id FROM developers WHERE discord_id = ?`, [discordId], (err, dev) => {
+        const devId = dev?.id || 1;
+        db.run(
+            `INSERT INTO projects (developer_id, name, display_name, uuid, description, logo_url, is_free) VALUES (?,?,?,?,?,?,0)`,
+            [devId, name, name, uuid, description || null, logoUrl],
+            function(err) {
+                if (err) return res.redirect('/admin?error=Failed+to+create+project#projects');
+                res.redirect('/admin?msg=Project+created#projects');
+            }
+        );
+    });
+});
+
+// ─── PROJECT v2: DELETE PROJECT ────────────────────────────────────────────────
+router.post('/project/:id/delete', requireAuth, (req, res) => {
+    const { id } = req.params;
+    db.run(`DELETE FROM project_files WHERE project_id = ?`, [id], () => {
+        db.run(`DELETE FROM projects WHERE id = ?`, [id], () => {
+            res.json({ success: true });
+        });
+    });
+});
+
+// ─── PROJECT v2: ADD FILE ─────────────────────────────────────────────────────
+router.post('/project/:id/add-file', requireAuth, upload.single('script_file'), (req, res) => {
+    const projectId = req.params.id;
+    const { display_name, logo_url } = req.body;
+    if (!req.file) return res.json({ success: false, message: 'No file uploaded' });
+    if (!display_name) return res.json({ success: false, message: 'Display name required' });
+
+    const content = req.file.buffer.toString('utf8');
+    const ext = (req.file.originalname || '').split('.').pop().toLowerCase();
+    const fileType = (ext === 'lua' || ext === 'txt') ? ext : 'lua';
+
+    let fileLogoUrl = logo_url || null;
+
+    db.run(
+        `INSERT INTO project_files (project_id, display_name, logo_url, file_content, file_type) VALUES (?,?,?,?,?)`,
+        [projectId, display_name, fileLogoUrl, content, fileType],
+        function(err) {
+            if (err) return res.json({ success: false, message: 'DB error: ' + err.message });
+            res.json({ success: true, fileId: this.lastID });
+        }
+    );
+});
+
+// ─── PROJECT v2: DELETE FILE ──────────────────────────────────────────────────
+router.post('/project/:id/file/:fileId/delete', requireAuth, (req, res) => {
+    db.run(`DELETE FROM project_files WHERE id = ? AND project_id = ?`, [req.params.fileId, req.params.id], (err) => {
+        if (err) return res.json({ success: false });
+        res.json({ success: true });
+    });
+});
+
+// ─── PROJECT v2: UPDATE FILE ──────────────────────────────────────────────────
+router.post('/project/:id/file/:fileId/update', requireAuth, upload.single('script_file'), (req, res) => {
+    const { display_name } = req.body;
+    if (req.file) {
+        const content = req.file.buffer.toString('utf8');
+        db.run(`UPDATE project_files SET file_content = ?, display_name = COALESCE(?, display_name), updated_at = CURRENT_TIMESTAMP WHERE id = ? AND project_id = ?`,
+            [content, display_name || null, req.params.fileId, req.params.id],
+            err => res.json({ success: !err })
+        );
+    } else if (display_name) {
+        db.run(`UPDATE project_files SET display_name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND project_id = ?`,
+            [display_name, req.params.fileId, req.params.id],
+            err => res.json({ success: !err })
+        );
+    } else {
+        res.json({ success: false, message: 'Nothing to update' });
+    }
+});
+
+// ─── PROJECT v2: GET FILES LIST (JSON) ───────────────────────────────────────
+router.get('/project/:id/files', requireAuth, (req, res) => {
+    db.all(
+        `SELECT id, display_name, logo_url, file_type, created_at, updated_at FROM project_files WHERE project_id = ? ORDER BY created_at DESC`,
+        [req.params.id],
+        (err, files) => res.json({ files: files || [] })
+    );
+});
+
+// ─── REFERRAL LEADERBOARD ─────────────────────────────────────────────────────
+router.get('/api/referrals', requireAuth, (req, res) => {
+    db.all(
+        `SELECT referrer_discord_id, COUNT(*) as referral_count FROM referrals GROUP BY referrer_discord_id ORDER BY referral_count DESC LIMIT 20`,
+        (err, rows) => res.json({ referrals: rows || [] })
+    );
+});
 
 module.exports = router;
