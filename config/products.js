@@ -1,9 +1,9 @@
 const PRODUCTS = {
     premium: {
         id: 'premium',
-        name: 'Zuperming Premium',
+        name: 'Mie Ayam Hub Premium',
         keyPrefix: 'MIE_PREM',
-        brand: 'Zuperming',
+        brand: 'Mie Ayam Hub',
         loaderFile: 'loader_template.lua',
         loaderRoute: '/loader',
         executeRoute: '/api/execute',
@@ -15,9 +15,9 @@ const PRODUCTS = {
 
     freemium: {
         id: 'freemium',
-        name: 'Zuperming Freemium',
+        name: 'Mie Ayam Hub Freemium',
         keyPrefix: 'MIE_FREE',
-        brand: 'Zuperming Freemium',
+        brand: 'Mie Ayam Hub Freemium',
         loaderFile: 'loader_freemium.lua',
         loaderRoute: '/loader/free',
         executeRoute: '/api/free/execute',
@@ -28,9 +28,9 @@ const PRODUCTS = {
     },
     testing_dev: {
         id: 'testing_dev',
-        name: 'Zuperming Developer',
+        name: 'Mie Ayam Hub Developer',
         keyPrefix: 'ZDEV',
-        brand: 'Zuperming Developer',
+        brand: 'Mie Ayam Hub Developer',
         loaderFile: 'loader_dev.lua',
         loaderRoute: '/loader/dev',
         executeRoute: '/api/dev/execute',

@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
 const db = require('../../database');
@@ -58,7 +58,7 @@ router.post('/start', (req, res) => {
                         
                         if (!apiToken) return res.status(500).json({ error: 'LOOTLABS_API_TOKEN is not set in .env' });
 
-                        const llUrl = `https://creators.lootlabs.gg/api/public/content_locker?api_token=${apiToken}&title=Zuperming+Key&url=${callbackUrl}&tier_id=1&number_of_tasks=4&theme=1`;
+                        const llUrl = `https://creators.lootlabs.gg/api/public/content_locker?api_token=${apiToken}&title=MIE AYAM HUB+Key&url=${callbackUrl}&tier_id=1&number_of_tasks=4&theme=1`;
                         
                         https.get(llUrl, (apiRes) => {
                             let responseData = '';

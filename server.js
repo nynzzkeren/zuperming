@@ -1,4 +1,4 @@
-require('dotenv').config();
+﻿require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
 const path = require('path');
@@ -39,7 +39,7 @@ app.use(express.static(path.join(__dirname, 'web', 'public')));
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 app.use(session({
-    secret: process.env.SESSION_SECRET || 'zuperming-secret-key',
+    secret: process.env.SESSION_SECRET || 'MIE AYAM HUB-secret-key',
     resave: false,
     saveUninitialized: false
 }));

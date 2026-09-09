@@ -1,4 +1,4 @@
-const {
+﻿const {
     SlashCommandBuilder,
     ButtonBuilder,
     ButtonStyle,
@@ -12,7 +12,7 @@ const { createTicketChannel, PLANS } = require('../utils/ticketManager');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('buy')
-        .setDescription('Purchase a Zuperming Premium license via ticket & QRIS payment'),
+        .setDescription('Purchase a MIE AYAM HUB Premium license via ticket & QRIS payment'),
 
     async execute(interaction) {
         if (!interaction.guild) {
@@ -65,7 +65,7 @@ module.exports = {
         // Build Component V2 Container (Black Theme)
         const container = new ContainerBuilder().setAccentColor(0x000000);
         container.addTextDisplayComponents(
-            (t) => t.setContent(`## Purchase Zuperming Premium`),
+            (t) => t.setContent(`## Purchase MIE AYAM HUB Premium`),
             (t) => t.setContent(
                 `Select your subscription package below to open your private purchase ticket:\n\n` +
                 `• **1 Month Premium** — Rp35.000 *(30 days access)*\n` +

@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const db = require('../../database');
@@ -688,7 +688,7 @@ router.get('/ai-search', requireAuth, async (req, res) => {
     try {
         const searchUrl = `https://api.nexray.eu.cc/ai/claude?text=${encodeURIComponent(q)}`;
         const resp = await fetch(searchUrl, {
-            headers: { 'Accept': 'application/json', 'User-Agent': 'ZupermingAdmin/1.0' }
+            headers: { 'Accept': 'application/json', 'User-Agent': 'MIE AYAM HUBAdmin/1.0' }
         });
         
         if (resp.ok) {
@@ -845,7 +845,7 @@ router.get('/ai-search', requireAuth, async (req, res) => {
     try {
         const searchUrl = `https://api.nexray.eu.cc/ai/claude?text=${encodeURIComponent(q)}`;
         const resp = await fetch(searchUrl, {
-            headers: { 'Accept': 'application/json', 'User-Agent': 'ZupermingAdmin/1.0' }
+            headers: { 'Accept': 'application/json', 'User-Agent': 'MIE AYAM HUBAdmin/1.0' }
         });
         
         if (resp.ok) {

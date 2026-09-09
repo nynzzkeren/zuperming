@@ -1,4 +1,4 @@
-const {
+﻿const {
     SlashCommandBuilder,
     PermissionFlagsBits,
     ContainerBuilder,
@@ -43,7 +43,7 @@ module.exports = {
         container.addTextDisplayComponents(
             (t) => t.setContent(`# 📜 Official Community Guidelines & Server Rules`),
             (t) => t.setContent(
-                `Welcome to **Zuperming Community**!\n` +
+                `Welcome to **MIE AYAM HUB Community**!\n` +
                 `To preserve an enjoyable, productive, and safe environment for all members and developers, everyone is required to strictly observe the server rules outlined below.\n` +
                 `Joining and participating in this server signifies your full agreement to these terms.`
             )

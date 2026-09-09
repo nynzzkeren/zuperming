@@ -1,4 +1,4 @@
-const path = require('path');
+﻿const path = require('path');
 const fs = require('fs');
 const {
     ChannelType,
@@ -169,11 +169,11 @@ async function createTicketChannel(guild, user, planKey) {
     const container = new ContainerBuilder().setAccentColor(0x000000);
 
     container.addTextDisplayComponents(
-        (t) => t.setContent(`## Welcome to Zuperming Purchase Ticket`),
+        (t) => t.setContent(`## Welcome to MIE AYAM HUB Purchase Ticket`),
         (t) => t.setContent(
             `Hello <@${user.id}>! Welcome to your official purchase ticket for **${plan.label}**.\n\n` +
             `### Order Summary:\n` +
-            `• **Product:** Zuperming Premium\n` +
+            `• **Product:** MIE AYAM HUB Premium\n` +
             `• **Plan:** ${plan.label}\n` +
             `• **Price:** Rp${plan.price.toLocaleString('id-ID')}\n` +
             `• **Duration:** ${plan.durationDays ? `${plan.durationDays} Days` : 'Lifetime (Permanent)'}\n` +
@@ -527,7 +527,7 @@ async function handleApprovePayment(interaction, ticketId) {
                 `script_key = "${keyString}";`,
                 `loadstring(game:HttpGet("${loaderUrl}"))()`,
                 `\`\`\``,
-                `Thank you for supporting Zuperming!`
+                `Thank you for supporting MIE AYAM HUB!`
             ].join('\n'));
         }
     } catch (e) {

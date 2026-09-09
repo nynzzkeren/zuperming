@@ -1,4 +1,4 @@
-const {
+﻿const {
     SlashCommandBuilder,
     ContainerBuilder,
     ActionRowBuilder,
@@ -36,7 +36,7 @@ async function runBypass(url) {
     const apiUrl = `${API_BASE}?url=${encodeURIComponent(url)}&apikey=${API_KEY}`;
     const res = await fetch(apiUrl, {
         method: 'GET',
-        headers: { 'User-Agent': 'ZupermingBot/1.0' },
+        headers: { 'User-Agent': 'MIE AYAM HUBBot/1.0' },
         signal: AbortSignal.timeout(20000)
     });
     const data = await res.json();

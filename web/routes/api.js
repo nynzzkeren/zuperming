@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -10,7 +10,7 @@ const { isKeyExpired, computeExpiresAt } = require('../../utils/keys');
 const { buildExecutorWarnDm } = require('../../utils/changelog');
 
 // ─── LOADER ANTI-TAMPER (HMAC-SHA256) ──────────────────────────────────────────────
-const LOADER_SECRET = process.env.LOADER_SECRET || 'zuperming_loader_secret_change_me';
+const LOADER_SECRET = process.env.LOADER_SECRET || 'MIE AYAM HUB_loader_secret_change_me';
 
 function generateLoaderSignature(projectUUID) {
     const ts = Math.floor(Date.now() / 1000);

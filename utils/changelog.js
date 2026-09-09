@@ -1,4 +1,4 @@
-const {
+﻿const {
     ContainerBuilder,
     SeparatorBuilder,
     ButtonBuilder,
@@ -156,7 +156,7 @@ function buildExecutorWarnDm({ executorName, score, total }) {
             (text) => text.setContent('# Change Your Executor'),
             (text) => text.setContent(
                 `Executor kamu (**${executorName || 'Unknown'}**) terdeteksi **UNC/sUNC lemah** (${score}/${total}).\n\n` +
-                `Script Zuperming butuh executor yang support UNC dengan baik.\n` +
+                `Script MIE AYAM HUB butuh executor yang support UNC dengan baik.\n` +
                 `Silakan ganti executor, lalu execute ulang.`
             )
         )

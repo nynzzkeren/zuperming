@@ -1,4 +1,4 @@
-const {
+﻿const {
     SlashCommandBuilder,
     PermissionFlagsBits,
     ButtonBuilder,
@@ -24,9 +24,9 @@ module.exports = {
 
         const container = new ContainerBuilder().setAccentColor(0x000000);
         container.addTextDisplayComponents(
-            (t) => t.setContent(`## Zuperming Premium — Purchase Panel`),
+            (t) => t.setContent(`## MIE AYAM HUB Premium — Purchase Panel`),
             (t) => t.setContent(
-                `Welcome to the official **Zuperming Premium** store!\n\n` +
+                `Welcome to the official **MIE AYAM HUB Premium** store!\n\n` +
                 `Select a package below to open your private purchase ticket with QRIS payment:\n\n` +
                 `• **1 Month Premium** — Rp35.000 *(30 days full premium access)*\n` +
                 `• **Lifetime Premium** — Rp55.000 *(permanent access, never expires)*\n\n` +

@@ -1,4 +1,4 @@
-const path = require('path');
+﻿const path = require('path');
 const fs = require('fs');
 const sqlite3 = require('sqlite3').verbose();
 
@@ -135,7 +135,7 @@ const db = new sqlite3.Database(dbPath, (err) => {
             db.run(`CREATE TABLE IF NOT EXISTS panels (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 project_id INTEGER NOT NULL,
-                title TEXT DEFAULT 'Zuperming Premium Panel',
+                title TEXT DEFAULT 'MIE AYAM HUB Premium Panel',
                 description TEXT DEFAULT 'Redeem key, get script, role, reset HWID, or view stats.',
                 FOREIGN KEY(project_id) REFERENCES projects(id)
             )`);
