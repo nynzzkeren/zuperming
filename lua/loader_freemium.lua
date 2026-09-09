@@ -13,6 +13,9 @@ local _StarterGui    = _game:GetService("StarterGui")
 local _RbxAnalytics  = _game:GetService("RbxAnalyticsService")
 local _LocalPlayer   = _Players.LocalPlayer
 
+-- ── [VM] Anti-dump: proxy all sensitive values through closures ──
+local function _protect(fn) return (function(...) return fn(...) end) end
+
 local function _notify(title, text, dur)
     pcall(function()
         _StarterGui:SetCore("SendNotification", {
@@ -147,13 +150,13 @@ if type(result) ~= "string" or #result < 8 then
     return
 end
 
-if result:find("Zuperming") and result:find("Kick") then
+if result:find("Zuperming:") and result:find("Kick") then
     _notify("Zuperming Free", "Authentication failed.", 4)
     pcall(loadstring(result))
     return
 end
 
-_notify("Zuperming Free", "Authorized! Loading...")
+_notify("Zuperming Free", "Key validated! Loading...")
 
 local fn, compileErr = loadstring(result)
 result = nil
